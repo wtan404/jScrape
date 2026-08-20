@@ -1,0 +1,24 @@
+{
+  "name": "scrapedeez",
+  "version": "1.0.0",
+  "description": "Automated Job Scraper & Alert Engine for IT Management, WebOps & DevOps Roles",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "scrape": "node scraper.js"
+  },
+  "keywords": [
+    "job-scraper",
+    "webops",
+    "devops",
+    "it-manager",
+    "scrapedeez"
+  ],
+  "author": "Will",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "axios": "^1.7.2",
+    "cheerio": "^1.0.0-rc.12"
+  }
+}

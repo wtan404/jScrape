@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scrapedeez | IT Manager & WebOps Job Scraper</title>
+  <meta name="description" content="Scrapedeez automated job scraper and notification engine for IT Management, Web Operations, and DevOps roles.">
+  <meta name="theme-color" content="#090d16">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Header Navigation -->
+  <header class="app-header">
+    <div class="container header-wrap">
+      <div class="brand">
+        <span class="brand-icon">🕷️</span>
+        <span class="brand-title">SCRAPE<span class="highlight">DEEZ</span></span>
+        <span class="role-badge">IT MANAGER & WEBOPS FEED</span>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-primary btn-sm" onclick="triggerScrapeNow()" id="btnScrape">
+          <i data-lucide="refresh-cw"></i>
+          <span>Scrape Jobs Now</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container main-layout">
+    <!-- Filter & Target Summary Bar -->
+    <section class="summary-bar">
+      <div class="summary-card">
+        <div class="summary-metric" id="totalMatchesCount">0</div>
+        <div class="summary-label">Matching Roles Found</div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-value" id="lastScrapedTime">Never</div>
+        <div class="summary-label">Last Scraped Timestamp</div>
+      </div>
+
+      <div class="summary-card filters-card">
+        <div class="summary-label">Target Role Filter:</div>
+        <div class="pill-tags">
+          <span class="pill">IT Manager</span>
+          <span class="pill">Web Operations</span>
+          <span class="pill">DevOps Manager</span>
+          <span class="pill">Web Engineering Lead</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Search & Live Filter Row -->
+    <section class="controls-row">
+      <div class="search-box">
+        <i data-lucide="search"></i>
+        <input type="text" id="searchInput" placeholder="Filter by title, company, or keyword (e.g. Terraform, Kubernetes, Manager)..." oninput="filterJobs()">
+      </div>
+
+      <div class="source-filter">
+        <select id="sourceSelect" onchange="filterJobs()">
+          <option value="all">All Sources (RemoteOK + WeWorkRemotely)</option>
+          <option value="RemoteOK">RemoteOK Feed</option>
+          <option value="WeWorkRemotely">WeWorkRemotely Feed</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Jobs Feed Grid -->
+    <section class="jobs-section">
+      <div class="jobs-list" id="jobsList">
+        <!-- Rendered via JS -->
+        <div class="loading-state">
+          <i data-lucide="loader-2" class="spin"></i>
+          <p>Fetching IT Manager, WebOps & DevOps job postings...</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <div class="container footer-wrap">
+      <p>&copy; <span id="year">2026</span> Scrapedeez Job Alert Engine. Monitored for Web Development & IT Operations Leadership.</p>
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>
