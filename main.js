@@ -1,8 +1,9 @@
 /* ==========================================================================
-   Scrapedeez — Multi-Source Dashboard Engine
+   Scrapedeez — Multi-Source & User-Configurable Dashboard Engine
    ========================================================================== */
 
 let allJobsData = [];
+let currentConfig = {};
 
 document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) {
@@ -47,32 +48,63 @@ async function fetchJobsDatabase() {
 async function fetchConfig() {
   try {
     const res = await fetch('/api/config');
-    const data = await res.json();
+    currentConfig = await res.json();
 
+    // Populate modal inputs
+    const titlesInput = document.getElementById('targetTitlesInput');
+    const keywordsInput = document.getElementById('keywordsInput');
     const ghInput = document.getElementById('ghCompaniesInput');
     const leverInput = document.getElementById('leverCompaniesInput');
     const serpInput = document.getElementById('serpApiKeyInput');
 
-    if (ghInput && data.greenhouseCompanies) {
-      ghInput.value = data.greenhouseCompanies.join(', ');
+    if (titlesInput && currentConfig.targetTitles) {
+      titlesInput.value = currentConfig.targetTitles.join(', ');
     }
-    if (leverInput && data.leverCompanies) {
-      leverInput.value = data.leverCompanies.join(', ');
+    if (keywordsInput && currentConfig.keywords) {
+      keywordsInput.value = currentConfig.keywords.join(', ');
     }
-    if (serpInput && data.serpApiKey) {
-      serpInput.value = data.serpApiKey;
+    if (ghInput && currentConfig.greenhouseCompanies) {
+      ghInput.value = currentConfig.greenhouseCompanies.join(', ');
     }
+    if (leverInput && currentConfig.leverCompanies) {
+      leverInput.value = currentConfig.leverCompanies.join(', ');
+    }
+    if (serpInput && currentConfig.serpApiKey) {
+      serpInput.value = currentConfig.serpApiKey;
+    }
+
+    // Render Tag Bar
+    renderKeywordTags(currentConfig.targetTitles || [], currentConfig.keywords || []);
   } catch (err) {
     console.error('Config fetch failed:', err);
   }
 }
 
+function renderKeywordTags(titles, keywords) {
+  const container = document.getElementById('activeKeywordsTags');
+  if (!container) return;
+
+  if (titles.length === 0 && keywords.length === 0) {
+    container.innerHTML = `<span class="tag-loading">No custom search terms defined. Click "Edit Target Terms" to add job titles.</span>`;
+    return;
+  }
+
+  const titleTags = titles.map(t => `<span class="user-tag">${escapeHtml(t)}</span>`).join('');
+  const skillTags = keywords.map(k => `<span class="user-tag skill">${escapeHtml(k)}</span>`).join('');
+
+  container.innerHTML = titleTags + skillTags;
+}
+
 async function saveConfig(e) {
   e.preventDefault();
+  const titlesVal = document.getElementById('targetTitlesInput')?.value || '';
+  const keywordsVal = document.getElementById('keywordsInput')?.value || '';
   const ghVal = document.getElementById('ghCompaniesInput')?.value || '';
   const leverVal = document.getElementById('leverCompaniesInput')?.value || '';
   const serpKey = document.getElementById('serpApiKeyInput')?.value || '';
 
+  const targetTitles = titlesVal.split(',').map(s => s.trim()).filter(Boolean);
+  const keywords = keywordsVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
   const greenhouseCompanies = ghVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
   const leverCompanies = leverVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 
@@ -80,12 +112,15 @@ async function saveConfig(e) {
     await fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ greenhouseCompanies, leverCompanies, serpApiKey: serpKey })
+      body: JSON.stringify({ targetTitles, keywords, greenhouseCompanies, leverCompanies, serpApiKey: serpKey })
     });
+    
     toggleConfigModal();
-    alert('Target ATS company boards & API configuration saved! Click "Scrape All Sources" to fetch live postings.');
+    fetchConfig();
+    alert('Search terms & company settings saved! Running fresh multi-source scrape now...');
+    triggerScrapeNow();
   } catch (err) {
-    alert('Failed to save config: ' + err.message);
+    alert('Failed to save configuration: ' + err.message);
   }
 }
 
@@ -124,7 +159,7 @@ function renderJobs(jobs) {
   if (jobs.length === 0) {
     jobsList.innerHTML = `
       <div class="empty-state">
-        <p>No matching IT Manager, WebOps, or DevOps postings found for this search filter. Click <strong>Scrape All Sources</strong> above to run a fresh multi-source scrape.</p>
+        <p>No matching postings found for your current target search terms. Click <strong>Scrape All Sources</strong> or update your target search terms above.</p>
       </div>
     `;
     return;

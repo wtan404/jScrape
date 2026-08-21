@@ -1,17 +1,11 @@
 const axios = require('axios');
 
-async function scrapeGoogleJobs(apiKey = process.env.SERPAPI_KEY) {
+async function scrapeGoogleJobs(apiKey = process.env.SERPAPI_KEY, targetTitles = ['IT Manager', 'DevOps Manager']) {
   if (!apiKey || apiKey === 'your_serpapi_key_here') {
-    console.log('[Google Jobs Scraper] No SERPAPI_KEY configured. Returning live SerpAPI integration setup guide.');
     return [];
   }
 
-  const queries = [
-    'Manager of IT web operations',
-    'IT Manager web development',
-    'DevOps Manager'
-  ];
-
+  const queries = targetTitles.length > 0 ? targetTitles.slice(0, 5) : ['IT Manager', 'DevOps Manager'];
   const allJobs = [];
 
   for (const query of queries) {

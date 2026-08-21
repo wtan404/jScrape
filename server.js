@@ -13,17 +13,21 @@ app.use(express.static(__dirname));
 const DATA_FILE = path.join(__dirname, 'jobs_data.json');
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
-// Initial setup
+// Default config fallback
+const DEFAULT_CONFIG = {
+  targetTitles: ['IT Manager', 'Manager of IT', 'Web Operations', 'DevOps Manager'],
+  keywords: ['devops', 'webops', 'infrastructure', 'cloud', 'terraform'],
+  greenhouseCompanies: DEFAULT_GREENHOUSE_COMPANIES,
+  leverCompanies: DEFAULT_LEVER_COMPANIES,
+  serpApiKey: ''
+};
+
 if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify({ lastScraped: null, totalMatches: 0, jobs: [] }));
 }
 
 if (!fs.existsSync(CONFIG_FILE)) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify({
-    greenhouseCompanies: DEFAULT_GREENHOUSE_COMPANIES,
-    leverCompanies: DEFAULT_LEVER_COMPANIES,
-    serpApiKey: ''
-  }, null, 2));
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2));
 }
 
 // GET /api/jobs
@@ -46,11 +50,13 @@ app.get('/api/config', (req, res) => {
   }
 });
 
-// POST /api/config (Save custom company ATS targets & SerpAPI key)
+// POST /api/config (Save user custom keywords, titles & companies)
 app.post('/api/config', (req, res) => {
   try {
-    const { greenhouseCompanies, leverCompanies, serpApiKey } = req.body;
+    const { targetTitles, keywords, greenhouseCompanies, leverCompanies, serpApiKey } = req.body;
     const config = {
+      targetTitles: targetTitles || DEFAULT_CONFIG.targetTitles,
+      keywords: keywords || DEFAULT_CONFIG.keywords,
       greenhouseCompanies: greenhouseCompanies || DEFAULT_GREENHOUSE_COMPANIES,
       leverCompanies: leverCompanies || DEFAULT_LEVER_COMPANIES,
       serpApiKey: serpApiKey || ''
@@ -65,7 +71,7 @@ app.post('/api/config', (req, res) => {
 // POST /api/scrape-now
 app.post('/api/scrape-now', async (req, res) => {
   try {
-    let config = { greenhouseCompanies: [], leverCompanies: [], serpApiKey: '' };
+    let config = DEFAULT_CONFIG;
     if (fs.existsSync(CONFIG_FILE)) {
       config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
     }
@@ -73,7 +79,9 @@ app.post('/api/scrape-now', async (req, res) => {
     const matches = await runScraperJob(
       config.greenhouseCompanies,
       config.leverCompanies,
-      config.serpApiKey || process.env.SERPAPI_KEY
+      config.serpApiKey || process.env.SERPAPI_KEY,
+      config.targetTitles,
+      config.keywords
     );
 
     res.json({
@@ -88,6 +96,5 @@ app.post('/api/scrape-now', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`[Scrapedeez] Multi-Source Job Scraper Dashboard running on http://localhost:${PORT}`);
-  runScraperJob().catch(err => console.error('[Scrapedeez] Startup scrape notice:', err.message));
+  console.log(`[Scrapedeez] Web Scraper Dashboard running on http://localhost:${PORT}`);
 });

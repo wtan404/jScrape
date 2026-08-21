@@ -1,78 +1,70 @@
 const axios = require('axios');
 
-// Default target tech companies using Greenhouse, Lever, or Ashby
-const DEFAULT_GREENHOUSE_COMPANIES = [
-  'stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 
-  'hashicorp', 'vercel', 'fastly', 'elastic', 'mongodb', 'pagerduty'
-];
+const DEFAULT_GREENHOUSE_COMPANIES = ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel'];
+const DEFAULT_LEVER_COMPANIES = ['netflix', 'spotify', 'palantir', 'figma', 'postman'];
 
-const DEFAULT_LEVER_COMPANIES = [
-  'netflix', 'spotify', 'palantir', 'figma', 'postman'
-];
-
-const TARGET_KEYWORDS = [
-  'it manager', 'manager of it', 'web operations', 'webops', 
-  'devops manager', 'devops lead', 'director of it', 'infrastructure manager',
-  'web development manager', 'release engineering', 'head of web'
-];
-
-// Scrape Greenhouse Boards
-async function scrapeGreenhouseCompany(company) {
+// Scrape Greenhouse Company Board using User's Custom Titles/Keywords
+async function scrapeGreenhouseCompany(company, targetTitles = [], keywords = []) {
   try {
     const url = `https://boards-api.greenhouse.io/v1/boards/${company}/jobs?content=true`;
     const response = await axios.get(url, { timeout: 6000 });
     const jobs = response.data.jobs || [];
 
+    const searchTerms = [...targetTitles, ...keywords].map(t => t.toLowerCase().trim()).filter(Boolean);
     const matches = [];
-    for (const job of jobs) {
-      const title = job.title || '';
-      const location = job.location ? job.location.name : 'Remote / Various';
-      const jobUrl = job.absolute_url;
 
-      const matchedKeyword = TARGET_KEYWORDS.find(k => title.toLowerCase().includes(k));
-      if (matchedKeyword) {
+    for (const job of jobs) {
+      const title = (job.title || '').toLowerCase();
+      const content = (job.content || '').toLowerCase();
+      const location = job.location ? job.location.name : 'Remote / Various';
+
+      const matchedTerm = searchTerms.find(term => title.includes(term) || content.includes(term));
+
+      if (matchedTerm || searchTerms.length === 0) {
         matches.push({
           id: `gh-${company}-${job.id}`,
           source: `Greenhouse (${company.toUpperCase()})`,
-          title,
+          title: job.title,
           company: company.charAt(0).toUpperCase() + company.slice(1),
           location,
-          url: jobUrl,
-          matchedKeyword: matchedKeyword.toUpperCase(),
+          url: job.absolute_url,
+          matchedKeyword: matchedTerm ? matchedTerm.toUpperCase() : 'USER MATCH',
           date: job.updated_at || new Date().toISOString()
         });
       }
     }
     return matches;
   } catch (err) {
-    // Board not found or no open jobs
     return [];
   }
 }
 
-// Scrape Lever Boards
-async function scrapeLeverCompany(company) {
+// Scrape Lever Company Board using User's Custom Titles/Keywords
+async function scrapeLeverCompany(company, targetTitles = [], keywords = []) {
   try {
     const url = `https://api.lever.co/v0/postings/${company}?mode=json`;
     const response = await axios.get(url, { timeout: 6000 });
     const jobs = response.data || [];
 
+    const searchTerms = [...targetTitles, ...keywords].map(t => t.toLowerCase().trim()).filter(Boolean);
     const matches = [];
-    for (const job of jobs) {
-      const title = job.text || '';
-      const location = job.categories ? job.categories.location : 'Remote';
-      const jobUrl = job.hostedUrl;
 
-      const matchedKeyword = TARGET_KEYWORDS.find(k => title.toLowerCase().includes(k));
-      if (matchedKeyword) {
+    for (const job of jobs) {
+      const title = (job.text || '').toLowerCase();
+      const description = (job.descriptionPlain || '').toLowerCase();
+      const location = job.categories ? job.categories.location : 'Remote';
+
+      const matchedTerm = searchTerms.find(term => title.includes(term) || description.includes(term));
+
+      if (matchedTerm || searchTerms.length === 0) {
         matches.push({
           id: `lever-${company}-${job.id}`,
           source: `Lever (${company.toUpperCase()})`,
-          title,
+          title: job.text,
           company: company.charAt(0).toUpperCase() + company.slice(1),
           location,
-          url: jobUrl,
-          matchedKeyword: matchedKeyword.toUpperCase(),
+          url: job.hostedUrl,
+          matchedKeyword: matchedTerm ? matchedTerm.toUpperCase() : 'USER MATCH',
           date: job.createdAt ? new Date(job.createdAt).toISOString() : new Date().toISOString()
         });
       }
@@ -83,21 +75,18 @@ async function scrapeLeverCompany(company) {
   }
 }
 
-// Master ATS Scraper Engine
-async function scrapeAllATSCompanies(customGreenhouse = [], customLever = []) {
-  const ghList = [...new Set([...DEFAULT_GREENHOUSE_COMPANIES, ...customGreenhouse])];
-  const leverList = [...new Set([...DEFAULT_LEVER_COMPANIES, ...customLever])];
+// Master ATS Engine accepting User-Defined Keywords & Companies
+async function scrapeAllATSCompanies(customGreenhouse = [], customLever = [], targetTitles = [], keywords = []) {
+  const ghList = customGreenhouse.length > 0 ? customGreenhouse : DEFAULT_GREENHOUSE_COMPANIES;
+  const leverList = customLever.length > 0 ? customLever : DEFAULT_LEVER_COMPANIES;
 
-  console.log(`[ATS Scraper] Querying ${ghList.length} Greenhouse & ${leverList.length} Lever company boards...`);
+  console.log(`[ATS Scraper] Querying ${ghList.length} Greenhouse & ${leverList.length} Lever boards using custom keywords:`, targetTitles);
 
-  const ghPromises = ghList.map(c => scrapeGreenhouseCompany(c));
-  const leverPromises = leverList.map(c => scrapeLeverCompany(c));
+  const ghPromises = ghList.map(c => scrapeGreenhouseCompany(c, targetTitles, keywords));
+  const leverPromises = leverList.map(c => scrapeLeverCompany(c, targetTitles, keywords));
 
   const results = await Promise.all([...ghPromises, ...leverPromises]);
-  const flatMatches = results.flat();
-
-  console.log(`[ATS Scraper] Found ${flatMatches.length} matching leadership/WebOps postings across company career boards.`);
-  return flatMatches;
+  return results.flat();
 }
 
 module.exports = { scrapeAllATSCompanies, DEFAULT_GREENHOUSE_COMPANIES, DEFAULT_LEVER_COMPANIES };

@@ -1,0 +1,34 @@
+{
+  "targetTitles": [
+    "IT Manager",
+    "Manager of IT",
+    "Web Operations",
+    "DevOps Manager",
+    "Software Engineering Manager"
+  ],
+  "keywords": [
+    "devops",
+    "webops",
+    "infrastructure",
+    "cloud",
+    "terraform",
+    "management"
+  ],
+  "greenhouseCompanies": [
+    "stripe",
+    "gitlab",
+    "github",
+    "cloudflare",
+    "datadog",
+    "hashicorp",
+    "vercel"
+  ],
+  "leverCompanies": [
+    "netflix",
+    "spotify",
+    "palantir",
+    "figma",
+    "postman"
+  ],
+  "serpApiKey": ""
+}

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Scrapedeez — Multi-Source Dashboard Theme
+   Scrapedeez — Multi-Source & User-Configurable Dashboard Theme
    ========================================================================== */
 
 :root {
@@ -151,6 +151,23 @@ body {
   width: 100%;
 }
 
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--accent-cyan);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btn-link:hover {
+  color: #fff;
+}
+
 .spin {
   animation: spin 1s linear infinite;
 }
@@ -161,7 +178,67 @@ body {
 
 /* Main Layout */
 .main-layout {
-  padding: 2.5rem 1.5rem 5rem 1.5rem;
+  padding: 2rem 1.5rem 5rem 1.5rem;
+}
+
+/* User Keywords Panel */
+.keywords-panel {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.8rem;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.panel-title i {
+  color: var(--accent-cyan);
+  width: 18px;
+  height: 18px;
+}
+
+.keyword-tags-container {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.user-tag {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: var(--accent-cyan);
+  padding: 0.25rem 0.7rem;
+  border-radius: 50px;
+  font-weight: 600;
+}
+
+.user-tag.skill {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: var(--accent-emerald);
+}
+
+.tag-loading {
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 /* Summary Bar */
@@ -169,7 +246,7 @@ body {
   display: grid;
   grid-template-columns: 180px 220px 1fr;
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.8rem;
 }
 
 .summary-card {
@@ -206,11 +283,11 @@ body {
   letter-spacing: 0.5px;
 }
 
-.filters-card {
+.sources-card {
   gap: 0.5rem;
 }
 
-.pill-tags {
+.sources-breakdown {
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
@@ -408,7 +485,7 @@ body {
   border: 1px solid var(--border-hover);
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 540px;
+  max-width: 580px;
   padding: 2.5rem;
   position: relative;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
@@ -474,11 +551,6 @@ body {
 
 .form-group input:focus {
   border-color: var(--accent-cyan);
-}
-
-.help-text {
-  font-size: 0.75rem;
-  color: var(--text-dim);
 }
 
 /* Footer */

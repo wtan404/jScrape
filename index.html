@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scrapedeez | Multi-Source IT & WebOps Job Scraper</title>
-  <meta name="description" content="Automated Multi-Source Job Scraper & ATS Engine for IT Management, Web Operations, and DevOps leadership roles.">
+  <title>Scrapedeez | Web Job Scraper & Target Search Engine</title>
+  <meta name="description" content="Scrapedeez web dashboard for customizable job search, ATS company scraping, and keyword tracking.">
   <meta name="theme-color" content="#090d16">
 
   <!-- Google Fonts -->
@@ -25,13 +25,13 @@
       <div class="brand">
         <span class="brand-icon">🕷️</span>
         <span class="brand-title">SCRAPE<span class="highlight">DEEZ</span></span>
-        <span class="role-badge">MULTI-SOURCE ENGINE</span>
+        <span class="role-badge">WEB SEARCH ENGINE</span>
       </div>
 
       <div class="header-actions">
         <button class="btn btn-secondary btn-sm" onclick="toggleConfigModal()">
           <i data-lucide="settings"></i>
-          <span>Configure ATS & API Keys</span>
+          <span>Manage Search & ATS Settings</span>
         </button>
 
         <button class="btn btn-primary btn-sm" onclick="triggerScrapeNow()" id="btnScrape">
@@ -43,11 +43,26 @@
   </header>
 
   <main class="container main-layout">
+    <!-- User Custom Keywords & Target Roles Banner -->
+    <section class="keywords-panel">
+      <div class="panel-head">
+        <div class="panel-title">
+          <i data-lucide="target"></i>
+          <span>Your Active Target Roles & Keywords</span>
+        </div>
+        <button class="btn-link" onclick="toggleConfigModal()"><i data-lucide="edit-2"></i> Edit Target Terms</button>
+      </div>
+
+      <div class="keyword-tags-container" id="activeKeywordsTags">
+        <span class="tag-loading">Loading search terms...</span>
+      </div>
+    </section>
+
     <!-- Telemetry Bar -->
     <section class="summary-bar">
       <div class="summary-card">
         <div class="summary-metric" id="totalMatchesCount">0</div>
-        <div class="summary-label">Matching Roles Scraped</div>
+        <div class="summary-label">Matching Roles Found</div>
       </div>
 
       <div class="summary-card">
@@ -55,22 +70,21 @@
         <div class="summary-label">Last Pipeline Execution</div>
       </div>
 
-      <div class="summary-card filters-card">
-        <div class="summary-label">Active Sources Monitored:</div>
-        <div class="pill-tags">
-          <span class="pill green">Greenhouse Boards</span>
-          <span class="pill green">Lever Boards</span>
-          <span class="pill blue">Google Jobs (SerpAPI)</span>
-          <span class="pill gray">RemoteOK & WWR</span>
+      <div class="summary-card sources-card">
+        <div class="summary-label">Scraped Sources Breakdown:</div>
+        <div class="sources-breakdown" id="sourcesBreakdown">
+          <span class="pill green">Greenhouse & Lever ATS</span>
+          <span class="pill blue">Google Jobs</span>
+          <span class="pill gray">Remote Feeds</span>
         </div>
       </div>
     </section>
 
-    <!-- Search & Live Filter Bar -->
+    <!-- Search & Filter Controls -->
     <section class="controls-row">
       <div class="search-box">
         <i data-lucide="search"></i>
-        <input type="text" id="searchInput" placeholder="Filter by role title, company, or tech (e.g. IT Manager, WebOps, Terraform)..." oninput="filterJobs()">
+        <input type="text" id="searchInput" placeholder="Search within scraped results by title, company, or skill..." oninput="filterJobs()">
       </div>
 
       <div class="source-filter">
@@ -83,53 +97,62 @@
       </div>
     </section>
 
-    <!-- Jobs Feed Grid -->
+    <!-- Jobs Results Grid -->
     <section class="jobs-section">
       <div class="jobs-list" id="jobsList">
         <div class="loading-state">
           <i data-lucide="loader-2" class="spin"></i>
-          <p>Loading multi-source job postings for Manager of IT, Web Operations & DevOps...</p>
+          <p>Loading multi-source job postings for your custom search terms...</p>
         </div>
       </div>
     </section>
   </main>
 
-  <!-- Configuration Modal (Company ATS & SerpAPI Keys) -->
+  <!-- Configuration Modal (Custom Keywords, Target Roles & ATS Settings) -->
   <div class="modal-overlay" id="configModal">
     <div class="modal-card">
       <button class="modal-close" onclick="toggleConfigModal()"><i data-lucide="x"></i></button>
 
       <div class="modal-header">
         <i data-lucide="sliders"></i>
-        <h2>Target Sources & API Key Config</h2>
-        <p>Add company boards to monitor via Greenhouse/Lever APIs or connect Google Jobs SerpAPI.</p>
+        <h2>Configure Search Keywords & Sources</h2>
+        <p>Define your job titles, keywords, and company career boards to monitor.</p>
       </div>
 
       <form id="configForm" onsubmit="saveConfig(event)">
         <div class="form-group">
-          <label for="ghCompaniesInput">Greenhouse Target Companies (comma separated)</label>
+          <label for="targetTitlesInput">Target Job Titles (comma separated) *</label>
+          <input type="text" id="targetTitlesInput" placeholder="e.g. IT Manager, Web Operations, DevOps Lead, Software Engineering Manager" required>
+        </div>
+
+        <div class="form-group">
+          <label for="keywordsInput">Skill & Tech Keywords (comma separated)</label>
+          <input type="text" id="keywordsInput" placeholder="e.g. devops, webops, cloud, terraform, management, kubernetes">
+        </div>
+
+        <div class="form-group">
+          <label for="ghCompaniesInput">Greenhouse Company Boards (comma separated)</label>
           <input type="text" id="ghCompaniesInput" placeholder="stripe, gitlab, github, cloudflare, datadog, hashicorp, vercel">
         </div>
 
         <div class="form-group">
-          <label for="leverCompaniesInput">Lever Target Companies (comma separated)</label>
+          <label for="leverCompaniesInput">Lever Company Boards (comma separated)</label>
           <input type="text" id="leverCompaniesInput" placeholder="netflix, spotify, palantir, figma, postman">
         </div>
 
         <div class="form-group">
-          <label for="serpApiKeyInput">SerpAPI Key for Live Google Jobs (Optional)</label>
-          <input type="password" id="serpApiKeyInput" placeholder="Enter SerpAPI key from serpapi.com">
-          <span class="help-text">Grabs live aggregated listings across LinkedIn, Indeed, and ZipRecruiter. Free 100 searches/mo.</span>
+          <label for="serpApiKeyInput">SerpAPI Key for Google Jobs (Optional)</label>
+          <input type="password" id="serpApiKeyInput" placeholder="Enter SerpAPI key for Google Jobs aggregator">
         </div>
 
-        <button type="submit" class="btn btn-primary btn-block">Save Configuration</button>
+        <button type="submit" class="btn btn-primary btn-block">Save Search Settings</button>
       </form>
     </div>
   </div>
 
   <footer class="app-footer">
     <div class="container footer-wrap">
-      <p>&copy; <span id="year">2026</span> Scrapedeez Multi-Source Job Engine. Built for Web Development & IT Operations Leadership.</p>
+      <p>&copy; <span id="year">2026</span> Scrapedeez Web Search Suite. Fully User-Configurable Job Scraper Engine.</p>
     </div>
   </footer>
 
