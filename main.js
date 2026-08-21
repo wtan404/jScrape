@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Scrapedeez — Profile-Bound Job Engine
+   Scrapedeez — Profile-Bound Job Engine & Distance Sort
    ========================================================================== */
 
 let allJobsData = [];
@@ -594,11 +594,32 @@ function getDistanceMiles(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
+function formatSalary(job) {
+  if (job.salary) return job.salary;
+  
+  const text = (job.title + ' ' + (job.description || '')).toLowerCase();
+  const match = text.match(/\$(\d{2,3}(?:,\d{3})*|\d{2,3}k)\s*(?:-|to)?\s*\$?(\d{2,3}(?:,\d{3})*|\d{2,3}k)?/i);
+  if (match) {
+    return match[0];
+  }
+
+  const titleLower = job.title.toLowerCase();
+  if (titleLower.includes('director') || titleLower.includes('head') || titleLower.includes('vp')) {
+    return '$175k - $245k / yr (est.)';
+  } else if (titleLower.includes('manager') || titleLower.includes('lead')) {
+    return '$135k - $185k / yr (est.)';
+  } else if (titleLower.includes('senior') || titleLower.includes('sr')) {
+    return '$120k - $165k / yr (est.)';
+  } else {
+    return '$105k - $150k / yr (est.)';
+  }
+}
+
 async function filterJobs() {
   const applyBtn = document.getElementById('btnApplyGeoFilters');
   if (applyBtn) {
     applyBtn.disabled = true;
-    applyBtn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Filtering...</span>`;
+    applyBtn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Filtering & Sorting...</span>`;
     if (window.lucide) lucide.createIcons();
   }
 
@@ -689,19 +710,37 @@ async function filterJobs() {
           const dist = getDistanceMiles(userCoords.lat, userCoords.lon, job.lat, job.lon);
           matchRadius = dist <= maxMiles;
         } else if (userCoords.city || userCoords.state) {
-          // Substring location fallback when exact lat/lon isn't present
           const cleanCity = (userCoords.city || '').toLowerCase();
           const cleanState = (userCoords.state || '').toLowerCase();
           matchRadius = locLower.includes(cleanCity) || locLower.includes(cleanState) || locLower.includes(zipVal);
         }
       } else if (!userCoords) {
-        // Zip code string match fallback if geocoding is loading
         matchRadius = locLower.includes(zipVal);
       }
     }
 
     return matchRadius;
   });
+
+  // Calculate distance & SORT: Closest to Furthest when Zip Code is entered
+  filtered.forEach(job => {
+    const rawWt = (job.workType || '').toLowerCase();
+    const locLower = (job.location || '').toLowerCase();
+    const titleLower = (job.title || '').toLowerCase();
+    const isRemote = rawWt.includes('remote') || locLower.includes('remote') || titleLower.includes('remote');
+
+    if (userCoords && job.lat && job.lon) {
+      job.distanceMiles = getDistanceMiles(userCoords.lat, userCoords.lon, job.lat, job.lon);
+    } else if (isRemote) {
+      job.distanceMiles = 99999; // Remote placed at end
+    } else {
+      job.distanceMiles = 9999;
+    }
+  });
+
+  if (userCoords) {
+    filtered.sort((a, b) => a.distanceMiles - b.distanceMiles);
+  }
 
   renderJobs(filtered);
 
@@ -746,18 +785,22 @@ function renderJobs(jobs) {
       workTypeLabel = 'HYBRID';
     }
 
+    const salaryVal = formatSalary(job);
+
     return `
       <article class="job-card ${job.isNew ? 'is-new' : ''}">
         <div class="job-info">
           <div class="job-meta-top">
             <span class="work-type-badge ${workTypeClass}">${workTypeLabel}</span>
             ${job.isNew ? '<span class="badge-new">NEW ROLE</span>' : '<span class="badge-verified"><i data-lucide="check"></i> VERIFIED LIVE</span>'}
+            ${job.distanceMiles && job.distanceMiles < 9000 ? `<span class="badge-distance"><i data-lucide="map-pin"></i> ${Math.round(job.distanceMiles)} mi away</span>` : ''}
             <span class="job-company">${escapeHtml(job.company)}</span>
             <span class="job-source">${escapeHtml(job.source)}</span>
           </div>
           <h3 class="job-title">${escapeHtml(job.title)}</h3>
           <div class="job-footer-info">
             <span><i data-lucide="map-pin"></i> ${escapeHtml(job.location || 'Remote')}</span>
+            <span class="job-salary"><i data-lucide="dollar-sign"></i> ${escapeHtml(salaryVal)}</span>
             <span><i data-lucide="clock"></i> ${formatDate(job.date)}</span>
           </div>
         </div>
