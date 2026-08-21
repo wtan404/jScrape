@@ -50,7 +50,7 @@
           <i data-lucide="shield-check"></i>
           <h2>Monitored Role Criteria & Focus Areas</h2>
         </div>
-        <span class="panel-subtitle">Auto-pruning dead postings & scanning every 60 minutes.</span>
+        <span class="panel-subtitle">Auto-pruning dead postings & positions &gt; 30 days old.</span>
       </div>
 
       <div class="criteria-pill-list">
@@ -58,6 +58,7 @@
         <span class="criteria-pill"><i data-lucide="check"></i> Web Operations (WebOps)</span>
         <span class="criteria-pill"><i data-lucide="check"></i> Website Development Manager</span>
         <span class="criteria-pill"><i data-lucide="check"></i> DevOps Lead & Manager</span>
+        <span class="criteria-pill age-tag"><i data-lucide="clock"></i> Max 30 Days Old</span>
       </div>
     </section>
 
@@ -65,7 +66,7 @@
     <section class="summary-bar">
       <div class="summary-card">
         <div class="summary-metric" id="totalMatchesCount">0</div>
-        <div class="summary-label">Active Verified Postings</div>
+        <div class="summary-label">Active Verified Postings (&lt; 30 Days)</div>
       </div>
 
       <div class="summary-card">
@@ -76,6 +77,7 @@
       <div class="summary-card sources-card">
         <div class="summary-label">Verification Engine Status:</div>
         <div class="sources-breakdown">
+          <span class="pill green">Prune &gt; 30 Days Old</span>
           <span class="pill green">Dead Link Auto-Prune</span>
           <span class="pill blue">New Role Detection</span>
           <span class="pill gray">Greenhouse / Lever / Feeds</span>
@@ -105,7 +107,7 @@
       <div class="jobs-list" id="jobsList">
         <div class="loading-state">
           <i data-lucide="loader-2" class="spin"></i>
-          <p>Verifying active job postings & running scraper pipeline...</p>
+          <p>Verifying active job postings (&lt; 30 days old) & running scraper pipeline...</p>
         </div>
       </div>
     </section>

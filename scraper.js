@@ -3,9 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const { scrapeAllATSCompanies } = require('./ats_scraper');
 const { scrapeGoogleJobs } = require('./google_jobs_scraper');
-const { verifyAndPruneJobs } = require('./verifier');
+const { verifyAndPruneJobs, isWithin30Days } = require('./verifier');
 
-// Locked-in Predefined Target Criteria
 const PREDEFINED_ROLES = [
   'Manager of IT',
   'IT Manager',
@@ -29,7 +28,7 @@ const BROWSER_HEADERS = {
   'Accept-Language': 'en-US,en;q=0.9'
 };
 
-// Scrape RemoteOK Feed
+// Scrape RemoteOK Feed (Filtered for < 30 days old)
 async function scrapeRemoteOK() {
   try {
     const response = await axios.get('https://remoteok.com/api', { headers: BROWSER_HEADERS, timeout: 8000 });
@@ -40,6 +39,11 @@ async function scrapeRemoteOK() {
 
     for (const job of jobs) {
       if (!job || typeof job !== 'object') continue;
+      const dateStr = job.date ? new Date(job.date).toISOString() : new Date().toISOString();
+      
+      // Enforce 30-day cutoff
+      if (!isWithin30Days(dateStr)) continue;
+
       const title = (job.position || '').toLowerCase();
       const description = (job.description || '').toLowerCase();
 
@@ -55,7 +59,7 @@ async function scrapeRemoteOK() {
           location: job.location || 'Remote',
           url: job.url || `https://remoteok.com/remote-jobs/${job.id}`,
           matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'DEVOPS / WEBOPS FILTER',
-          date: job.date ? new Date(job.date).toISOString() : new Date().toISOString()
+          date: dateStr
         });
       }
     }
@@ -65,7 +69,7 @@ async function scrapeRemoteOK() {
   }
 }
 
-// Scrape WeWorkRemotely Feed
+// Scrape WeWorkRemotely Feed (Filtered for < 30 days old)
 async function scrapeWeWorkRemotely() {
   try {
     const response = await axios.get('https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss', { headers: BROWSER_HEADERS, timeout: 8000 });
@@ -80,6 +84,10 @@ async function scrapeWeWorkRemotely() {
       const rawTitle = match[1];
       const link = match[2];
       const pubDate = match[3];
+      const dateStr = new Date(pubDate).toISOString();
+
+      // Enforce 30-day cutoff
+      if (!isWithin30Days(dateStr)) continue;
 
       const parts = rawTitle.split(':');
       const company = parts.length > 1 ? parts[0].trim() : 'Unknown';
@@ -97,7 +105,7 @@ async function scrapeWeWorkRemotely() {
           location: 'Remote',
           url: link,
           matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'DEVOPS / WEBOPS FILTER',
-          date: new Date(pubDate).toISOString()
+          date: dateStr
         });
       }
     }
@@ -109,17 +117,15 @@ async function scrapeWeWorkRemotely() {
 
 // Master Pipeline Run & Re-Verification
 async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey = process.env.SERPAPI_KEY) {
-  console.log('[Scrapedeez] Launching Pipeline for Locked Criteria (Manager of IT, WebOps, Web Development, DevOps)...');
+  console.log('[Scrapedeez] Launching Pipeline for Locked Criteria (< 30 days old)...');
 
   const dataPath = path.join(__dirname, 'jobs_data.json');
   let existingStore = { jobs: [] };
   if (fs.existsSync(dataPath)) {
-    try {
-      existingStore = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
-    } catch (e) {}
+    try { existingStore = JSON.parse(fs.readFileSync(dataPath, 'utf8')); } catch (e) {}
   }
 
-  // 1. Re-verify & Auto-prune dead/closed links from existing results
+  // 1. Re-verify & Auto-prune dead links and jobs > 30 days old
   const verifiedExistingJobs = await verifyAndPruneJobs(existingStore.jobs || []);
   const existingIdSet = new Set(verifiedExistingJobs.map(j => j.id || j.url));
 
@@ -131,7 +137,7 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
     scrapeGoogleJobs(serpApiKey, PREDEFINED_ROLES)
   ]);
 
-  const newlyScraped = [...atsJobs, ...googleJobs, ...remoteOkJobs, ...wwrJobs];
+  const newlyScraped = [...atsJobs, ...googleJobs, ...remoteOkJobs, ...wwrJobs].filter(j => isWithin30Days(j.date));
 
   // 3. Mark newly discovered jobs vs verified existing jobs
   const mergedJobs = [];
@@ -153,15 +159,16 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
   // Sort: NEW jobs first, then by date
   mergedJobs.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0) || new Date(b.date) - new Date(a.date));
 
-  // 4. Save updated results to JSON store
+  // 4. Save updated results
   fs.writeFileSync(dataPath, JSON.stringify({
     lastScraped: new Date().toISOString(),
     totalMatches: mergedJobs.length,
+    maxAgeDays: 30,
     targetCriteria: PREDEFINED_ROLES,
     jobs: mergedJobs
   }, null, 2));
 
-  console.log(`[Scrapedeez] Rescan & Re-verification Complete. ${mergedJobs.length} active verified jobs available.`);
+  console.log(`[Scrapedeez] Rescan Complete. ${mergedJobs.length} active verified jobs (< 30 days old) stored.`);
   return mergedJobs;
 }
 

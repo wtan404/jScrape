@@ -18,8 +18,12 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fetchJobsDatabase() {
   const jobsList = document.getElementById('jobsList');
   try {
-    const response = await fetch('/api/jobs');
-    if (!response.ok) return;
+    const response = await fetch('api/jobs');
+    if (!response.ok) {
+      // Fallback if data file not fetched yet
+      renderJobs([]);
+      return;
+    }
     const data = await response.json();
 
     allJobsData = data.jobs || [];
@@ -34,13 +38,7 @@ async function fetchJobsDatabase() {
 
     renderJobs(allJobsData);
   } catch (err) {
-    if (jobsList) {
-      jobsList.innerHTML = `
-        <div class="empty-state">
-          <p>Failed to connect to Scrapedeez server. Ensure local server is running on port 8090.</p>
-        </div>
-      `;
-    }
+    console.error('Initial job database fetch note:', err);
   }
 }
 
@@ -65,10 +63,15 @@ async function triggerScrapeNow() {
   }
 
   try {
-    const res = await fetch('/api/scrape-now', { method: 'POST' });
+    const res = await fetch('api/scrape-now', { method: 'POST' });
+    
     if (!res.ok) {
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('text/html') || res.status === 404) {
+        throw new Error('Node.js app is not running yet in cPanel. Please start server.js in cPanel "Setup Node.js App".');
+      }
       const text = await res.text();
-      throw new Error(`Server error: ${text.substring(0, 80)}`);
+      throw new Error(`Server returned status ${res.status}`);
     }
 
     const data = await res.json();
@@ -78,7 +81,7 @@ async function triggerScrapeNow() {
     if (jobsList) {
       jobsList.innerHTML = `
         <div class="empty-state">
-          <p>Rescan failed: ${escapeHtml(err.message)}</p>
+          <p>${escapeHtml(err.message)}</p>
         </div>
       `;
     }
@@ -102,7 +105,7 @@ function renderJobs(jobs) {
     jobsList.innerHTML = `
       <div class="empty-state">
         <i data-lucide="briefcase"></i>
-        <p>No active verified job postings available right now for Manager of IT, WebOps, or DevOps. Click <strong>Re-Verify & Rescan Now</strong> above.</p>
+        <p>No active verified job postings available right now. Click <strong>Re-Verify & Rescan Now</strong> above.</p>
       </div>
     `;
     if (window.lucide) lucide.createIcons();

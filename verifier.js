@@ -15,6 +15,16 @@ const EXPIRED_MARKERS = [
   'job not found'
 ];
 
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+
+// Check if date is within 30 days
+function isWithin30Days(dateStr) {
+  if (!dateStr) return true; // Keep if unknown date to avoid accidental loss
+  const jobDate = new Date(dateStr);
+  if (isNaN(jobDate.getTime())) return true;
+  return (Date.now() - jobDate.getTime()) <= THIRTY_DAYS_MS;
+}
+
 // Verify if a single job posting URL is still active
 async function verifyJobLink(jobUrl) {
   if (!jobUrl || typeof jobUrl !== 'string') return false;
@@ -29,7 +39,6 @@ async function verifyJobLink(jobUrl) {
 
     const html = (typeof response.data === 'string' ? response.data : '').toLowerCase();
 
-    // Check if body contains explicit job closure text
     const isClosed = EXPIRED_MARKERS.some(marker => html.includes(marker));
     if (isClosed) {
       console.log(`[Verifier] Job URL expired/closed: ${jobUrl}`);
@@ -38,39 +47,38 @@ async function verifyJobLink(jobUrl) {
 
     return true;
   } catch (err) {
-    // HTTP 404, 410, or network error = expired/removed job
     if (err.response && (err.response.status === 404 || err.response.status === 410)) {
       console.log(`[Verifier] Pruning dead job URL (${err.response.status}): ${jobUrl}`);
       return false;
     }
-    // Network timeouts stay true to prevent false prunes on soft glitches
     return true;
   }
 }
 
-// Verify a batch of existing jobs and return only active ones
+// Verify a batch of existing jobs: Prunes dead links AND jobs older than 30 days
 async function verifyAndPruneJobs(existingJobs = []) {
   if (!existingJobs.length) return [];
 
-  console.log(`[Verifier] Re-verifying ${existingJobs.length} existing jobs for link availability...`);
+  console.log(`[Verifier] Re-verifying ${existingJobs.length} existing jobs (pruning dead links & postings > 30 days old)...`);
   
+  // 1. Filter out jobs older than 30 days
+  const recentJobs = existingJobs.filter(job => isWithin30Days(job.date));
+  const agePrunedCount = existingJobs.length - recentJobs.length;
+
+  if (agePrunedCount > 0) {
+    console.log(`[Verifier] Auto-pruned ${agePrunedCount} jobs older than 30 days.`);
+  }
+
+  // 2. Verify link availability
   const verificationResults = await Promise.all(
-    existingJobs.map(async job => {
+    recentJobs.map(async job => {
       const isStillAvailable = await verifyJobLink(job.url);
       return isStillAvailable ? job : null;
     })
   );
 
   const activeJobs = verificationResults.filter(Boolean);
-  const prunedCount = existingJobs.length - activeJobs.length;
-
-  if (prunedCount > 0) {
-    console.log(`[Verifier] Auto-pruned ${prunedCount} closed/expired job postings.`);
-  } else {
-    console.log(`[Verifier] All ${existingJobs.length} existing jobs verified active.`);
-  }
-
   return activeJobs;
 }
 
-module.exports = { verifyJobLink, verifyAndPruneJobs };
+module.exports = { verifyJobLink, verifyAndPruneJobs, isWithin30Days };
