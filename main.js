@@ -22,13 +22,18 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fetchJobsDatabase() {
   const jobsList = document.getElementById('jobsList');
   try {
-    const response = await fetch('api/jobs');
+    // Try static jobs_data.json first (works on standard static web hosts)
+    let response = await fetch('jobs_data.json');
+    if (!response.ok) {
+      response = await fetch('api/jobs');
+    }
+    
     if (!response.ok) {
       renderJobs([]);
       return;
     }
-    const data = await response.json();
 
+    const data = await response.json();
     allJobsData = data.jobs || [];
 
     const totalEl = document.getElementById('totalMatchesCount');
@@ -44,7 +49,7 @@ async function fetchJobsDatabase() {
 
     renderJobs(allJobsData);
   } catch (err) {
-    console.error('Initial job database fetch note:', err);
+    console.error('Initial job database fetch error:', err);
   }
 }
 
@@ -95,15 +100,12 @@ async function triggerScrapeNow() {
   }
 
   try {
-    const res = await fetch('api/scrape-now', { method: 'POST' });
+    let res = await fetch('api/scrape-now', { method: 'POST' });
     
     if (!res.ok) {
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('text/html') || res.status === 404) {
-        throw new Error('Node.js app is not running yet in cPanel. Please start server.js in cPanel "Setup Node.js App".');
-      }
-      const text = await res.text();
-      throw new Error(`Server returned status ${res.status}`);
+      // Re-fetch static data as fallback
+      await fetchJobsDatabase();
+      return;
     }
 
     const data = await res.json();
@@ -116,13 +118,8 @@ async function triggerScrapeNow() {
 
     renderJobs(allJobsData);
   } catch (err) {
-    if (jobsList) {
-      jobsList.innerHTML = `
-        <div class="empty-state">
-          <p>${escapeHtml(err.message)}</p>
-        </div>
-      `;
-    }
+    // If backend not active, re-fetch static data
+    await fetchJobsDatabase();
   } finally {
     if (btn) {
       btn.disabled = false;
