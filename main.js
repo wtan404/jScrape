@@ -80,6 +80,7 @@ async function fetchProfiles() {
             profilesData[id].hasPin = prof.hasPin;
             profilesData[id].targetTitles = prof.targetTitles || [];
             profilesData[id].keywords = prof.keywords || [];
+            if (prof.lastScraped) profilesData[id].lastScraped = prof.lastScraped;
           }
         }
       }
@@ -413,7 +414,6 @@ async function submitPinVerification(e) {
 }
 
 async function fetchJobsDatabase() {
-  const jobsList = document.getElementById('jobsList');
   const activeProf = profilesData[currentProfileId] || {};
 
   try {
@@ -423,7 +423,6 @@ async function fetchJobsDatabase() {
       allJobsData = data.jobs || [];
 
       if (data.lastScraped) {
-        lastScrapedTimestamp = new Date(data.lastScraped).getTime();
         activeProf.lastScraped = data.lastScraped;
       }
       activeProf.jobs = allJobsData;
@@ -434,14 +433,15 @@ async function fetchJobsDatabase() {
   } catch (err) {
     if (activeProf.jobs && activeProf.jobs.length > 0) {
       allJobsData = activeProf.jobs;
-      if (activeProf.lastScraped) lastScrapedTimestamp = new Date(activeProf.lastScraped).getTime();
     } else {
       try {
         const globalRes = await fetch('./jobs_data.json?t=' + Date.now());
         if (globalRes.ok) {
           const globalData = await globalRes.json();
           allJobsData = globalData.jobs || [];
-          if (globalData.lastScraped) lastScrapedTimestamp = new Date(globalData.lastScraped).getTime();
+          if (!activeProf.lastScraped && globalData.lastScraped) {
+            activeProf.lastScraped = globalData.lastScraped;
+          }
         }
       } catch (e) {
         allJobsData = [];
@@ -449,9 +449,10 @@ async function fetchJobsDatabase() {
     }
   }
 
+  // Update telemetry cards specifically for selected profile
   const timeEl = document.getElementById('lastScrapedTime');
   if (timeEl) {
-    timeEl.textContent = lastScrapedTimestamp ? formatDate(new Date(lastScrapedTimestamp).toISOString()) : 'Never';
+    timeEl.textContent = activeProf.lastScraped ? formatDate(activeProf.lastScraped) : 'Never';
   }
   updateElapsedBadge();
   filterJobs();
@@ -461,13 +462,22 @@ function updateElapsedBadge() {
   const badgeText = document.getElementById('elapsedTimerText');
   if (!badgeText) return;
 
-  if (!lastScrapedTimestamp || isNaN(lastScrapedTimestamp)) {
-    badgeText.textContent = 'Refreshed just now';
+  const activeProf = profilesData[currentProfileId] || {};
+  const lastScraped = activeProf.lastScraped;
+
+  if (!lastScraped) {
+    badgeText.textContent = 'Not scanned yet';
+    return;
+  }
+
+  const scrapedTime = new Date(lastScraped).getTime();
+  if (isNaN(scrapedTime)) {
+    badgeText.textContent = 'Not scanned yet';
     return;
   }
 
   const now = Date.now();
-  const elapsedSec = Math.max(0, Math.floor((now - lastScrapedTimestamp) / 1000));
+  const elapsedSec = Math.max(0, Math.floor((now - scrapedTime) / 1000));
 
   if (elapsedSec < 15) {
     badgeText.textContent = 'Refreshed just now';
@@ -503,10 +513,9 @@ async function triggerScrapeNow() {
         const data = await res.json();
         if (data.jobs) {
           allJobsData = data.jobs;
-          lastScrapedTimestamp = new Date(data.scrapedAt).getTime();
           if (profilesData[currentProfileId]) {
             profilesData[currentProfileId].jobs = data.jobs;
-            profilesData[currentProfileId].lastScraped = data.scrapedAt;
+            profilesData[currentProfileId].lastScraped = data.scrapedAt || new Date().toISOString();
             localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
           }
         }
