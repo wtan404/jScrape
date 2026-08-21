@@ -95,25 +95,25 @@ async function fetchProfiles() {
 }
 
 function renderProfileDropdown() {
-  const container = document.getElementById('profileSegmentedTabs');
-  if (!container || !profilesData) return;
+  const dropdown = document.getElementById('profileSelectDropdown');
+  if (!dropdown || !profilesData) return;
 
-  container.innerHTML = Object.values(profilesData).map(p => `
-    <button class="profile-tab-btn ${p.id === currentProfileId ? 'active' : ''}" onclick="selectProfile('${p.id}')">
+  dropdown.innerHTML = Object.values(profilesData).map(p => `
+    <option value="${p.id}" ${p.id === currentProfileId ? 'selected' : ''}>
       ${escapeHtml(p.name)}
-    </button>
+    </option>
   `).join('');
 }
 
-function selectProfile(profileId) {
-  if (profileId === currentProfileId) return;
+function onProfileChange() {
+  const dropdown = document.getElementById('profileSelectDropdown');
+  if (!dropdown) return;
 
-  currentProfileId = profileId;
+  currentProfileId = dropdown.value;
   authenticatedPin = null;
   isEditingName = false;
   isEditingKeywords = false;
 
-  renderProfileDropdown();
   renderActiveProfileCard();
   fetchJobsDatabase();
 }
@@ -180,10 +180,6 @@ function renderKeywordsSection() {
       kwListEl.innerHTML = allTerms.map(term => `<span class="kw-tag">${escapeHtml(term)}</span>`).join('');
     }
   }
-}
-
-function onProfileChange() {
-  selectProfile(currentProfileId);
 }
 
 // 1. Trigger Edit Profile Name (Inline)
@@ -420,7 +416,6 @@ async function submitPinVerification(e) {
 async function fetchJobsDatabase() {
   const activeProf = profilesData[currentProfileId] || {};
 
-  // Always fetch master dataset from jobs_data.json
   try {
     const res = await fetch(`./jobs_data.json?t=${Date.now()}`);
     if (res.ok) {
