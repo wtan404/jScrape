@@ -20,7 +20,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="styles.css?v=6.0">
+  <link rel="stylesheet" href="styles.css?v=7.0">
 </head>
 <body>
 
@@ -124,50 +124,54 @@
         </div>
       </div>
 
-      <!-- Box 3: Location Filters with Multi-Select Setup Checkboxes & Apply CTA -->
+      <!-- Box 3: 2-Row Filter Box Layout -->
       <div class="summary-card geo-card">
-        <div class="geo-controls-grid">
-          <div class="geo-group">
-            <label for="zipInput"><i data-lucide="map-pin"></i> Zip Code:</label>
-            <input type="text" id="zipInput" placeholder="US Zip..." maxlength="5">
-          </div>
+        <div class="geo-controls-wrap">
+          <!-- Row 1: Zip & Distance Range -->
+          <div class="geo-row-1">
+            <div class="geo-group">
+              <label for="zipInput"><i data-lucide="map-pin"></i> Zip Code:</label>
+              <input type="text" id="zipInput" placeholder="US Zip..." maxlength="5">
+            </div>
 
-          <div class="geo-group">
-            <label for="radiusSelect"><i data-lucide="compass"></i> Radius:</label>
-            <select id="radiusSelect">
-              <option value="any">Any Distance</option>
-              <option value="25">25 Miles</option>
-              <option value="50">50 Miles</option>
-              <option value="100">100 Miles</option>
-              <option value="250">250 Miles</option>
-            </select>
-          </div>
-
-          <!-- Multi-Select Location Setup Checkboxes (Remote, Hybrid, Onsite) -->
-          <div class="geo-group setup-checkboxes-group">
-            <label><i data-lucide="briefcase"></i> Work Setup:</label>
-            <div class="setup-checkboxes">
-              <label class="chk-pill">
-                <input type="checkbox" id="chkRemote" checked onchange="filterJobs()">
-                <span>🟢 Remote</span>
-              </label>
-              <label class="chk-pill">
-                <input type="checkbox" id="chkHybrid" checked onchange="filterJobs()">
-                <span>🔵 Hybrid</span>
-              </label>
-              <label class="chk-pill">
-                <input type="checkbox" id="chkOnsite" checked onchange="filterJobs()">
-                <span>🟠 Onsite</span>
-              </label>
+            <div class="geo-group">
+              <label for="radiusSelect"><i data-lucide="compass"></i> Radius:</label>
+              <select id="radiusSelect">
+                <option value="any">Any Distance</option>
+                <option value="25">25 Miles</option>
+                <option value="50">50 Miles</option>
+                <option value="100">100 Miles</option>
+                <option value="250">250 Miles</option>
+              </select>
             </div>
           </div>
 
-          <div class="geo-group geo-btn-group">
-            <label class="desktop-only-label">&nbsp;</label>
-            <button type="button" class="btn btn-primary btn-xs" onclick="filterJobs()" id="btnApplyGeoFilters">
-              <i data-lucide="filter"></i>
-              <span>Apply Filters</span>
-            </button>
+          <!-- Row 2: Work Setup Checkboxes & Apply Button (Bottom Right) -->
+          <div class="geo-row-2">
+            <div class="geo-group setup-checkboxes-group">
+              <label><i data-lucide="briefcase"></i> Work Setup:</label>
+              <div class="setup-checkboxes">
+                <label class="chk-pill">
+                  <input type="checkbox" id="chkRemote" checked onchange="filterJobs()">
+                  <span>🟢 Remote</span>
+                </label>
+                <label class="chk-pill">
+                  <input type="checkbox" id="chkHybrid" checked onchange="filterJobs()">
+                  <span>🔵 Hybrid</span>
+                </label>
+                <label class="chk-pill">
+                  <input type="checkbox" id="chkOnsite" checked onchange="filterJobs()">
+                  <span>🟠 Onsite</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="geo-group geo-btn-group">
+              <button type="button" class="btn btn-primary btn-xs" onclick="filterJobs()" id="btnApplyGeoFilters">
+                <i data-lucide="filter"></i>
+                <span>Apply Filters</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -243,6 +247,6 @@
     </div>
   </footer>
 
-  <script src="main.js?v=6.0"></script>
+  <script src="main.js?v=7.0"></script>
 </body>
 </html>
