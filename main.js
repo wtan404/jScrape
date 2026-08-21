@@ -16,10 +16,11 @@ let editingTagsList = [];
 let profilesData = {
   profile1: {
     id: 'profile1',
-    name: 'User 1 - IT Management, WebOps & DevOps',
-    hasPin: false,
-    targetTitles: ['Manager of IT', 'IT Manager', 'Web Operations', 'WebOps Manager', 'Website Development', 'DevOps Manager', 'DevOps Lead', 'Director of IT', 'Web Engineering Manager'],
-    keywords: ['devops', 'webops', 'web development', 'infrastructure', 'cloud', 'terraform', 'kubernetes', 'change control', 'it management'],
+    name: 'Will',
+    hasPin: true,
+    pin: '0418',
+    targetTitles: ['Manager of IT', 'IT Manager', 'Web Operations', 'WebOps Manager', 'DevOps Manager', 'DevOps Lead', 'devops', 'web development'],
+    keywords: [],
     greenhouseCompanies: ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel'],
     lastScraped: new Date().toISOString(),
     jobs: []
@@ -97,6 +98,7 @@ async function fetchProfiles() {
   } finally {
     renderProfileDropdown();
     renderActiveProfileCard();
+    filterJobs();
   }
 }
 
