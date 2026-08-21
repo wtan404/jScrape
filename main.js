@@ -95,14 +95,27 @@ async function fetchProfiles() {
 }
 
 function renderProfileDropdown() {
-  const dropdown = document.getElementById('profileSelectDropdown');
-  if (!dropdown || !profilesData) return;
+  const container = document.getElementById('profileSegmentedTabs');
+  if (!container || !profilesData) return;
 
-  dropdown.innerHTML = Object.values(profilesData).map(p => `
-    <option value="${p.id}" ${p.id === currentProfileId ? 'selected' : ''}>
+  container.innerHTML = Object.values(profilesData).map(p => `
+    <button class="profile-tab-btn ${p.id === currentProfileId ? 'active' : ''}" onclick="selectProfile('${p.id}')">
       ${escapeHtml(p.name)}
-    </option>
+    </button>
   `).join('');
+}
+
+function selectProfile(profileId) {
+  if (profileId === currentProfileId) return;
+
+  currentProfileId = profileId;
+  authenticatedPin = null;
+  isEditingName = false;
+  isEditingKeywords = false;
+
+  renderProfileDropdown();
+  renderActiveProfileCard();
+  fetchJobsDatabase();
 }
 
 function renderActiveProfileCard() {
@@ -170,16 +183,8 @@ function renderKeywordsSection() {
 }
 
 function onProfileChange() {
-  const dropdown = document.getElementById('profileSelectDropdown');
-  if (!dropdown) return;
-
-  currentProfileId = dropdown.value;
-  authenticatedPin = null;
-  isEditingName = false;
-  isEditingKeywords = false;
-
-  renderActiveProfileCard();
-  fetchJobsDatabase();
+  // Retained for backward compatibility
+  selectProfile(currentProfileId);
 }
 
 // 1. Trigger Edit Profile Name (Inline)
@@ -449,7 +454,6 @@ async function fetchJobsDatabase() {
     }
   }
 
-  // Update telemetry cards specifically for selected profile
   const timeEl = document.getElementById('lastScrapedTime');
   if (timeEl) {
     timeEl.textContent = activeProf.lastScraped ? formatDate(activeProf.lastScraped) : 'Never';

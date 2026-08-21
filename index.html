@@ -20,7 +20,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="styles.css?v=2.5">
+  <link rel="stylesheet" href="styles.css?v=2.6">
 </head>
 <body>
 
@@ -49,6 +49,17 @@
 
   <main class="container main-layout">
 
+    <!-- Sleek Segmented Profile Switcher Tabs (Separated Top Bar) -->
+    <section class="profile-tabs-wrapper">
+      <div class="profile-tabs-label">
+        <i data-lucide="users"></i>
+        <span>SELECT USER PROFILE:</span>
+      </div>
+      <div class="profile-segmented-tabs" id="profileSegmentedTabs">
+        <!-- Dynamic Profile Segmented Buttons -->
+      </div>
+    </section>
+
     <!-- Active User Profile & Shopify-Style Interactive Keywords Box -->
     <section class="active-profile-card">
       <div class="profile-card-header">
@@ -62,18 +73,6 @@
               <i data-lucide="edit-2"></i>
               <span>Edit Name</span>
             </button>
-          </div>
-        </div>
-
-        <div class="profile-actions">
-          <!-- 3-User Profile Selector -->
-          <div class="profile-selector-wrap">
-            <i data-lucide="user" class="profile-icon"></i>
-            <select id="profileSelectDropdown" onchange="onProfileChange()">
-              <option value="profile1">User 1 - IT Management, WebOps & DevOps</option>
-              <option value="profile2">User Profile 2 (Custom)</option>
-              <option value="profile3">User Profile 3 (Custom)</option>
-            </select>
           </div>
         </div>
       </div>
@@ -225,6 +224,6 @@
     </div>
   </footer>
 
-  <script src="main.js?v=2.5"></script>
+  <script src="main.js?v=2.6"></script>
 </body>
 </html>
