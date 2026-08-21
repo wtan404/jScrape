@@ -20,7 +20,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="styles.css?v=2.2">
+  <link rel="stylesheet" href="styles.css?v=2.3">
 </head>
 <body>
 
@@ -55,7 +55,13 @@
       <div class="profile-card-header">
         <div class="profile-info">
           <span class="profile-label">ACTIVE SEARCH PROFILE</span>
-          <h2 id="activeProfileDisplayName">User 1 - IT Management, WebOps & DevOps</h2>
+          <div class="profile-name-row">
+            <h2 id="activeProfileDisplayName">User 1 - IT Management, WebOps & DevOps</h2>
+            <button class="btn btn-secondary btn-xs" onclick="openEditNameModal()" id="btnEditName">
+              <i data-lucide="edit-2"></i>
+              <span>Edit Profile Name</span>
+            </button>
+          </div>
         </div>
 
         <div class="profile-actions">
@@ -68,54 +74,75 @@
               <option value="profile3">User Profile 3 (Custom)</option>
             </select>
           </div>
-
-          <button class="btn btn-secondary btn-sm" onclick="openPinModal()" id="btnEditProfile">
-            <i data-lucide="lock"></i>
-            <span>Edit Profile & Keywords</span>
-          </button>
         </div>
       </div>
 
-      <!-- Active Keywords & Role Tags -->
+      <!-- Active Keywords & Role Tags with Dedicated Edit Button -->
       <div class="profile-keywords-wrap">
-        <span class="kw-label">Target Job Titles & Search Keywords:</span>
+        <div class="kw-header">
+          <span class="kw-label">Target Job Titles & Search Keywords:</span>
+          <button class="btn btn-secondary btn-sm" onclick="openEditCriteriaModal()" id="btnEditCriteria">
+            <i data-lucide="lock"></i>
+            <span>Edit Target Titles & Keywords</span>
+          </button>
+        </div>
+
         <div class="kw-tags-list" id="activeKeywordsList">
-          <span class="kw-tag">Manager of IT</span>
-          <span class="kw-tag">Web Operations</span>
-          <span class="kw-tag">DevOps Lead</span>
+          <!-- Dynamic Keyword Tags -->
         </div>
       </div>
     </section>
 
-    <!-- PIN-Unlocked Profile Criteria Edit Box -->
+    <!-- PIN-Unlocked Profile Name Edit Box -->
+    <section class="profile-criteria-box" id="profileNameEditBox" style="display: none;">
+      <div class="criteria-box-header">
+        <div class="criteria-title">
+          <i data-lucide="user"></i>
+          <h2>Edit Profile Name / Label</h2>
+        </div>
+        <span class="unlocked-badge"><i data-lucide="unlock"></i> PIN Authenticated</span>
+      </div>
+
+      <form id="profileNameForm" onsubmit="saveProfileName(event)">
+        <div class="form-group">
+          <label for="profileNameInput"><i data-lucide="user"></i> User Profile Name / Label *</label>
+          <input type="text" id="profileNameInput" placeholder="e.g. Will - IT Management & WebOps" required>
+        </div>
+
+        <div class="form-actions mt-3">
+          <button type="button" class="btn btn-secondary" onclick="lockNameEditBox()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveName">
+            <i data-lucide="save"></i>
+            <span>Save Profile Name</span>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- PIN-Unlocked Target Titles & Keywords Edit Box -->
     <section class="profile-criteria-box" id="profileCriteriaBox" style="display: none;">
       <div class="criteria-box-header">
         <div class="criteria-title">
           <i data-lucide="sliders"></i>
-          <h2 id="activeProfileBoxTitle">Editing Search Criteria</h2>
+          <h2 id="activeProfileBoxTitle">Edit Target Titles & Keywords</h2>
         </div>
         <span class="unlocked-badge"><i data-lucide="unlock"></i> PIN Authenticated</span>
       </div>
 
       <form id="profileCriteriaForm" onsubmit="saveProfileCriteria(event)">
         <div class="form-row">
-          <div class="form-group flex-1">
-            <label for="profileNameInput"><i data-lucide="user"></i> User Profile Name / Label *</label>
-            <input type="text" id="profileNameInput" placeholder="e.g. Will - IT Management & WebOps" required>
-          </div>
-
           <div class="form-group flex-2">
             <label for="profileTitlesInput"><i data-lucide="briefcase"></i> Target Job Titles & Roles (comma separated) *</label>
             <input type="text" id="profileTitlesInput" placeholder="e.g. Manager of IT, Web Operations, DevOps Lead" required>
           </div>
-        </div>
 
-        <div class="form-row mt-3">
           <div class="form-group flex-1">
             <label for="profileKeywordsInput"><i data-lucide="tag"></i> Skill & Tech Keywords</label>
             <input type="text" id="profileKeywordsInput" placeholder="e.g. devops, webops, cloud, terraform">
           </div>
+        </div>
 
+        <div class="form-row mt-3">
           <div class="form-group flex-2">
             <label for="profileCompaniesInput"><i data-lucide="building"></i> Target ATS Company Career Boards (Greenhouse/Lever)</label>
             <input type="text" id="profileCompaniesInput" placeholder="stripe, gitlab, github, cloudflare, datadog, hashicorp, vercel">
@@ -247,6 +274,6 @@
     </div>
   </footer>
 
-  <script src="main.js?v=2.2"></script>
+  <script src="main.js?v=2.3"></script>
 </body>
 </html>

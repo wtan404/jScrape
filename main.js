@@ -7,6 +7,7 @@ let lastScrapedTimestamp = null;
 let currentProfileId = 'profile1';
 let profilesData = {};
 let authenticatedPin = null;
+let pendingEditTarget = null; // 'name' or 'criteria'
 
 const zipGeocodeCache = {};
 
@@ -65,7 +66,7 @@ function renderActiveProfileCard() {
   if (kwListEl) {
     const allTerms = [...(activeProf.targetTitles || []), ...(activeProf.keywords || [])];
     if (allTerms.length === 0) {
-      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No search criteria set yet. Click Edit Profile & Keywords to add terms.</span>`;
+      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No search criteria set yet. Click Edit Target Titles & Keywords to add terms.</span>`;
     } else {
       kwListEl.innerHTML = allTerms.map(term => `<span class="kw-tag">${escapeHtml(term)}</span>`).join('');
     }
@@ -77,10 +78,31 @@ function onProfileChange() {
   if (!dropdown) return;
 
   currentProfileId = dropdown.value;
-  authenticatedPin = null; // Lock criteria box when switching profiles
+  authenticatedPin = null;
+  lockNameEditBox();
   lockProfileBox();
   renderActiveProfileCard();
   fetchJobsDatabase();
+}
+
+// 1. Trigger Edit Profile Name
+function openEditNameModal() {
+  pendingEditTarget = 'name';
+  if (authenticatedPin) {
+    unlockNameEditBox();
+  } else {
+    openPinModal();
+  }
+}
+
+// 2. Trigger Edit Target Titles & Keywords
+function openEditCriteriaModal() {
+  pendingEditTarget = 'criteria';
+  if (authenticatedPin) {
+    unlockProfileBox();
+  } else {
+    openPinModal();
+  }
 }
 
 function openPinModal() {
@@ -98,10 +120,10 @@ function openPinModal() {
 
   if (!targetProf.hasPin) {
     if (heading) heading.textContent = 'Set New Security PIN';
-    if (prompt) prompt.textContent = `No PIN set for ${targetProf.name}. Enter a 4-digit PIN to secure your search criteria.`;
+    if (prompt) prompt.textContent = `No PIN set for ${targetProf.name}. Enter a 4-digit PIN to lock your profile.`;
   } else {
     if (heading) heading.textContent = 'Enter Security PIN';
-    if (prompt) prompt.textContent = `Enter 4-digit security PIN to unlock & edit search criteria for ${targetProf.name}.`;
+    if (prompt) prompt.textContent = `Enter 4-digit security PIN to unlock & edit details for ${targetProf.name}.`;
   }
 
   overlay.style.display = 'flex';
@@ -148,7 +170,12 @@ async function submitPinVerification(e) {
       }
 
       closePinModal();
-      unlockProfileBox();
+
+      if (pendingEditTarget === 'name') {
+        unlockNameEditBox();
+      } else {
+        unlockProfileBox();
+      }
     } else {
       if (errorMsg) {
         errorMsg.textContent = data.error || 'Incorrect PIN entered.';
@@ -165,7 +192,25 @@ async function submitPinVerification(e) {
   }
 }
 
+function unlockNameEditBox() {
+  lockProfileBox();
+  const box = document.getElementById('profileNameEditBox');
+  const prof = profilesData[currentProfileId];
+
+  if (!box || !prof) return;
+
+  document.getElementById('profileNameInput').value = prof.name || '';
+  box.style.display = 'block';
+  box.scrollIntoView({ behavior: 'smooth' });
+}
+
+function lockNameEditBox() {
+  const box = document.getElementById('profileNameEditBox');
+  if (box) box.style.display = 'none';
+}
+
 function unlockProfileBox() {
+  lockNameEditBox();
   const box = document.getElementById('profileCriteriaBox');
   const title = document.getElementById('activeProfileBoxTitle');
   const prof = profilesData[currentProfileId];
@@ -174,7 +219,6 @@ function unlockProfileBox() {
 
   if (title) title.textContent = `Editing Search Criteria: ${prof.name}`;
 
-  document.getElementById('profileNameInput').value = prof.name || '';
   document.getElementById('profileTitlesInput').value = (prof.targetTitles || []).join(', ');
   document.getElementById('profileKeywordsInput').value = (prof.keywords || []).join(', ');
   document.getElementById('profileCompaniesInput').value = (prof.greenhouseCompanies || []).join(', ');
@@ -188,15 +232,59 @@ function lockProfileBox() {
   if (box) box.style.display = 'none';
 }
 
-async function saveProfileCriteria(e) {
+async function saveProfileName(e) {
   e.preventDefault();
 
   if (!authenticatedPin) {
-    openPinModal();
+    openEditNameModal();
     return;
   }
 
   const nameVal = document.getElementById('profileNameInput')?.value || '';
+  const btn = document.getElementById('btnSaveName');
+
+  if (btn) btn.disabled = true;
+
+  try {
+    const prof = profilesData[currentProfileId];
+    const res = await fetch('./api/profiles/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        profileId: currentProfileId,
+        pin: authenticatedPin,
+        name: nameVal,
+        targetTitles: prof.targetTitles,
+        keywords: prof.keywords,
+        greenhouseCompanies: prof.greenhouseCompanies
+      })
+    });
+
+    if (res.ok) {
+      if (profilesData[currentProfileId]) {
+        profilesData[currentProfileId].name = nameVal;
+      }
+      renderProfileDropdown();
+      renderActiveProfileCard();
+      lockNameEditBox();
+    } else {
+      alert('Save failed: Invalid PIN.');
+    }
+  } catch (err) {
+    alert('Save error: ' + err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function saveProfileCriteria(e) {
+  e.preventDefault();
+
+  if (!authenticatedPin) {
+    openEditCriteriaModal();
+    return;
+  }
+
   const titlesVal = document.getElementById('profileTitlesInput')?.value || '';
   const keywordsVal = document.getElementById('profileKeywordsInput')?.value || '';
   const companiesVal = document.getElementById('profileCompaniesInput')?.value || '';
@@ -213,13 +301,14 @@ async function saveProfileCriteria(e) {
   }
 
   try {
+    const prof = profilesData[currentProfileId];
     const res = await fetch('./api/profiles/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         profileId: currentProfileId,
         pin: authenticatedPin,
-        name: nameVal,
+        name: prof.name,
         targetTitles,
         keywords,
         greenhouseCompanies
@@ -228,12 +317,10 @@ async function saveProfileCriteria(e) {
 
     if (res.ok) {
       if (profilesData[currentProfileId]) {
-        profilesData[currentProfileId].name = nameVal;
         profilesData[currentProfileId].targetTitles = targetTitles;
         profilesData[currentProfileId].keywords = keywords;
         profilesData[currentProfileId].greenhouseCompanies = greenhouseCompanies;
       }
-      renderProfileDropdown();
       renderActiveProfileCard();
       lockProfileBox();
       triggerScrapeNow();

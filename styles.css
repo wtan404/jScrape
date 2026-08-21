@@ -181,6 +181,12 @@ body {
   font-size: 0.85rem;
 }
 
+.btn-xs {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+}
+
 .spin {
   animation: spin 1s linear infinite;
 }
@@ -194,7 +200,7 @@ body {
   padding: 2.2rem 1.5rem 5rem 1.5rem;
 }
 
-/* Top Active Profile Card (Placed Above 3 Summary Cards) */
+/* Top Active Profile Card */
 .active-profile-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-hover);
@@ -228,7 +234,13 @@ body {
   text-transform: uppercase;
 }
 
-.profile-info h2 {
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.profile-name-row h2 {
   font-family: var(--font-heading);
   font-size: 1.5rem;
   font-weight: 800;
@@ -270,14 +282,20 @@ body {
 
 .profile-keywords-wrap {
   border-top: 1px solid var(--border-color);
-  padding-top: 1rem;
+  padding-top: 1.2rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.8rem;
+}
+
+.kw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .kw-label {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-muted);
 }
