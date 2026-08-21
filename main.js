@@ -1,9 +1,8 @@
 /* ==========================================================================
-   Scrapedeez — Simple Search & Aggregator Engine
+   Scrapedeez — Hourly Automated Scraper & Link Verifier Engine
    ========================================================================== */
 
 let allJobsData = [];
-let currentConfig = {};
 
 document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) {
@@ -13,65 +12,45 @@ document.addEventListener('DOMContentLoaded', () => {
   const yearEl = document.getElementById('year');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-  fetchConfig();
   fetchJobsDatabase();
 });
 
 async function fetchJobsDatabase() {
+  const jobsList = document.getElementById('jobsList');
   try {
     const response = await fetch('/api/jobs');
     if (!response.ok) return;
     const data = await response.json();
 
     allJobsData = data.jobs || [];
+
+    const totalEl = document.getElementById('totalMatchesCount');
+    const timeEl = document.getElementById('lastScrapedTime');
+
+    if (totalEl) totalEl.textContent = data.totalMatches || allJobsData.length;
+    if (timeEl && data.lastScraped) {
+      timeEl.textContent = formatDate(data.lastScraped);
+    }
+
     renderJobs(allJobsData);
   } catch (err) {
-    console.error('Failed to fetch initial job database:', err);
+    if (jobsList) {
+      jobsList.innerHTML = `
+        <div class="empty-state">
+          <p>Failed to connect to Scrapedeez server. Ensure local server is running on port 8090.</p>
+        </div>
+      `;
+    }
   }
 }
 
-async function fetchConfig() {
-  try {
-    const res = await fetch('/api/config');
-    if (!res.ok) return;
-    currentConfig = await res.json();
-
-    const searchInput = document.getElementById('targetKeywordsInput');
-    const ghInput = document.getElementById('ghCompaniesInput');
-    const serpInput = document.getElementById('serpApiKeyInput');
-
-    if (searchInput && currentConfig.targetTitles) {
-      searchInput.value = currentConfig.targetTitles.join(', ');
-    }
-
-    if (ghInput && currentConfig.greenhouseCompanies) {
-      ghInput.value = currentConfig.greenhouseCompanies.join(', ');
-    }
-
-    if (serpInput && currentConfig.serpApiKey) {
-      serpInput.value = currentConfig.serpApiKey;
-    }
-  } catch (err) {
-    console.error('Config fetch failed:', err);
-  }
-}
-
-async function executeJobSearch(e) {
-  e.preventDefault();
-
-  const searchVal = document.getElementById('targetKeywordsInput')?.value || '';
-  const ghVal = document.getElementById('ghCompaniesInput')?.value || '';
-  const serpKey = document.getElementById('serpApiKeyInput')?.value || '';
-
-  const targetTitles = searchVal.split(',').map(s => s.trim()).filter(Boolean);
-  const greenhouseCompanies = ghVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-
-  const btn = document.getElementById('btnSearch');
+async function triggerScrapeNow() {
+  const btn = document.getElementById('btnScrape');
   const jobsList = document.getElementById('jobsList');
 
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Searching & Aggregating...</span>`;
+    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Re-Verifying & Rescanning...</span>`;
     if (window.lucide) lucide.createIcons();
   }
 
@@ -79,32 +58,17 @@ async function executeJobSearch(e) {
     jobsList.innerHTML = `
       <div class="loading-state">
         <i data-lucide="loader-2" class="spin"></i>
-        <p>Querying company career boards & global job feeds for <strong>"${escapeHtml(targetTitles.join(', '))}"</strong>...</p>
+        <p>Re-verifying link availability of existing jobs & checking all feeds for new postings...</p>
       </div>
     `;
     if (window.lucide) lucide.createIcons();
   }
 
   try {
-    // 1. Save Config
-    await fetch('/api/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        targetTitles, 
-        keywords: targetTitles.map(t => t.toLowerCase()), 
-        greenhouseCompanies, 
-        leverCompanies: currentConfig.leverCompanies || [], 
-        serpApiKey: serpKey 
-      })
-    });
-
-    // 2. Trigger Scrape Job
     const res = await fetch('/api/scrape-now', { method: 'POST' });
-    
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`Server returned HTTP ${res.status}: ${text.substring(0, 80)}`);
+      throw new Error(`Server error: ${text.substring(0, 80)}`);
     }
 
     const data = await res.json();
@@ -114,14 +78,14 @@ async function executeJobSearch(e) {
     if (jobsList) {
       jobsList.innerHTML = `
         <div class="empty-state">
-          <p>Search failed: ${escapeHtml(err.message)}</p>
+          <p>Rescan failed: ${escapeHtml(err.message)}</p>
         </div>
       `;
     }
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = `<i data-lucide="arrow-right"></i><span>Search & Aggregate Jobs</span>`;
+      btn.innerHTML = `<i data-lucide="refresh-cw"></i><span>Re-Verify & Rescan Now</span>`;
       if (window.lucide) lucide.createIcons();
     }
   }
@@ -129,19 +93,16 @@ async function executeJobSearch(e) {
 
 function renderJobs(jobs) {
   const jobsList = document.getElementById('jobsList');
-  const countBadge = document.getElementById('resultsCountBadge');
+  const totalEl = document.getElementById('totalMatchesCount');
 
-  if (countBadge) {
-    countBadge.textContent = `${jobs.length} Postings Found`;
-  }
-
+  if (totalEl) totalEl.textContent = jobs.length;
   if (!jobsList) return;
 
   if (jobs.length === 0) {
     jobsList.innerHTML = `
       <div class="empty-state">
         <i data-lucide="briefcase"></i>
-        <p>No job postings found matching your search. Enter your target job titles or keywords above and click <strong>Search & Aggregate Jobs</strong>.</p>
+        <p>No active verified job postings available right now for Manager of IT, WebOps, or DevOps. Click <strong>Re-Verify & Rescan Now</strong> above.</p>
       </div>
     `;
     if (window.lucide) lucide.createIcons();
@@ -149,12 +110,12 @@ function renderJobs(jobs) {
   }
 
   jobsList.innerHTML = jobs.map(job => `
-    <article class="job-card">
+    <article class="job-card ${job.isNew ? 'is-new' : ''}">
       <div class="job-info">
         <div class="job-meta-top">
+          ${job.isNew ? '<span class="badge-new">NEW ROLE</span>' : '<span class="badge-verified"><i data-lucide="check"></i> VERIFIED LIVE</span>'}
           <span class="job-company">${escapeHtml(job.company)}</span>
           <span class="job-source">${escapeHtml(job.source)}</span>
-          <span class="job-matched-badge">${escapeHtml(job.matchedKeyword)}</span>
         </div>
         <h3 class="job-title">${escapeHtml(job.title)}</h3>
         <div class="job-footer-info">
@@ -164,7 +125,7 @@ function renderJobs(jobs) {
       </div>
       <div class="job-action">
         <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer">
-          <span>View & Apply</span>
+          <span>Apply / View</span>
           <i data-lucide="external-link"></i>
         </a>
       </div>
@@ -176,31 +137,36 @@ function renderJobs(jobs) {
   }
 }
 
-function filterFetchedResults() {
-  const query = document.getElementById('subFilterInput')?.value.toLowerCase().trim() || '';
+function filterJobs() {
+  const query = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
+  const sourceFilter = document.getElementById('sourceSelect')?.value || 'all';
 
   const filtered = allJobsData.filter(job => {
-    return !query || 
+    const matchQuery = !query || 
       job.title.toLowerCase().includes(query) || 
       job.company.toLowerCase().includes(query) || 
       job.location.toLowerCase().includes(query) ||
-      job.matchedKeyword.toLowerCase().includes(query);
+      (job.matchedKeyword && job.matchedKeyword.toLowerCase().includes(query));
+
+    let matchSource = true;
+    if (sourceFilter === 'new') {
+      matchSource = job.isNew === true;
+    } else if (sourceFilter === 'ats') {
+      matchSource = job.source.includes('Greenhouse') || job.source.includes('Lever');
+    } else if (sourceFilter === 'feeds') {
+      matchSource = job.source.includes('RemoteOK') || job.source.includes('WeWorkRemotely');
+    }
+
+    return matchQuery && matchSource;
   });
 
   renderJobs(filtered);
 }
 
-function toggleAdvancedSettings() {
-  const el = document.getElementById('advancedSettings');
-  if (el) {
-    el.style.display = el.style.display === 'none' ? 'block' : 'none';
-  }
-}
-
 function formatDate(isoStr) {
   if (!isoStr) return 'Recently';
   const d = new Date(isoStr);
-  return isNaN(d.getTime()) ? isoStr : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return isNaN(d.getTime()) ? isoStr : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function escapeHtml(text) {

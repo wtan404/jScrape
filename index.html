@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scrapedeez | Instant Multi-Source Job Search & Aggregator</title>
-  <meta name="description" content="Enter your target job titles or keywords to instantly search and aggregate job postings across company boards and global feeds.">
+  <title>Scrapedeez | Automated Hourly IT Manager & WebOps Job Tracker</title>
+  <meta name="description" content="Automated hourly job scraper and link verifier for IT Management, Web Operations, Website Development, and DevOps leadership roles.">
   <meta name="theme-color" content="#090d16">
 
   <!-- Google Fonts -->
@@ -25,76 +25,87 @@
       <div class="brand">
         <span class="brand-icon">🕷️</span>
         <span class="brand-title">SCRAPE<span class="highlight">DEEZ</span></span>
-        <span class="role-badge">JOB AGGREGATOR</span>
+        <span class="role-badge">HOURLY AUTOMATED SCANNER</span>
       </div>
 
-      <button class="btn-text-link" onclick="toggleAdvancedSettings()">
-        <i data-lucide="sliders"></i>
-        <span>Advanced Settings</span>
-      </button>
+      <div class="header-actions">
+        <div class="cron-status">
+          <span class="pulse-dot"></span>
+          <span>AUTO-RESCAN HOURLY (LINK VERIFIED)</span>
+        </div>
+
+        <button class="btn btn-primary btn-sm" onclick="triggerScrapeNow()" id="btnScrape">
+          <i data-lucide="refresh-cw"></i>
+          <span>Re-Verify & Rescan Now</span>
+        </button>
+      </div>
     </div>
   </header>
 
   <main class="container main-layout">
-    <!-- Simple Primary Search Bar -->
-    <section class="hero-search-section">
-      <div class="search-box-card">
-        <h1 class="search-title">Search & Aggregate Job Openings</h1>
-        <p class="search-subtitle">Enter your target roles or keywords below to query live company career boards and global job feeds.</p>
-
-        <form id="instantSearchForm" onsubmit="executeJobSearch(event)" class="search-input-form">
-          <div class="input-wrap">
-            <i data-lucide="search" class="search-icon"></i>
-            <input type="text" id="targetKeywordsInput" placeholder="Enter job titles or keywords (e.g. IT Manager, Web Operations, DevOps, Engineering Manager)..." required>
-          </div>
-          
-          <button type="submit" class="btn btn-primary btn-lg" id="btnSearch">
-            <i data-lucide="arrow-right"></i>
-            <span>Search & Aggregate Jobs</span>
-          </button>
-        </form>
+    <!-- Hero Target Criteria Banner -->
+    <section class="target-criteria-panel">
+      <div class="panel-head">
+        <div class="panel-title">
+          <i data-lucide="shield-check"></i>
+          <h2>Monitored Role Criteria & Focus Areas</h2>
+        </div>
+        <span class="panel-subtitle">Auto-pruning dead postings & scanning every 60 minutes.</span>
       </div>
 
-      <!-- Collapsible Advanced Settings -->
-      <div class="advanced-settings-card" id="advancedSettings" style="display: none;">
-        <div class="settings-header">
-          <h3>Advanced Sources & API Options</h3>
-          <button class="btn-close-sm" onclick="toggleAdvancedSettings()"><i data-lucide="x"></i></button>
-        </div>
-        <div class="settings-grid">
-          <div class="form-group">
-            <label for="ghCompaniesInput">Target Greenhouse & Lever Companies (comma separated)</label>
-            <input type="text" id="ghCompaniesInput" placeholder="stripe, gitlab, github, cloudflare, datadog, hashicorp, vercel, netflix">
-          </div>
-          <div class="form-group">
-            <label for="serpApiKeyInput">Google Jobs SerpAPI Key (Optional)</label>
-            <input type="password" id="serpApiKeyInput" placeholder="Paste SerpAPI key for Google Jobs aggregator">
-          </div>
+      <div class="criteria-pill-list">
+        <span class="criteria-pill"><i data-lucide="check"></i> Manager of IT</span>
+        <span class="criteria-pill"><i data-lucide="check"></i> Web Operations (WebOps)</span>
+        <span class="criteria-pill"><i data-lucide="check"></i> Website Development Manager</span>
+        <span class="criteria-pill"><i data-lucide="check"></i> DevOps Lead & Manager</span>
+      </div>
+    </section>
+
+    <!-- Telemetry Bar -->
+    <section class="summary-bar">
+      <div class="summary-card">
+        <div class="summary-metric" id="totalMatchesCount">0</div>
+        <div class="summary-label">Active Verified Postings</div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-value" id="lastScrapedTime">Never</div>
+        <div class="summary-label">Last Hourly Execution</div>
+      </div>
+
+      <div class="summary-card sources-card">
+        <div class="summary-label">Verification Engine Status:</div>
+        <div class="sources-breakdown">
+          <span class="pill green">Dead Link Auto-Prune</span>
+          <span class="pill blue">New Role Detection</span>
+          <span class="pill gray">Greenhouse / Lever / Feeds</span>
         </div>
       </div>
     </section>
 
-    <!-- Telemetry & Filter Bar -->
-    <section class="results-bar">
-      <div class="results-meta">
-        <h2 class="results-title">Aggregated Job Results</h2>
-        <span class="results-count-badge" id="resultsCountBadge">0 Postings Found</span>
+    <!-- In-Memory Filter Controls -->
+    <section class="controls-row">
+      <div class="search-box">
+        <i data-lucide="search"></i>
+        <input type="text" id="searchInput" placeholder="Filter active verified results by company, location, or keyword..." oninput="filterJobs()">
       </div>
 
-      <div class="filter-controls">
-        <div class="sub-search-box">
-          <i data-lucide="filter"></i>
-          <input type="text" id="subFilterInput" placeholder="Filter fetched results..." oninput="filterFetchedResults()">
-        </div>
+      <div class="source-filter">
+        <select id="sourceSelect" onchange="filterJobs()">
+          <option value="all">All Verified Sources (ATS + Google Jobs + Feeds)</option>
+          <option value="new">Newly Identified Postings Only</option>
+          <option value="ats">Company ATS Boards (Greenhouse/Lever)</option>
+          <option value="feeds">RemoteOK & WeWorkRemotely</option>
+        </select>
       </div>
     </section>
 
-    <!-- Aggregated Jobs List Grid -->
+    <!-- Jobs Results Feed Grid -->
     <section class="jobs-section">
       <div class="jobs-list" id="jobsList">
-        <div class="empty-state" id="initialState">
-          <i data-lucide="briefcase"></i>
-          <p>Enter your target job titles or keywords above and click <strong>Search & Aggregate Jobs</strong> to pull live job postings.</p>
+        <div class="loading-state">
+          <i data-lucide="loader-2" class="spin"></i>
+          <p>Verifying active job postings & running scraper pipeline...</p>
         </div>
       </div>
     </section>
@@ -102,7 +113,7 @@
 
   <footer class="app-footer">
     <div class="container footer-wrap">
-      <p>&copy; <span id="year">2026</span> Scrapedeez Job Search Suite. Multi-Source Aggregator for Web Operations & Leadership.</p>
+      <p>&copy; <span id="year">2026</span> Scrapedeez Hourly Job Engine. Auto-Pruning Link Verification & IT Management Tracker.</p>
     </div>
   </footer>
 

@@ -1,8 +1,8 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { runScraperJob } = require('./scraper');
-const { DEFAULT_GREENHOUSE_COMPANIES, DEFAULT_LEVER_COMPANIES } = require('./ats_scraper');
+const cron = require('node-cron');
+const { runScraperJob, PREDEFINED_ROLES } = require('./scraper');
 
 const app = express();
 const PORT = process.env.PORT || 8090;
@@ -13,21 +13,9 @@ app.use(express.static(__dirname));
 const DATA_FILE = path.join(__dirname, 'jobs_data.json');
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
-// Default config fallback
-const DEFAULT_CONFIG = {
-  targetTitles: ['IT Manager', 'Manager of IT', 'Web Operations', 'DevOps Manager'],
-  keywords: ['devops', 'webops', 'infrastructure', 'cloud', 'terraform'],
-  greenhouseCompanies: DEFAULT_GREENHOUSE_COMPANIES,
-  leverCompanies: DEFAULT_LEVER_COMPANIES,
-  serpApiKey: ''
-};
-
+// Ensure data files exist
 if (!fs.existsSync(DATA_FILE)) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify({ lastScraped: null, totalMatches: 0, jobs: [] }));
-}
-
-if (!fs.existsSync(CONFIG_FILE)) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2));
+  fs.writeFileSync(DATA_FILE, JSON.stringify({ lastScraped: null, totalMatches: 0, targetCriteria: PREDEFINED_ROLES, jobs: [] }));
 }
 
 // GET /api/jobs
@@ -40,48 +28,18 @@ app.get('/api/jobs', (req, res) => {
   }
 });
 
-// GET /api/config
-app.get('/api/config', (req, res) => {
-  try {
-    const raw = fs.readFileSync(CONFIG_FILE, 'utf8');
-    res.json(JSON.parse(raw));
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to read configuration.' });
-  }
-});
-
-// POST /api/config (Save user custom keywords, titles & companies)
-app.post('/api/config', (req, res) => {
-  try {
-    const { targetTitles, keywords, greenhouseCompanies, leverCompanies, serpApiKey } = req.body;
-    const config = {
-      targetTitles: targetTitles || DEFAULT_CONFIG.targetTitles,
-      keywords: keywords || DEFAULT_CONFIG.keywords,
-      greenhouseCompanies: greenhouseCompanies || DEFAULT_GREENHOUSE_COMPANIES,
-      leverCompanies: leverCompanies || DEFAULT_LEVER_COMPANIES,
-      serpApiKey: serpApiKey || ''
-    };
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
-    res.json({ status: 'success', config });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to update configuration.' });
-  }
-});
-
-// POST /api/scrape-now
+// POST /api/scrape-now (Manual trigger to re-verify links and fetch new postings)
 app.post('/api/scrape-now', async (req, res) => {
   try {
-    let config = DEFAULT_CONFIG;
+    let config = {};
     if (fs.existsSync(CONFIG_FILE)) {
-      config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+      try { config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); } catch (e) {}
     }
 
     const matches = await runScraperJob(
-      config.greenhouseCompanies,
-      config.leverCompanies,
-      config.serpApiKey || process.env.SERPAPI_KEY,
-      config.targetTitles,
-      config.keywords
+      config.greenhouseCompanies || [],
+      config.leverCompanies || [],
+      config.serpApiKey || process.env.SERPAPI_KEY
     );
 
     res.json({
@@ -95,6 +53,30 @@ app.post('/api/scrape-now', async (req, res) => {
   }
 });
 
+// Schedule Automated Hourly Rescan & Availability Verification (Every 60 minutes)
+cron.schedule('0 * * * *', async () => {
+  console.log('\n=============================================================');
+  console.log(`[Hourly Cron Scheduler] Running automated rescan & link verification: ${new Date().toISOString()}`);
+  console.log('=============================================================\n');
+  
+  try {
+    let config = {};
+    if (fs.existsSync(CONFIG_FILE)) {
+      try { config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); } catch (e) {}
+    }
+
+    await runScraperJob(
+      config.greenhouseCompanies || [],
+      config.leverCompanies || [],
+      config.serpApiKey || process.env.SERPAPI_KEY
+    );
+  } catch (err) {
+    console.error('[Hourly Cron Scheduler] Automated run error:', err.message);
+  }
+});
+
 app.listen(PORT, () => {
-  console.log(`[Scrapedeez] Web Scraper Dashboard running on http://localhost:${PORT}`);
+  console.log(`[Scrapedeez] Automated Hourly Job Scraper & Link Verifier running on http://localhost:${PORT}`);
+  // Run initial scan & verification on startup
+  runScraperJob().catch(err => console.error('[Scrapedeez] Startup scan error:', err.message));
 });

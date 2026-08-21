@@ -1,7 +1,7 @@
 {
   "name": "scrapedeez",
-  "version": "1.0.0",
-  "description": "Automated Job Scraper & Alert Engine for IT Management, WebOps & DevOps Roles",
+  "version": "1.1.0",
+  "description": "Automated Hourly Job Scraper & Verifier Engine for IT Management, WebOps & DevOps Roles",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -12,6 +12,7 @@
     "webops",
     "devops",
     "it-manager",
+    "hourly-verifier",
     "scrapedeez"
   ],
   "author": "Will",
@@ -19,6 +20,6 @@
   "dependencies": {
     "express": "^4.19.2",
     "axios": "^1.7.2",
-    "cheerio": "^1.0.0-rc.12"
+    "node-cron": "^3.0.3"
   }
 }
