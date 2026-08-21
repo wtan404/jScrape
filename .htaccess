@@ -1,0 +1,17 @@
+# DO NOT REMOVE OR EDIT. PASSENGER CONFIGURATION OPTION
+# Passenger App Root
+PassengerAppRoot "/home/synopsdi/public_html/list"
+# Passenger Startup File
+PassengerStartupFile server.js
+# Passenger App Type
+PassengerAppType node
+# Passenger Nodejs Path
+PassengerNodejs "/opt/alt/alt-nodejs18/root/usr/bin/node"
+
+# Enable Rewrite Engine for Passenger Proxy
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ server.js [QSA,L]
+</IfModule>
