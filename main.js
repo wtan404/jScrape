@@ -1,6 +1,6 @@
 /* ==========================================================================
    Scrapedeez — Hourly Automated Scraper & Link Verifier Engine
-   ========================================================================== */
+   ========================================================================= */
 
 let allJobsData = [];
 let lastScrapedTimestamp = null;
@@ -22,15 +22,12 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fetchJobsDatabase() {
   const jobsList = document.getElementById('jobsList');
   try {
-    // Try static jobs_data.json first (works on standard static web hosts)
-    let response = await fetch('jobs_data.json');
+    // Fetch static jobs_data.json with timestamp query to prevent browser caching
+    const dataUrl = './jobs_data.json?t=' + Date.now();
+    const response = await fetch(dataUrl);
+
     if (!response.ok) {
-      response = await fetch('api/jobs');
-    }
-    
-    if (!response.ok) {
-      renderJobs([]);
-      return;
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
@@ -49,7 +46,8 @@ async function fetchJobsDatabase() {
 
     renderJobs(allJobsData);
   } catch (err) {
-    console.error('Initial job database fetch error:', err);
+    console.warn('Fallback: Unable to fetch jobs_data.json directly:', err);
+    renderJobs(allJobsData);
   }
 }
 
@@ -89,38 +87,27 @@ async function triggerScrapeNow() {
     if (window.lucide) lucide.createIcons();
   }
 
-  if (jobsList) {
-    jobsList.innerHTML = `
-      <div class="loading-state">
-        <i data-lucide="loader-2" class="spin"></i>
-        <p>Re-verifying link availability of existing jobs & checking all feeds for new postings...</p>
-      </div>
-    `;
-    if (window.lucide) lucide.createIcons();
-  }
-
   try {
-    let res = await fetch('api/scrape-now', { method: 'POST' });
-    
-    if (!res.ok) {
-      // Re-fetch static data as fallback
-      await fetchJobsDatabase();
-      return;
+    // Attempt POST to live API, or fallback to re-fetching static data
+    try {
+      const res = await fetch('./api/scrape-now', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.jobs) {
+          allJobsData = data.jobs;
+          if (data.scrapedAt) lastScrapedTimestamp = new Date(data.scrapedAt).getTime();
+        }
+      }
+    } catch (e) {
+      // Static host fallback
     }
 
-    const data = await res.json();
-    allJobsData = data.jobs || [];
-
-    if (data.scrapedAt) {
-      lastScrapedTimestamp = new Date(data.scrapedAt).getTime();
-      updateElapsedBadge();
-    }
-
-    renderJobs(allJobsData);
-  } catch (err) {
-    // If backend not active, re-fetch static data
+    // Refresh dataset from jobs_data.json
     await fetchJobsDatabase();
+  } catch (err) {
+    console.error('Trigger error:', err);
   } finally {
+    // Always restore button state
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = `<i data-lucide="refresh-cw"></i><span>Re-Verify & Rescan Now</span>`;
