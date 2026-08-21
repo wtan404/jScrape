@@ -13,7 +13,6 @@ app.use(express.static(__dirname));
 const DATA_FILE = path.join(__dirname, 'jobs_data.json');
 const PROFILES_FILE = path.join(__dirname, 'profiles.json');
 
-// Correct 3 User Profiles Setup: Profile 1 has ALL original criteria, Profiles 2 & 3 are custom user slots
 const DEFAULT_PROFILES = {
   activeProfileId: 'profile1',
   profiles: {
@@ -22,22 +21,18 @@ const DEFAULT_PROFILES = {
       name: 'User 1 - IT Management, WebOps & DevOps',
       pin: null,
       targetTitles: [
-        'Manager of IT',
-        'IT Manager',
-        'Web Operations',
-        'WebOps Manager',
-        'Website Development',
-        'DevOps Manager',
-        'DevOps Lead',
-        'Director of IT',
-        'Web Engineering Manager'
+        'Manager of IT', 'IT Manager', 'Web Operations', 'WebOps Manager',
+        'Website Development', 'DevOps Manager', 'DevOps Lead', 'Director of IT', 'Web Engineering Manager'
       ],
       keywords: [
         'devops', 'webops', 'web development', 'infrastructure', 
         'cloud', 'terraform', 'kubernetes', 'change control', 'it management'
       ],
       greenhouseCompanies: ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel'],
-      leverCompanies: ['netflix', 'spotify', 'palantir', 'figma', 'postman']
+      leverCompanies: ['netflix', 'spotify', 'palantir', 'figma', 'postman'],
+      lastScraped: new Date().toISOString(),
+      totalMatches: 0,
+      jobs: []
     },
     profile2: {
       id: 'profile2',
@@ -46,7 +41,10 @@ const DEFAULT_PROFILES = {
       targetTitles: [],
       keywords: [],
       greenhouseCompanies: ['stripe', 'gitlab', 'github', 'cloudflare'],
-      leverCompanies: ['netflix', 'spotify']
+      leverCompanies: ['netflix', 'spotify'],
+      lastScraped: null,
+      totalMatches: 0,
+      jobs: []
     },
     profile3: {
       id: 'profile3',
@@ -55,13 +53,18 @@ const DEFAULT_PROFILES = {
       targetTitles: [],
       keywords: [],
       greenhouseCompanies: ['stripe', 'gitlab', 'github', 'cloudflare'],
-      leverCompanies: ['netflix', 'spotify']
+      leverCompanies: ['netflix', 'spotify'],
+      lastScraped: null,
+      totalMatches: 0,
+      jobs: []
     }
   }
 };
 
-// Always sync profiles file to use correct schema
-fs.writeFileSync(PROFILES_FILE, JSON.stringify(DEFAULT_PROFILES, null, 2));
+// Ensure profile store exists
+if (!fs.existsSync(PROFILES_FILE)) {
+  fs.writeFileSync(PROFILES_FILE, JSON.stringify(DEFAULT_PROFILES, null, 2));
+}
 
 // GET /api/profiles
 app.get('/api/profiles', (req, res) => {
@@ -74,7 +77,8 @@ app.get('/api/profiles', (req, res) => {
       sanitizedProfiles[id] = {
         ...prof,
         hasPin: Boolean(prof.pin),
-        pin: undefined
+        pin: undefined,
+        jobs: undefined // Omit heavy jobs payload in lightweight profiles call
       };
     }
 
@@ -84,6 +88,42 @@ app.get('/api/profiles', (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to read profiles.' });
+  }
+});
+
+// GET /api/jobs (Supports profile-specific fetch: /api/jobs?profileId=profile1)
+app.get('/api/jobs', (req, res) => {
+  const profileId = req.query.profileId || 'profile1';
+  try {
+    if (fs.existsSync(PROFILES_FILE)) {
+      const store = JSON.parse(fs.readFileSync(PROFILES_FILE, 'utf8'));
+      const prof = store.profiles[profileId];
+
+      if (prof && prof.jobs && prof.jobs.length > 0) {
+        return res.json({
+          profileId,
+          lastScraped: prof.lastScraped,
+          totalMatches: prof.jobs.length,
+          jobs: prof.jobs
+        });
+      }
+    }
+
+    // Static fallback to global jobs_data.json
+    if (fs.existsSync(DATA_FILE)) {
+      const raw = fs.readFileSync(DATA_FILE, 'utf8');
+      const data = JSON.parse(raw);
+      res.json({
+        profileId,
+        lastScraped: data.lastScraped,
+        totalMatches: data.totalMatches || (data.jobs ? data.jobs.length : 0),
+        jobs: data.jobs || []
+      });
+    } else {
+      res.json({ profileId, lastScraped: null, totalMatches: 0, jobs: [] });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to read job database.' });
   }
 });
 
@@ -143,42 +183,38 @@ app.post('/api/profiles/save', (req, res) => {
   }
 });
 
-// GET /api/jobs
-app.get('/api/jobs', (req, res) => {
-  try {
-    if (fs.existsSync(DATA_FILE)) {
-      const raw = fs.readFileSync(DATA_FILE, 'utf8');
-      res.json(JSON.parse(raw));
-    } else {
-      res.json({ lastScraped: null, totalMatches: 0, jobs: [] });
-    }
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to read job database.' });
-  }
-});
-
-// POST /api/scrape-now
+// POST /api/scrape-now (Profile-specific rescan)
 app.post('/api/scrape-now', async (req, res) => {
+  const profileId = req.body.profileId || 'profile1';
+
   try {
     let store = DEFAULT_PROFILES;
     if (fs.existsSync(PROFILES_FILE)) {
       try { store = JSON.parse(fs.readFileSync(PROFILES_FILE, 'utf8')); } catch (e) {}
     }
 
-    const activeProf = store.profiles[store.activeProfileId] || store.profiles.profile1;
+    const targetProf = store.profiles[profileId] || store.profiles.profile1;
 
     const matches = await runScraperJob(
-      activeProf.greenhouseCompanies || [],
-      activeProf.leverCompanies || [],
+      targetProf.greenhouseCompanies || [],
+      targetProf.leverCompanies || [],
       process.env.SERPAPI_KEY,
-      activeProf.targetTitles,
-      activeProf.keywords
+      targetProf.targetTitles,
+      targetProf.keywords
     );
+
+    targetProf.jobs = matches;
+    targetProf.lastScraped = new Date().toISOString();
+    targetProf.totalMatches = matches.length;
+
+    store.activeProfileId = profileId;
+    fs.writeFileSync(PROFILES_FILE, JSON.stringify(store, null, 2));
 
     res.json({
       status: 'success',
+      profileId,
       count: matches.length,
-      scrapedAt: new Date().toISOString(),
+      scrapedAt: targetProf.lastScraped,
       jobs: matches
     });
   } catch (err) {
@@ -186,22 +222,38 @@ app.post('/api/scrape-now', async (req, res) => {
   }
 });
 
-// Schedule Automated Hourly Rescan & Availability Verification
+// Schedule Automated Hourly Rescan & Verification for All Profiles
 cron.schedule('0 * * * *', async () => {
-  console.log(`[Hourly Cron Scheduler] Running automated rescan: ${new Date().toISOString()}`);
+  console.log(`[Hourly Cron Scheduler] Running automated rescan for active profiles: ${new Date().toISOString()}`);
   try {
     let store = DEFAULT_PROFILES;
     if (fs.existsSync(PROFILES_FILE)) {
       try { store = JSON.parse(fs.readFileSync(PROFILES_FILE, 'utf8')); } catch (e) {}
     }
-    const activeProf = store.profiles[store.activeProfileId] || store.profiles.profile1;
-    await runScraperJob(activeProf.greenhouseCompanies || [], activeProf.leverCompanies || [], process.env.SERPAPI_KEY, activeProf.targetTitles, activeProf.keywords);
+
+    for (const [profId, prof] of Object.entries(store.profiles)) {
+      if ((prof.targetTitles && prof.targetTitles.length > 0) || (prof.keywords && prof.keywords.length > 0)) {
+        console.log(`[Hourly Cron Scheduler] Scanning jobs bound to profile: ${prof.name} (${profId})`);
+        const matches = await runScraperJob(
+          prof.greenhouseCompanies || [],
+          prof.leverCompanies || [],
+          process.env.SERPAPI_KEY,
+          prof.targetTitles,
+          prof.keywords
+        );
+        prof.jobs = matches;
+        prof.lastScraped = new Date().toISOString();
+        prof.totalMatches = matches.length;
+      }
+    }
+
+    fs.writeFileSync(PROFILES_FILE, JSON.stringify(store, null, 2));
   } catch (err) {
     console.error('[Hourly Cron Scheduler] Automated run error:', err.message);
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`[Scrapedeez] 3-Profile Engine running on http://localhost:${PORT}`);
+  console.log(`[Scrapedeez] Profile-bound Job Engine running on http://localhost:${PORT}`);
   runScraperJob().catch(err => console.error('[Scrapedeez] Startup scan error:', err.message));
 });

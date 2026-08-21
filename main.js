@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Scrapedeez — 3-Profile PIN Protected Job Engine
+   Scrapedeez — Profile-Bound Job Engine
    ========================================================================== */
 
 let allJobsData = [];
@@ -12,7 +12,7 @@ let isEditingName = false;
 let isEditingKeywords = false;
 let editingTagsList = [];
 
-// Default client-side profiles fallback
+// Default client-side profiles fallback with profile-bound job stores
 let profilesData = {
   profile1: {
     id: 'profile1',
@@ -20,7 +20,9 @@ let profilesData = {
     hasPin: false,
     targetTitles: ['Manager of IT', 'IT Manager', 'Web Operations', 'WebOps Manager', 'Website Development', 'DevOps Manager', 'DevOps Lead', 'Director of IT', 'Web Engineering Manager'],
     keywords: ['devops', 'webops', 'web development', 'infrastructure', 'cloud', 'terraform', 'kubernetes', 'change control', 'it management'],
-    greenhouseCompanies: ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel']
+    greenhouseCompanies: ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel'],
+    lastScraped: new Date().toISOString(),
+    jobs: []
   },
   profile2: {
     id: 'profile2',
@@ -28,7 +30,9 @@ let profilesData = {
     hasPin: false,
     targetTitles: [],
     keywords: [],
-    greenhouseCompanies: ['stripe', 'gitlab', 'github']
+    greenhouseCompanies: ['stripe', 'gitlab', 'github'],
+    lastScraped: null,
+    jobs: []
   },
   profile3: {
     id: 'profile3',
@@ -36,7 +40,9 @@ let profilesData = {
     hasPin: false,
     targetTitles: [],
     keywords: [],
-    greenhouseCompanies: ['stripe', 'gitlab', 'github']
+    greenhouseCompanies: ['stripe', 'gitlab', 'github'],
+    lastScraped: null,
+    jobs: []
   }
 };
 
@@ -66,7 +72,17 @@ async function fetchProfiles() {
     const res = await fetch('./api/profiles');
     if (res.ok) {
       const data = await res.json();
-      if (data.profiles) profilesData = data.profiles;
+      if (data.profiles) {
+        for (const [id, prof] of Object.entries(data.profiles)) {
+          if (!profilesData[id]) profilesData[id] = prof;
+          else {
+            profilesData[id].name = prof.name;
+            profilesData[id].hasPin = prof.hasPin;
+            profilesData[id].targetTitles = prof.targetTitles || [];
+            profilesData[id].keywords = prof.keywords || [];
+          }
+        }
+      }
       if (data.activeProfileId) currentProfileId = data.activeProfileId;
     }
   } catch (err) {
@@ -160,8 +176,9 @@ function onProfileChange() {
   authenticatedPin = null;
   isEditingName = false;
   isEditingKeywords = false;
+
   renderActiveProfileCard();
-  fetchJobsDatabase();
+  fetchJobsDatabase(); // Immediately fetch & render job database bound to newly selected profile
 }
 
 // 1. Trigger Edit Profile Name (Inline)
@@ -287,7 +304,6 @@ async function saveShopifyTags() {
 
   isEditingKeywords = false;
   renderKeywordsSection();
-  filterJobs();
   triggerScrapeNow();
 }
 
@@ -397,33 +413,50 @@ async function submitPinVerification(e) {
 
 async function fetchJobsDatabase() {
   const jobsList = document.getElementById('jobsList');
+  const activeProf = profilesData[currentProfileId] || {};
+
   try {
-    const dataUrl = './jobs_data.json?t=' + Date.now();
-    const response = await fetch(dataUrl);
+    // 1. Try fetching profile-bound jobs from backend API
+    const res = await fetch(`./api/jobs?profileId=${currentProfileId}&t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      allJobsData = data.jobs || [];
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      if (data.lastScraped) {
+        lastScrapedTimestamp = new Date(data.lastScraped).getTime();
+        activeProf.lastScraped = data.lastScraped;
+      }
+      activeProf.jobs = allJobsData;
+      localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
+    } else {
+      throw new Error('API offline');
     }
-
-    const data = await response.json();
-    allJobsData = data.jobs || [];
-
-    const totalEl = document.getElementById('totalMatchesCount');
-    const timeEl = document.getElementById('lastScrapedTime');
-
-    if (totalEl) totalEl.textContent = data.totalMatches || allJobsData.length;
-    
-    if (data.lastScraped) {
-      lastScrapedTimestamp = new Date(data.lastScraped).getTime();
-      if (timeEl) timeEl.textContent = formatDate(data.lastScraped);
-      updateElapsedBadge();
-    }
-
-    filterJobs();
   } catch (err) {
-    console.warn('Fallback: Unable to fetch jobs_data.json directly:', err);
-    filterJobs();
+    // 2. Static Fallback: Use profile's bound jobs from memory/localStorage or global fallback
+    if (activeProf.jobs && activeProf.jobs.length > 0) {
+      allJobsData = activeProf.jobs;
+      if (activeProf.lastScraped) lastScrapedTimestamp = new Date(activeProf.lastScraped).getTime();
+    } else {
+      try {
+        const globalRes = await fetch('./jobs_data.json?t=' + Date.now());
+        if (globalRes.ok) {
+          const globalData = await globalRes.json();
+          allJobsData = globalData.jobs || [];
+          if (globalData.lastScraped) lastScrapedTimestamp = new Date(globalData.lastScraped).getTime();
+        }
+      } catch (e) {
+        allJobsData = [];
+      }
+    }
   }
+
+  // Update Telemetry Cards for Active Profile
+  const timeEl = document.getElementById('lastScrapedTime');
+  if (timeEl) {
+    timeEl.textContent = lastScrapedTimestamp ? formatDate(new Date(lastScrapedTimestamp).toISOString()) : 'Never';
+  }
+  updateElapsedBadge();
+  filterJobs();
 }
 
 function updateElapsedBadge() {
@@ -457,18 +490,27 @@ async function triggerScrapeNow() {
 
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Re-Verifying & Rescanning...</span>`;
+    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Re-Verifying & Rescanning Profile...</span>`;
     if (window.lucide) lucide.createIcons();
   }
 
   try {
     try {
-      const res = await fetch('./api/scrape-now', { method: 'POST' });
+      const res = await fetch('./api/scrape-now', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileId: currentProfileId })
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.jobs) {
           allJobsData = data.jobs;
-          if (data.scrapedAt) lastScrapedTimestamp = new Date(data.scrapedAt).getTime();
+          lastScrapedTimestamp = new Date(data.scrapedAt).getTime();
+          if (profilesData[currentProfileId]) {
+            profilesData[currentProfileId].jobs = matches;
+            profilesData[currentProfileId].lastScraped = data.scrapedAt;
+            localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
+          }
         }
       }
     } catch (e) {}
@@ -534,7 +576,6 @@ async function filterJobs() {
   const zipVal = document.getElementById('zipInput')?.value.trim() || '';
   const radiusVal = document.getElementById('radiusSelect')?.value || 'any';
 
-  // Get active profile terms
   const activeProf = profilesData[currentProfileId] || { targetTitles: [], keywords: [] };
   const profileTerms = [...(activeProf.targetTitles || []), ...(activeProf.keywords || [])]
     .map(t => t.toLowerCase().trim())
