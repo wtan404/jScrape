@@ -259,6 +259,13 @@ function startShopifyTagEdit() {
   isEditingKeywords = true;
   renderKeywordsSection();
 
+  const btn = document.getElementById('btnSaveTags');
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = `<i data-lucide="save"></i><span>Save & Re-Scan</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
   const input = document.getElementById('shopifyTagInput');
   if (input) {
     input.value = '';
@@ -331,7 +338,15 @@ async function saveShopifyTags() {
         })
       });
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error('Save error:', e);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<i data-lucide="save"></i><span>Save & Re-Scan</span>`;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
 
   isEditingKeywords = false;
   renderKeywordsSection();
@@ -732,7 +747,7 @@ async function filterJobs() {
     if (userCoords && job.lat && job.lon) {
       job.distanceMiles = getDistanceMiles(userCoords.lat, userCoords.lon, job.lat, job.lon);
     } else if (isRemote) {
-      job.distanceMiles = 99999; // Remote placed at end
+      job.distanceMiles = 99999;
     } else {
       job.distanceMiles = 9999;
     }
