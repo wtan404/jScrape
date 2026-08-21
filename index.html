@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scrapedeez | Multi-Source Web Job Search Engine</title>
-  <meta name="description" content="Scrapedeez web dashboard with ever-present job search configuration, company ATS tracking, and multi-source feed extraction.">
+  <title>Scrapedeez | Instant Multi-Source Job Search & Aggregator</title>
+  <meta name="description" content="Enter your target job titles or keywords to instantly search and aggregate job postings across company boards and global feeds.">
   <meta name="theme-color" content="#090d16">
 
   <!-- Google Fonts -->
@@ -25,106 +25,76 @@
       <div class="brand">
         <span class="brand-icon">🕷️</span>
         <span class="brand-title">SCRAPE<span class="highlight">DEEZ</span></span>
-        <span class="role-badge">LIVE SEARCH ENGINE</span>
+        <span class="role-badge">JOB AGGREGATOR</span>
       </div>
 
-      <div class="header-status">
-        <span class="status-dot"></span>
-        <span>ENGINE ONLINE</span>
-      </div>
+      <button class="btn-text-link" onclick="toggleAdvancedSettings()">
+        <i data-lucide="sliders"></i>
+        <span>Advanced Settings</span>
+      </button>
     </div>
   </header>
 
   <main class="container main-layout">
-    <!-- Ever-Present Primary Search & Configuration Panel -->
-    <section class="search-config-panel">
-      <div class="panel-header">
-        <div class="panel-title">
-          <i data-lucide="sliders"></i>
-          <h2>Search Configuration & Target Controls</h2>
-        </div>
-        <span class="panel-subtitle">Configure your target job titles, keywords, and company boards below.</span>
+    <!-- Simple Primary Search Bar -->
+    <section class="hero-search-section">
+      <div class="search-box-card">
+        <h1 class="search-title">Search & Aggregate Job Openings</h1>
+        <p class="search-subtitle">Enter your target roles or keywords below to query live company career boards and global job feeds.</p>
+
+        <form id="instantSearchForm" onsubmit="executeJobSearch(event)" class="search-input-form">
+          <div class="input-wrap">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="targetKeywordsInput" placeholder="Enter job titles or keywords (e.g. IT Manager, Web Operations, DevOps, Engineering Manager)..." required>
+          </div>
+          
+          <button type="submit" class="btn btn-primary btn-lg" id="btnSearch">
+            <i data-lucide="arrow-right"></i>
+            <span>Search & Aggregate Jobs</span>
+          </button>
+        </form>
       </div>
 
-      <form id="mainSearchForm" onsubmit="saveAndScrape(event)">
-        <div class="form-row">
-          <div class="form-group flex-2">
-            <label for="targetTitlesInput"><i data-lucide="briefcase"></i> Target Job Titles & Roles *</label>
-            <input type="text" id="targetTitlesInput" placeholder="e.g. IT Manager, Web Operations, DevOps Lead, Software Engineering Manager" required>
-          </div>
-
-          <div class="form-group flex-1">
-            <label for="keywordsInput"><i data-lucide="tag"></i> Skill & Tech Keywords</label>
-            <input type="text" id="keywordsInput" placeholder="e.g. devops, webops, cloud, terraform, kubernetes">
-          </div>
+      <!-- Collapsible Advanced Settings -->
+      <div class="advanced-settings-card" id="advancedSettings" style="display: none;">
+        <div class="settings-header">
+          <h3>Advanced Sources & API Options</h3>
+          <button class="btn-close-sm" onclick="toggleAdvancedSettings()"><i data-lucide="x"></i></button>
         </div>
-
-        <div class="form-row mt-3">
-          <div class="form-group flex-2">
-            <label for="ghCompaniesInput"><i data-lucide="building"></i> Target ATS Company Boards (Greenhouse & Lever)</label>
-            <input type="text" id="ghCompaniesInput" placeholder="e.g. stripe, gitlab, github, cloudflare, datadog, hashicorp, vercel, netflix">
+        <div class="settings-grid">
+          <div class="form-group">
+            <label for="ghCompaniesInput">Target Greenhouse & Lever Companies (comma separated)</label>
+            <input type="text" id="ghCompaniesInput" placeholder="stripe, gitlab, github, cloudflare, datadog, hashicorp, vercel, netflix">
           </div>
-
-          <div class="form-group flex-1">
-            <label for="serpApiKeyInput"><i data-lucide="key"></i> Google Jobs SerpAPI Key (Optional)</label>
+          <div class="form-group">
+            <label for="serpApiKeyInput">Google Jobs SerpAPI Key (Optional)</label>
             <input type="password" id="serpApiKeyInput" placeholder="Paste SerpAPI key for Google Jobs aggregator">
           </div>
         </div>
-
-        <div class="form-actions mt-4">
-          <button type="submit" class="btn btn-primary btn-lg" id="btnScrape">
-            <i data-lucide="refresh-cw"></i>
-            <span>Save & Scrape All Sources</span>
-          </button>
-        </div>
-      </form>
+      </div>
     </section>
 
-    <!-- Telemetry Bar -->
-    <section class="summary-bar">
-      <div class="summary-card">
-        <div class="summary-metric" id="totalMatchesCount">0</div>
-        <div class="summary-label">Matching Roles Scraped</div>
+    <!-- Telemetry & Filter Bar -->
+    <section class="results-bar">
+      <div class="results-meta">
+        <h2 class="results-title">Aggregated Job Results</h2>
+        <span class="results-count-badge" id="resultsCountBadge">0 Postings Found</span>
       </div>
 
-      <div class="summary-card">
-        <div class="summary-value" id="lastScrapedTime">Never</div>
-        <div class="summary-label">Last Pipeline Execution</div>
-      </div>
-
-      <div class="summary-card sources-card">
-        <div class="summary-label">Active Sources Monitored:</div>
-        <div class="sources-breakdown">
-          <span class="pill green">Greenhouse & Lever ATS</span>
-          <span class="pill blue">Google Jobs</span>
-          <span class="pill gray">RemoteOK & WWR</span>
+      <div class="filter-controls">
+        <div class="sub-search-box">
+          <i data-lucide="filter"></i>
+          <input type="text" id="subFilterInput" placeholder="Filter fetched results..." oninput="filterFetchedResults()">
         </div>
       </div>
     </section>
 
-    <!-- In-Memory Filter Controls -->
-    <section class="controls-row">
-      <div class="search-box">
-        <i data-lucide="search"></i>
-        <input type="text" id="searchInput" placeholder="Search within scraped results by title, company, or location..." oninput="filterJobs()">
-      </div>
-
-      <div class="source-filter">
-        <select id="sourceSelect" onchange="filterJobs()">
-          <option value="all">All Sources (ATS + Google Jobs + Feeds)</option>
-          <option value="ats">Company ATS Boards (Greenhouse/Lever)</option>
-          <option value="gjobs">Google Jobs (LinkedIn/Indeed)</option>
-          <option value="feeds">RemoteOK & WeWorkRemotely</option>
-        </select>
-      </div>
-    </section>
-
-    <!-- Jobs Results Feed Grid -->
+    <!-- Aggregated Jobs List Grid -->
     <section class="jobs-section">
       <div class="jobs-list" id="jobsList">
-        <div class="loading-state">
-          <i data-lucide="loader-2" class="spin"></i>
-          <p>Loading multi-source job postings...</p>
+        <div class="empty-state" id="initialState">
+          <i data-lucide="briefcase"></i>
+          <p>Enter your target job titles or keywords above and click <strong>Search & Aggregate Jobs</strong> to pull live job postings.</p>
         </div>
       </div>
     </section>
@@ -132,7 +102,7 @@
 
   <footer class="app-footer">
     <div class="container footer-wrap">
-      <p>&copy; <span id="year">2026</span> Scrapedeez Web Search Suite. Ever-Present Search Controls & Scraper Engine.</p>
+      <p>&copy; <span id="year">2026</span> Scrapedeez Job Search Suite. Multi-Source Aggregator for Web Operations & Leadership.</p>
     </div>
   </footer>
 
