@@ -80,20 +80,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function fetchProfiles() {
   try {
-    const res = await fetch('./api/profiles');
+    let res = await fetch(`./profiles.php?t=${Date.now()}`);
+    if (!res.ok) {
+      res = await fetch(`./api/profiles?t=${Date.now()}`);
+    }
     if (res.ok) {
       const data = await res.json();
       if (data.profiles) {
-        for (const [id, prof] of Object.entries(data.profiles)) {
-          if (!profilesData[id]) profilesData[id] = prof;
-          else {
-            profilesData[id].name = prof.name;
-            profilesData[id].hasPin = prof.hasPin;
-            profilesData[id].targetTitles = prof.targetTitles || [];
-            profilesData[id].keywords = prof.keywords || [];
-            if (prof.lastScraped) profilesData[id].lastScraped = prof.lastScraped;
-          }
-        }
+        profilesData = data.profiles;
+        localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
       }
       if (data.activeProfileId) currentProfileId = data.activeProfileId;
     }
@@ -221,7 +216,7 @@ async function saveInlineName() {
   localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
 
   try {
-    await fetch('./api/profiles/save', {
+    let res = await fetch('./profiles.php?action=save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -230,6 +225,17 @@ async function saveInlineName() {
         name: nameVal
       })
     });
+    if (!res.ok) {
+      await fetch('./api/profiles/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileId: currentProfileId,
+          pin: authenticatedPin,
+          name: nameVal
+        })
+      });
+    }
   } catch (e) {}
 
   isEditingName = false;
@@ -296,12 +302,12 @@ async function saveShopifyTags() {
   const btn = document.getElementById('btnSaveTags');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Saving...</span>`;
+    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Saving to Server...</span>`;
     if (window.lucide) lucide.createIcons();
   }
 
   try {
-    await fetch('./api/profiles/save', {
+    let res = await fetch('./profiles.php?action=save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -312,6 +318,19 @@ async function saveShopifyTags() {
         keywords: []
       })
     });
+    if (!res.ok) {
+      await fetch('./api/profiles/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileId: currentProfileId,
+          pin: authenticatedPin,
+          name: profilesData[currentProfileId].name,
+          targetTitles: editingTagsList,
+          keywords: []
+        })
+      });
+    }
   } catch (e) {}
 
   isEditingKeywords = false;
@@ -374,11 +393,18 @@ async function submitPinVerification(e) {
 
     let success = false;
     try {
-      const res = await fetch('./api/profiles/verify-pin', {
+      let res = await fetch('./profiles.php?action=verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profileId: currentProfileId, pin: pinVal })
       });
+      if (!res.ok) {
+        res = await fetch('./api/profiles/verify-pin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profileId: currentProfileId, pin: pinVal })
+        });
+      }
       if (res.ok) {
         const data = await res.json();
         success = data.success;

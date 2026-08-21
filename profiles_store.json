@@ -1,0 +1,74 @@
+{
+  "activeProfileId": "profile1",
+  "profiles": {
+    "profile1": {
+      "id": "profile1",
+      "name": "User 1 - IT Management, WebOps & DevOps",
+      "hasPin": false,
+      "pin": null,
+      "targetTitles": [
+        "Manager of IT",
+        "IT Manager",
+        "Web Operations",
+        "WebOps Manager",
+        "Website Development",
+        "DevOps Manager",
+        "DevOps Lead",
+        "Director of IT",
+        "Web Engineering Manager"
+      ],
+      "keywords": [
+        "devops",
+        "webops",
+        "web development",
+        "infrastructure",
+        "cloud",
+        "terraform",
+        "kubernetes",
+        "change control",
+        "it management"
+      ],
+      "greenhouseCompanies": [
+        "stripe",
+        "gitlab",
+        "github",
+        "cloudflare",
+        "datadog",
+        "hashicorp",
+        "vercel"
+      ],
+      "lastScraped": "2026-08-20T21:30:00.000Z",
+      "jobs": []
+    },
+    "profile2": {
+      "id": "profile2",
+      "name": "User Profile 2 (Custom)",
+      "hasPin": false,
+      "pin": null,
+      "targetTitles": [],
+      "keywords": [],
+      "greenhouseCompanies": [
+        "stripe",
+        "gitlab",
+        "github"
+      ],
+      "lastScraped": null,
+      "jobs": []
+    },
+    "profile3": {
+      "id": "profile3",
+      "name": "User Profile 3 (Custom)",
+      "hasPin": false,
+      "pin": null,
+      "targetTitles": [],
+      "keywords": [],
+      "greenhouseCompanies": [
+        "stripe",
+        "gitlab",
+        "github"
+      ],
+      "lastScraped": null,
+      "jobs": []
+    }
+  }
+}
