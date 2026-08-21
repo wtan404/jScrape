@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Scrapedeez | IT Manager & WebOps Job Engine</title>
   <meta name="description" content="Automated hourly job scraper with PIN-protected user profiles for IT Management, Web Operations, Website Development, and DevOps leadership roles.">
   <meta name="theme-color" content="#090d16">
@@ -20,7 +20,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="styles.css?v=3.0">
+  <link rel="stylesheet" href="styles.css?v=3.1">
 </head>
 <body>
 
@@ -33,7 +33,7 @@
       </div>
 
       <div class="header-actions">
-        <!-- User Profile Dropdown (Directly to the left of Rescan button) -->
+        <!-- User Profile Dropdown (Header Left of Rescan) -->
         <div class="header-profile-wrap">
           <i data-lucide="user" class="header-profile-icon"></i>
           <select id="profileSelectDropdown" class="header-profile-select" onchange="onProfileChange()">
@@ -43,7 +43,7 @@
 
         <button class="btn btn-primary btn-sm" onclick="triggerScrapeNow()" id="btnScrape">
           <i data-lucide="refresh-cw"></i>
-          <span>Re-Verify & Rescan Now</span>
+          <span>Re-Scan</span>
         </button>
       </div>
     </div>
@@ -89,7 +89,7 @@
         <div class="shopify-tag-input-bar" id="shopifyTagInputBar" style="display: none;">
           <div class="shopify-input-wrap">
             <i data-lucide="plus" class="add-tag-icon"></i>
-            <input type="text" id="shopifyTagInput" placeholder="Type a job title or keyword and press Enter to add..." onkeydown="handleShopifyTagInput(event)">
+            <input type="text" id="shopifyTagInput" placeholder="Type keyword & press Enter..." onkeydown="handleShopifyTagInput(event)">
           </div>
           <div class="shopify-actions">
             <button type="button" class="btn btn-secondary btn-sm" onclick="cancelShopifyTagEdit()">Cancel</button>
@@ -149,7 +149,7 @@
           </div>
 
           <div class="geo-group geo-btn-group">
-            <label>&nbsp;</label>
+            <label class="desktop-only-label">&nbsp;</label>
             <button type="button" class="btn btn-primary btn-xs" onclick="filterJobs()" id="btnApplyGeoFilters">
               <i data-lucide="filter"></i>
               <span>Apply Filters</span>
@@ -222,6 +222,6 @@
     </div>
   </footer>
 
-  <script src="main.js?v=3.0"></script>
+  <script src="main.js?v=3.1"></script>
 </body>
 </html>

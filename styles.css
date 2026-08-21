@@ -803,16 +803,147 @@ body {
   color: var(--text-dim);
 }
 
-/* Responsive */
-@media (max-width: 900px) {
-  .header-wrap, .profile-card-header, .summary-bar, .geo-controls-grid, .controls-row, .shopify-tag-input-bar {
-    flex-direction: column;
-    grid-template-columns: 1fr;
+/* Responsive Mobile & iPhone Optimization (Media Queries) */
+@media (max-width: 768px) {
+  .header-wrap {
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    justify-content: space-between;
   }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .header-profile-wrap {
+    flex: 1;
+    max-width: 58%;
+  }
+
+  .header-profile-select {
+    max-width: 100%;
+    font-size: 0.82rem;
+  }
+
+  .main-layout {
+    padding: 1.2rem 1rem 3rem 1rem;
+  }
+
+  .active-profile-card {
+    padding: 1.2rem 1rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .profile-name-row {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .profile-name-row h2 {
+    font-size: 1.25rem;
+  }
+
+  .inline-name-input-group {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
   .inline-name-input-group input {
     width: 100%;
+    font-size: 1.1rem;
   }
+
+  .kw-title-row {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .shopify-tag-input-bar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.8rem;
+  }
+
+  .shopify-actions {
+    justify-content: flex-end;
+  }
+
+  .summary-bar {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+  }
+
+  .geo-card {
+    padding: 0.9rem 1rem;
+  }
+
+  .geo-controls-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.7rem;
+  }
+
+  .geo-btn-group {
+    grid-column: span 2;
+  }
+
+  .desktop-only-label {
+    display: none;
+  }
+
+  #btnApplyGeoFilters {
+    width: 100%;
+    padding: 0.55rem;
+  }
+
+  .controls-row {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+
   .job-card {
     grid-template-columns: 1fr;
+    padding: 1.2rem 1rem;
+    gap: 1rem;
+  }
+
+  .job-title {
+    font-size: 1.15rem;
+  }
+
+  .job-footer-info {
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  .job-action a {
+    width: 100%;
+    justify-content: center;
+    padding: 0.75rem;
+  }
+
+  .modal-card {
+    width: 92%;
+    padding: 1.5rem 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-title {
+    font-size: 1.25rem;
+  }
+
+  .brand-logo-img {
+    width: 26px;
+    height: 26px;
+  }
+
+  .geo-controls-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .geo-btn-group {
+    grid-column: span 1;
   }
 }
