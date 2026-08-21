@@ -4,19 +4,31 @@ const path = require('path');
 const { scrapeAllATSCompanies } = require('./ats_scraper');
 const { scrapeGoogleJobs } = require('./google_jobs_scraper');
 
-// Scrape RemoteOK with User Keywords
+const BROWSER_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'en-US,en;q=0.9'
+};
+
+// Scrape RemoteOK Feed Safely
 async function scrapeRemoteOK(targetTitles = [], keywords = []) {
   try {
     const response = await axios.get('https://remoteok.com/api', {
-      headers: { 'User-Agent': 'ScrapedeezJobScraper/1.0' },
+      headers: BROWSER_HEADERS,
       timeout: 8000
     });
+
+    if (response.status !== 200 || !Array.isArray(response.data)) {
+      return [];
+    }
 
     const jobs = response.data.slice(1);
     const matches = [];
     const searchTerms = [...targetTitles, ...keywords].map(t => t.toLowerCase().trim()).filter(Boolean);
 
     for (const job of jobs) {
+      if (!job || typeof job !== 'object') continue;
+
       const title = (job.position || '').toLowerCase();
       const description = (job.description || '').toLowerCase();
       const company = job.company || 'Unknown';
@@ -29,7 +41,7 @@ async function scrapeRemoteOK(targetTitles = [], keywords = []) {
         matches.push({
           id: `remoteok-${job.id}`,
           source: 'RemoteOK Feed',
-          title: job.position,
+          title: job.position || 'Remote Position',
           company,
           location: job.location || 'Remote',
           url,
@@ -46,13 +58,17 @@ async function scrapeRemoteOK(targetTitles = [], keywords = []) {
   }
 }
 
-// Scrape WeWorkRemotely with User Keywords
+// Scrape WeWorkRemotely Feed Safely
 async function scrapeWeWorkRemotely(targetTitles = [], keywords = []) {
   try {
     const response = await axios.get('https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss', {
-      headers: { 'User-Agent': 'ScrapedeezJobScraper/1.0' },
+      headers: BROWSER_HEADERS,
       timeout: 8000
     });
+
+    if (response.status !== 200 || typeof response.data !== 'string') {
+      return [];
+    }
 
     const xml = response.data;
     const matches = [];
@@ -93,7 +109,7 @@ async function scrapeWeWorkRemotely(targetTitles = [], keywords = []) {
 
 // Master Pipeline Orchestrator
 async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey = process.env.SERPAPI_KEY, targetTitles = [], keywords = []) {
-  console.log('[Scrapedeez] Launching User-Configured Pipeline with Search Terms:', targetTitles, keywords);
+  console.log('[Scrapedeez] Launching Pipeline with Search Terms:', targetTitles);
 
   const [remoteOkJobs, wwrJobs, atsJobs, googleJobs] = await Promise.all([
     scrapeRemoteOK(targetTitles, keywords),
@@ -107,7 +123,7 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
   // Remove duplicates
   const seen = new Set();
   const uniqueMatches = allMatches.filter(job => {
-    const key = (job.title + '|' + job.company).toLowerCase();
+    const key = ((job.title || '') + '|' + (job.company || '')).toLowerCase();
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

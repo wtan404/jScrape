@@ -3,13 +3,23 @@ const axios = require('axios');
 const DEFAULT_GREENHOUSE_COMPANIES = ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel'];
 const DEFAULT_LEVER_COMPANIES = ['netflix', 'spotify', 'palantir', 'figma', 'postman'];
 
-// Scrape Greenhouse Company Board using User's Custom Titles/Keywords
+const BROWSER_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'en-US,en;q=0.9'
+};
+
+// Scrape Greenhouse Board Safely
 async function scrapeGreenhouseCompany(company, targetTitles = [], keywords = []) {
   try {
     const url = `https://boards-api.greenhouse.io/v1/boards/${company}/jobs?content=true`;
-    const response = await axios.get(url, { timeout: 6000 });
-    const jobs = response.data.jobs || [];
+    const response = await axios.get(url, { headers: BROWSER_HEADERS, timeout: 6000 });
 
+    if (response.status !== 200 || !response.data || typeof response.data !== 'object') {
+      return [];
+    }
+
+    const jobs = response.data.jobs || [];
     const searchTerms = [...targetTitles, ...keywords].map(t => t.toLowerCase().trim()).filter(Boolean);
     const matches = [];
 
@@ -39,13 +49,17 @@ async function scrapeGreenhouseCompany(company, targetTitles = [], keywords = []
   }
 }
 
-// Scrape Lever Company Board using User's Custom Titles/Keywords
+// Scrape Lever Board Safely
 async function scrapeLeverCompany(company, targetTitles = [], keywords = []) {
   try {
     const url = `https://api.lever.co/v0/postings/${company}?mode=json`;
-    const response = await axios.get(url, { timeout: 6000 });
-    const jobs = response.data || [];
+    const response = await axios.get(url, { headers: BROWSER_HEADERS, timeout: 6000 });
 
+    if (response.status !== 200 || !response.data || !Array.isArray(response.data)) {
+      return [];
+    }
+
+    const jobs = response.data;
     const searchTerms = [...targetTitles, ...keywords].map(t => t.toLowerCase().trim()).filter(Boolean);
     const matches = [];
 
@@ -75,12 +89,10 @@ async function scrapeLeverCompany(company, targetTitles = [], keywords = []) {
   }
 }
 
-// Master ATS Engine accepting User-Defined Keywords & Companies
+// Master ATS Engine
 async function scrapeAllATSCompanies(customGreenhouse = [], customLever = [], targetTitles = [], keywords = []) {
   const ghList = customGreenhouse.length > 0 ? customGreenhouse : DEFAULT_GREENHOUSE_COMPANIES;
   const leverList = customLever.length > 0 ? customLever : DEFAULT_LEVER_COMPANIES;
-
-  console.log(`[ATS Scraper] Querying ${ghList.length} Greenhouse & ${leverList.length} Lever boards using custom keywords:`, targetTitles);
 
   const ghPromises = ghList.map(c => scrapeGreenhouseCompany(c, targetTitles, keywords));
   const leverPromises = leverList.map(c => scrapeLeverCompany(c, targetTitles, keywords));

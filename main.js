@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fetchJobsDatabase() {
   try {
     const response = await fetch('/api/jobs');
+    if (!response.ok) return;
     const data = await response.json();
 
     allJobsData = data.jobs || [];
@@ -32,6 +33,7 @@ async function fetchJobsDatabase() {
 async function fetchConfig() {
   try {
     const res = await fetch('/api/config');
+    if (!res.ok) return;
     currentConfig = await res.json();
 
     const searchInput = document.getElementById('targetKeywordsInput');
@@ -84,7 +86,7 @@ async function executeJobSearch(e) {
   }
 
   try {
-    // Save configuration
+    // 1. Save Config
     await fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -97,10 +99,15 @@ async function executeJobSearch(e) {
       })
     });
 
-    // Run Scrape Pipeline
+    // 2. Trigger Scrape Job
     const res = await fetch('/api/scrape-now', { method: 'POST' });
-    const data = await res.json();
+    
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Server returned HTTP ${res.status}: ${text.substring(0, 80)}`);
+    }
 
+    const data = await res.json();
     allJobsData = data.jobs || [];
     renderJobs(allJobsData);
   } catch (err) {
