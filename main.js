@@ -925,20 +925,21 @@ function renderJobs(jobs) {
     return `
       <article class="job-card ${job.isNew ? 'is-new' : ''}">
         <div class="job-info">
+          <!-- Top Meta Row Order: Status Indicator Dot -> Company -> Location -> Setup Badge -->
           <div class="job-meta-top">
-            <!-- Sleek Glowing Dots for Verified and New statuses -->
             ${job.isNew ? '<span class="dot-new" title="New Role (Discovered Recent Hour)"></span>' : '<span class="dot-verified" title="Verified Live & Active"></span>'}
+            <span class="job-company">${escapeHtml(job.company)}</span>
+            <span class="job-location-top"><i data-lucide="map-pin"></i> ${escapeHtml(job.location || 'Remote')}</span>
             <span class="work-type-badge ${workTypeClass}">${workTypeLabel}</span>
             ${job.distanceMiles && job.distanceMiles < 9000 ? `<span class="badge-distance"><i data-lucide="map-pin"></i> ${Math.round(job.distanceMiles)} mi away</span>` : ''}
-            <span class="job-company">${escapeHtml(job.company)}</span>
           </div>
+          
           <h3 class="job-title">${escapeHtml(job.title)}</h3>
           
-          <!-- Line Order: Salary First, Time Posted Second, Location AT THE END -->
+          <!-- Bottom Info Line: Salary -> Date Only (Time Removed) -->
           <div class="job-footer-info">
             <span class="job-salary"><i data-lucide="dollar-sign"></i> ${escapeHtml(salaryVal)}</span>
-            <span><i data-lucide="clock"></i> ${formatDate(job.date)}</span>
-            <span class="job-location-end"><i data-lucide="map-pin"></i> ${escapeHtml(job.location || 'Remote')}</span>
+            <span><i data-lucide="calendar"></i> ${formatDate(job.date)}</span>
           </div>
         </div>
         <div class="job-action">
@@ -956,10 +957,11 @@ function renderJobs(jobs) {
   }
 }
 
+// Date-Only Formatting (Time Removed)
 function formatDate(isoStr) {
   if (!isoStr) return 'Recently';
   const d = new Date(isoStr);
-  return isNaN(d.getTime()) ? isoStr : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return isNaN(d.getTime()) ? isoStr : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function escapeHtml(text) {
