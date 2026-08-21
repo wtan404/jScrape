@@ -1,5 +1,6 @@
 {
   "antigravity.autoApproveTools": true,
   "antigravity.requestReview": false,
-  "antigravity.confirmCommandExecution": false
+  "antigravity.confirmCommandExecution": false,
+  "antigravity.autonomousMode": true
 }

@@ -20,7 +20,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="styles.css?v=2.3">
+  <link rel="stylesheet" href="styles.css?v=2.4">
 </head>
 <body>
 
@@ -50,16 +50,18 @@
 
   <main class="container main-layout">
 
-    <!-- Active User Profile & Keywords Box (Placed Top Above 3 Telemetry Cards) -->
+    <!-- Active User Profile & Shopify-Style Interactive Keywords Box -->
     <section class="active-profile-card">
       <div class="profile-card-header">
         <div class="profile-info">
           <span class="profile-label">ACTIVE SEARCH PROFILE</span>
-          <div class="profile-name-row">
+          
+          <!-- Inline Editable Profile Name Title -->
+          <div class="profile-name-row" id="profileNameContainer">
             <h2 id="activeProfileDisplayName">User 1 - IT Management, WebOps & DevOps</h2>
             <button class="btn btn-secondary btn-xs" onclick="openEditNameModal()" id="btnEditName">
               <i data-lucide="edit-2"></i>
-              <span>Edit Profile Name</span>
+              <span>Edit Name</span>
             </button>
           </div>
         </div>
@@ -77,86 +79,36 @@
         </div>
       </div>
 
-      <!-- Active Keywords & Role Tags with Dedicated Edit Button -->
-      <div class="profile-keywords-wrap">
+      <!-- Active Keywords & Role Tags with Shopify-Style Interactive Editing -->
+      <div class="profile-keywords-wrap" id="profileKeywordsContainer">
         <div class="kw-header">
           <span class="kw-label">Target Job Titles & Search Keywords:</span>
           <button class="btn btn-secondary btn-sm" onclick="openEditCriteriaModal()" id="btnEditCriteria">
             <i data-lucide="lock"></i>
-            <span>Edit Target Titles & Keywords</span>
+            <span>Edit Keywords & Roles</span>
           </button>
         </div>
 
+        <!-- Rendered Tags List -->
         <div class="kw-tags-list" id="activeKeywordsList">
-          <!-- Dynamic Keyword Tags -->
-        </div>
-      </div>
-    </section>
-
-    <!-- PIN-Unlocked Profile Name Edit Box -->
-    <section class="profile-criteria-box" id="profileNameEditBox" style="display: none;">
-      <div class="criteria-box-header">
-        <div class="criteria-title">
-          <i data-lucide="user"></i>
-          <h2>Edit Profile Name / Label</h2>
-        </div>
-        <span class="unlocked-badge"><i data-lucide="unlock"></i> PIN Authenticated</span>
-      </div>
-
-      <form id="profileNameForm" onsubmit="saveProfileName(event)">
-        <div class="form-group">
-          <label for="profileNameInput"><i data-lucide="user"></i> User Profile Name / Label *</label>
-          <input type="text" id="profileNameInput" placeholder="e.g. Will - IT Management & WebOps" required>
+          <!-- Dynamic Tags -->
         </div>
 
-        <div class="form-actions mt-3">
-          <button type="button" class="btn btn-secondary" onclick="lockNameEditBox()">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="btnSaveName">
-            <i data-lucide="save"></i>
-            <span>Save Profile Name</span>
-          </button>
-        </div>
-      </form>
-    </section>
-
-    <!-- PIN-Unlocked Target Titles & Keywords Edit Box -->
-    <section class="profile-criteria-box" id="profileCriteriaBox" style="display: none;">
-      <div class="criteria-box-header">
-        <div class="criteria-title">
-          <i data-lucide="sliders"></i>
-          <h2 id="activeProfileBoxTitle">Edit Target Titles & Keywords</h2>
-        </div>
-        <span class="unlocked-badge"><i data-lucide="unlock"></i> PIN Authenticated</span>
-      </div>
-
-      <form id="profileCriteriaForm" onsubmit="saveProfileCriteria(event)">
-        <div class="form-row">
-          <div class="form-group flex-2">
-            <label for="profileTitlesInput"><i data-lucide="briefcase"></i> Target Job Titles & Roles (comma separated) *</label>
-            <input type="text" id="profileTitlesInput" placeholder="e.g. Manager of IT, Web Operations, DevOps Lead" required>
+        <!-- Shopify-Style Tag Input & Save Bar (Hidden until Edit Mode Active) -->
+        <div class="shopify-tag-input-bar" id="shopifyTagInputBar" style="display: none;">
+          <div class="shopify-input-wrap">
+            <i data-lucide="plus" class="add-tag-icon"></i>
+            <input type="text" id="shopifyTagInput" placeholder="Type a job title or keyword and press Enter to add..." onkeydown="handleShopifyTagInput(event)">
           </div>
-
-          <div class="form-group flex-1">
-            <label for="profileKeywordsInput"><i data-lucide="tag"></i> Skill & Tech Keywords</label>
-            <input type="text" id="profileKeywordsInput" placeholder="e.g. devops, webops, cloud, terraform">
+          <div class="shopify-actions">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="cancelShopifyTagEdit()">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="saveShopifyTags()" id="btnSaveTags">
+              <i data-lucide="save"></i>
+              <span>Save & Re-Scan</span>
+            </button>
           </div>
         </div>
-
-        <div class="form-row mt-3">
-          <div class="form-group flex-2">
-            <label for="profileCompaniesInput"><i data-lucide="building"></i> Target ATS Company Career Boards (Greenhouse/Lever)</label>
-            <input type="text" id="profileCompaniesInput" placeholder="stripe, gitlab, github, cloudflare, datadog, hashicorp, vercel">
-          </div>
-        </div>
-
-        <div class="form-actions mt-3">
-          <button type="button" class="btn btn-secondary" onclick="lockProfileBox()">Cancel / Lock</button>
-          <button type="submit" class="btn btn-primary" id="btnSaveProfile">
-            <i data-lucide="save"></i>
-            <span>Save & Re-Scan Profile</span>
-          </button>
-        </div>
-      </form>
+      </div>
     </section>
 
     <!-- Telemetry Bar (3 Cards) -->
@@ -274,6 +226,6 @@
     </div>
   </footer>
 
-  <script src="main.js?v=2.3"></script>
+  <script src="main.js?v=2.4"></script>
 </body>
 </html>

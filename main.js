@@ -8,7 +8,11 @@ let currentProfileId = 'profile1';
 let authenticatedPin = null;
 let pendingEditTarget = null; // 'name' or 'criteria'
 
-// Default client-side profiles fallback (works on static web hosts)
+let isEditingName = false;
+let isEditingKeywords = false;
+let editingTagsList = [];
+
+// Default client-side profiles fallback
 let profilesData = {
   profile1: {
     id: 'profile1',
@@ -46,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const yearEl = document.getElementById('year');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-  // Load saved local profiles if available
   const savedProfs = localStorage.getItem('scrapedeez_profiles');
   if (savedProfs) {
     try { profilesData = JSON.parse(savedProfs); } catch (e) {}
@@ -86,16 +89,64 @@ function renderProfileDropdown() {
 }
 
 function renderActiveProfileCard() {
-  const nameEl = document.getElementById('activeProfileDisplayName');
-  const kwListEl = document.getElementById('activeKeywordsList');
+  const container = document.getElementById('profileNameContainer');
   const activeProf = profilesData[currentProfileId] || { name: 'User Profile', targetTitles: [], keywords: [] };
 
-  if (nameEl) nameEl.textContent = activeProf.name;
+  // Render Name Title or Inline Input
+  if (container) {
+    if (isEditingName) {
+      container.innerHTML = `
+        <div class="inline-name-input-group">
+          <input type="text" id="inlineNameInput" value="${escapeHtml(activeProf.name)}" autofocus>
+          <button class="btn btn-secondary btn-xs" onclick="cancelInlineNameEdit()">Cancel</button>
+          <button class="btn btn-primary btn-xs" onclick="saveInlineName()">Save</button>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `
+        <h2 id="activeProfileDisplayName">${escapeHtml(activeProf.name)}</h2>
+        <button class="btn btn-secondary btn-xs" onclick="openEditNameModal()" id="btnEditName">
+          <i data-lucide="edit-2"></i>
+          <span>Edit Name</span>
+        </button>
+      `;
+    }
+  }
 
-  if (kwListEl) {
+  renderKeywordsSection();
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function renderKeywordsSection() {
+  const kwListEl = document.getElementById('activeKeywordsList');
+  const inputBar = document.getElementById('shopifyTagInputBar');
+  const btnEditCriteria = document.getElementById('btnEditCriteria');
+  const activeProf = profilesData[currentProfileId] || { targetTitles: [], keywords: [] };
+
+  if (!kwListEl) return;
+
+  if (isEditingKeywords) {
+    if (btnEditCriteria) btnEditCriteria.style.display = 'none';
+    if (inputBar) inputBar.style.display = 'flex';
+
+    if (editingTagsList.length === 0) {
+      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No tags currently added. Type a keyword below and press Enter to add.</span>`;
+    } else {
+      kwListEl.innerHTML = editingTagsList.map((term, index) => `
+        <span class="kw-tag editable">
+          ${escapeHtml(term)}
+          <button type="button" class="tag-remove-btn" onclick="removeShopifyTag(${index})" title="Remove keyword">&times;</button>
+        </span>
+      `).join('');
+    }
+  } else {
+    if (btnEditCriteria) btnEditCriteria.style.display = 'inline-flex';
+    if (inputBar) inputBar.style.display = 'none';
+
     const allTerms = [...(activeProf.targetTitles || []), ...(activeProf.keywords || [])];
     if (allTerms.length === 0) {
-      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No search criteria set yet. Click Edit Target Titles & Keywords to add terms.</span>`;
+      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No search criteria set yet. Click Edit Keywords & Roles to add terms.</span>`;
     } else {
       kwListEl.innerHTML = allTerms.map(term => `<span class="kw-tag">${escapeHtml(term)}</span>`).join('');
     }
@@ -108,30 +159,136 @@ function onProfileChange() {
 
   currentProfileId = dropdown.value;
   authenticatedPin = null;
-  lockNameEditBox();
-  lockProfileBox();
+  isEditingName = false;
+  isEditingKeywords = false;
   renderActiveProfileCard();
   fetchJobsDatabase();
 }
 
-// 1. Trigger Edit Profile Name
+// 1. Trigger Edit Profile Name (Inline)
 function openEditNameModal() {
   pendingEditTarget = 'name';
   if (authenticatedPin) {
-    unlockNameEditBox();
+    isEditingName = true;
+    renderActiveProfileCard();
   } else {
     openPinModal();
   }
 }
 
-// 2. Trigger Edit Target Titles & Keywords
+function cancelInlineNameEdit() {
+  isEditingName = false;
+  renderActiveProfileCard();
+}
+
+async function saveInlineName() {
+  const nameInput = document.getElementById('inlineNameInput');
+  const nameVal = nameInput ? nameInput.value.trim() : '';
+
+  if (!nameVal) return;
+
+  if (profilesData[currentProfileId]) {
+    profilesData[currentProfileId].name = nameVal;
+  }
+  localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
+
+  try {
+    await fetch('./api/profiles/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        profileId: currentProfileId,
+        pin: authenticatedPin,
+        name: nameVal
+      })
+    });
+  } catch (e) {}
+
+  isEditingName = false;
+  renderProfileDropdown();
+  renderActiveProfileCard();
+}
+
+// 2. Trigger Edit Keywords (Shopify-style Tag Manager)
 function openEditCriteriaModal() {
   pendingEditTarget = 'criteria';
   if (authenticatedPin) {
-    unlockProfileBox();
+    startShopifyTagEdit();
   } else {
     openPinModal();
   }
+}
+
+function startShopifyTagEdit() {
+  const activeProf = profilesData[currentProfileId] || { targetTitles: [], keywords: [] };
+  editingTagsList = [...(activeProf.targetTitles || []), ...(activeProf.keywords || [])];
+  isEditingKeywords = true;
+  renderKeywordsSection();
+
+  const input = document.getElementById('shopifyTagInput');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+}
+
+function handleShopifyTagInput(e) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    const input = document.getElementById('shopifyTagInput');
+    const val = input ? input.value.replace(/,/g, '').trim() : '';
+
+    if (val && !editingTagsList.includes(val)) {
+      editingTagsList.push(val);
+      input.value = '';
+      renderKeywordsSection();
+    }
+  }
+}
+
+function removeShopifyTag(index) {
+  if (index >= 0 && index < editingTagsList.length) {
+    editingTagsList.splice(index, 1);
+    renderKeywordsSection();
+  }
+}
+
+function cancelShopifyTagEdit() {
+  isEditingKeywords = false;
+  renderKeywordsSection();
+}
+
+async function saveShopifyTags() {
+  if (profilesData[currentProfileId]) {
+    profilesData[currentProfileId].targetTitles = editingTagsList;
+    profilesData[currentProfileId].keywords = [];
+  }
+  localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
+
+  const btn = document.getElementById('btnSaveTags');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Saving...</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  try {
+    await fetch('./api/profiles/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        profileId: currentProfileId,
+        pin: authenticatedPin,
+        name: profilesData[currentProfileId].name,
+        targetTitles: editingTagsList,
+        keywords: []
+      })
+    });
+  } catch (e) {}
+
+  isEditingKeywords = false;
+  renderKeywordsSection();
+  triggerScrapeNow();
 }
 
 function openPinModal() {
@@ -186,7 +343,6 @@ async function submitPinVerification(e) {
   try {
     const targetProf = profilesData[currentProfileId];
 
-    // Check client-side stored PIN or API
     let success = false;
     try {
       const res = await fetch('./api/profiles/verify-pin', {
@@ -200,7 +356,6 @@ async function submitPinVerification(e) {
       }
     } catch (apiErr) {}
 
-    // Fallback PIN verification in browser memory
     if (!success) {
       if (!targetProf.pin) {
         targetProf.pin = pinVal;
@@ -219,9 +374,10 @@ async function submitPinVerification(e) {
       closePinModal();
 
       if (pendingEditTarget === 'name') {
-        unlockNameEditBox();
+        isEditingName = true;
+        renderActiveProfileCard();
       } else {
-        unlockProfileBox();
+        startShopifyTagEdit();
       }
     } else {
       if (errorMsg) {
@@ -236,147 +392,6 @@ async function submitPinVerification(e) {
     }
   } finally {
     if (btn) btn.disabled = false;
-  }
-}
-
-function unlockNameEditBox() {
-  lockProfileBox();
-  const box = document.getElementById('profileNameEditBox');
-  const prof = profilesData[currentProfileId] || { name: '' };
-
-  if (!box) return;
-
-  document.getElementById('profileNameInput').value = prof.name || '';
-  box.style.display = 'block';
-  box.scrollIntoView({ behavior: 'smooth' });
-}
-
-function lockNameEditBox() {
-  const box = document.getElementById('profileNameEditBox');
-  if (box) box.style.display = 'none';
-}
-
-function unlockProfileBox() {
-  lockNameEditBox();
-  const box = document.getElementById('profileCriteriaBox');
-  const title = document.getElementById('activeProfileBoxTitle');
-  const prof = profilesData[currentProfileId] || { targetTitles: [], keywords: [], greenhouseCompanies: [] };
-
-  if (!box) return;
-
-  if (title) title.textContent = `Editing Search Criteria: ${prof.name || 'User Profile'}`;
-
-  document.getElementById('profileTitlesInput').value = (prof.targetTitles || []).join(', ');
-  document.getElementById('profileKeywordsInput').value = (prof.keywords || []).join(', ');
-  document.getElementById('profileCompaniesInput').value = (prof.greenhouseCompanies || []).join(', ');
-
-  box.style.display = 'block';
-  box.scrollIntoView({ behavior: 'smooth' });
-}
-
-function lockProfileBox() {
-  const box = document.getElementById('profileCriteriaBox');
-  if (box) box.style.display = 'none';
-}
-
-async function saveProfileName(e) {
-  e.preventDefault();
-
-  if (!authenticatedPin) {
-    openEditNameModal();
-    return;
-  }
-
-  const nameVal = document.getElementById('profileNameInput')?.value || '';
-  const btn = document.getElementById('btnSaveName');
-
-  if (btn) btn.disabled = true;
-
-  try {
-    if (profilesData[currentProfileId]) {
-      profilesData[currentProfileId].name = nameVal;
-    }
-    localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
-
-    try {
-      await fetch('./api/profiles/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profileId: currentProfileId,
-          pin: authenticatedPin,
-          name: nameVal
-        })
-      });
-    } catch (apiErr) {}
-
-    renderProfileDropdown();
-    renderActiveProfileCard();
-    lockNameEditBox();
-  } catch (err) {
-    alert('Save error: ' + err.message);
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
-
-async function saveProfileCriteria(e) {
-  e.preventDefault();
-
-  if (!authenticatedPin) {
-    openEditCriteriaModal();
-    return;
-  }
-
-  const titlesVal = document.getElementById('profileTitlesInput')?.value || '';
-  const keywordsVal = document.getElementById('profileKeywordsInput')?.value || '';
-  const companiesVal = document.getElementById('profileCompaniesInput')?.value || '';
-
-  const targetTitles = titlesVal.split(',').map(s => s.trim()).filter(Boolean);
-  const keywords = keywordsVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-  const greenhouseCompanies = companiesVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-
-  const btn = document.getElementById('btnSaveProfile');
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Saving & Rescanning...</span>`;
-    if (window.lucide) lucide.createIcons();
-  }
-
-  try {
-    if (profilesData[currentProfileId]) {
-      profilesData[currentProfileId].targetTitles = targetTitles;
-      profilesData[currentProfileId].keywords = keywords;
-      profilesData[currentProfileId].greenhouseCompanies = greenhouseCompanies;
-    }
-    localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
-
-    try {
-      await fetch('./api/profiles/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profileId: currentProfileId,
-          pin: authenticatedPin,
-          name: profilesData[currentProfileId].name,
-          targetTitles,
-          keywords,
-          greenhouseCompanies
-        })
-      });
-    } catch (apiErr) {}
-
-    renderActiveProfileCard();
-    lockProfileBox();
-    triggerScrapeNow();
-  } catch (err) {
-    alert('Save error: ' + err.message);
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = `<i data-lucide="save"></i><span>Save & Re-Scan Profile</span>`;
-      if (window.lucide) lucide.createIcons();
-    }
   }
 }
 
