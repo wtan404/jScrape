@@ -3,6 +3,7 @@
    ========================================================================== */
 
 let allJobsData = [];
+let lastScrapedTimestamp = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) {
@@ -13,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
   fetchJobsDatabase();
+
+  // Tick live time elapsed badge every 10 seconds
+  setInterval(updateElapsedBadge, 10000);
 });
 
 async function fetchJobsDatabase() {
@@ -20,7 +24,6 @@ async function fetchJobsDatabase() {
   try {
     const response = await fetch('api/jobs');
     if (!response.ok) {
-      // Fallback if data file not fetched yet
       renderJobs([]);
       return;
     }
@@ -32,13 +35,42 @@ async function fetchJobsDatabase() {
     const timeEl = document.getElementById('lastScrapedTime');
 
     if (totalEl) totalEl.textContent = data.totalMatches || allJobsData.length;
-    if (timeEl && data.lastScraped) {
-      timeEl.textContent = formatDate(data.lastScraped);
+    
+    if (data.lastScraped) {
+      lastScrapedTimestamp = new Date(data.lastScraped).getTime();
+      if (timeEl) timeEl.textContent = formatDate(data.lastScraped);
+      updateElapsedBadge();
     }
 
     renderJobs(allJobsData);
   } catch (err) {
     console.error('Initial job database fetch note:', err);
+  }
+}
+
+function updateElapsedBadge() {
+  const badgeText = document.getElementById('elapsedTimerText');
+  if (!badgeText) return;
+
+  if (!lastScrapedTimestamp || isNaN(lastScrapedTimestamp)) {
+    badgeText.textContent = 'Refreshed just now';
+    return;
+  }
+
+  const now = Date.now();
+  const elapsedSec = Math.max(0, Math.floor((now - lastScrapedTimestamp) / 1000));
+
+  if (elapsedSec < 15) {
+    badgeText.textContent = 'Refreshed just now';
+  } else if (elapsedSec < 60) {
+    badgeText.textContent = `Refreshed ${elapsedSec}s ago`;
+  } else if (elapsedSec < 3600) {
+    const mins = Math.floor(elapsedSec / 60);
+    badgeText.textContent = `Refreshed ${mins}m ago`;
+  } else {
+    const hours = Math.floor(elapsedSec / 3600);
+    const mins = Math.floor((elapsedSec % 3600) / 60);
+    badgeText.textContent = mins > 0 ? `Refreshed ${hours}h ${mins}m ago` : `Refreshed ${hours}h ago`;
   }
 }
 
@@ -76,6 +108,12 @@ async function triggerScrapeNow() {
 
     const data = await res.json();
     allJobsData = data.jobs || [];
+
+    if (data.scrapedAt) {
+      lastScrapedTimestamp = new Date(data.scrapedAt).getTime();
+      updateElapsedBadge();
+    }
+
     renderJobs(allJobsData);
   } catch (err) {
     if (jobsList) {

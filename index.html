@@ -29,9 +29,10 @@
       </div>
 
       <div class="header-actions">
-        <div class="cron-status">
+        <!-- Live Time Elapsed Status Badge -->
+        <div class="cron-status" id="elapsedTimerBadge" title="Time elapsed since last scan & verification">
           <span class="pulse-dot"></span>
-          <span>AUTO-RESCAN HOURLY (LINK VERIFIED)</span>
+          <span id="elapsedTimerText">Refreshed just now</span>
         </div>
 
         <button class="btn btn-primary btn-sm" onclick="triggerScrapeNow()" id="btnScrape">
