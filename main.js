@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Scrapedeez — Profile-Bound Job Engine & Multi-Sort
+   Scrapedeez — Profile-Bound Job Engine, Distance Geocoding & Multi-Sort
    ========================================================================== */
 
 let allJobsData = [];
@@ -49,6 +49,53 @@ let profilesData = {
     lastScraped: null,
     jobs: []
   }
+};
+
+// High-Speed US Metropolitan Area Geocode Dictionary
+const US_CITY_COORDS = {
+  'san francisco': { lat: 37.7749, lon: -122.4194 },
+  'sf': { lat: 37.7749, lon: -122.4194 },
+  'bay area': { lat: 37.7749, lon: -122.4194 },
+  'austin': { lat: 30.2672, lon: -97.7431 },
+  'new york': { lat: 40.7128, lon: -74.0060 },
+  'nyc': { lat: 40.7128, lon: -74.0060 },
+  'chicago': { lat: 41.8781, lon: -87.6298 },
+  'los angeles': { lat: 34.0522, lon: -118.2437 },
+  'la': { lat: 34.0522, lon: -118.2437 },
+  'seattle': { lat: 47.6062, lon: -122.3321 },
+  'denver': { lat: 39.7392, lon: -104.9903 },
+  'boston': { lat: 42.3601, lon: -71.0589 },
+  'atlanta': { lat: 33.7490, lon: -84.3880 },
+  'dallas': { lat: 32.7767, lon: -96.7970 },
+  'washington': { lat: 38.9072, lon: -77.0369 },
+  'dc': { lat: 38.9072, lon: -77.0369 },
+  'raleigh': { lat: 35.7796, lon: -78.6382 },
+  'miami': { lat: 25.7617, lon: -80.1918 },
+  'phoenix': { lat: 33.4484, lon: -112.0740 },
+  'san jose': { lat: 37.3382, lon: -121.8863 },
+  'houston': { lat: 29.7604, lon: -95.3698 },
+  'philadelphia': { lat: 39.9526, lon: -75.1652 },
+  'philly': { lat: 39.9526, lon: -75.1652 },
+  'san diego': { lat: 32.7157, lon: -117.1611 },
+  'minneapolis': { lat: 44.9778, lon: -93.2650 },
+  'portland': { lat: 45.5152, lon: -122.6784 },
+  'detroit': { lat: 42.3314, lon: -83.0458 },
+  'charlotte': { lat: 35.2271, lon: -80.8431 },
+  'nashville': { lat: 36.1627, lon: -86.7816 },
+  'salt lake city': { lat: 40.7608, lon: -111.8910 },
+  'columbus': { lat: 39.9612, lon: -82.9988 },
+  'tampa': { lat: 27.9506, lon: -82.4572 },
+  'orlando': { lat: 28.5383, lon: -81.3792 },
+  'pittsburgh': { lat: 40.4406, lon: -79.9959 },
+  'st. louis': { lat: 38.6270, lon: -90.1994 },
+  'baltimore': { lat: 39.2904, lon: -76.6122 },
+  'sacramento': { lat: 38.5816, lon: -121.4944 },
+  'san antonio': { lat: 29.4241, lon: -98.4936 },
+  'las vegas': { lat: 36.1699, lon: -115.1398 },
+  'tokyo': { lat: 35.6762, lon: 139.6503 },
+  'london': { lat: 51.5074, lon: -0.1278 },
+  'toronto': { lat: 43.6532, lon: -79.3832 },
+  'vancouver': { lat: 49.2827, lon: -123.1207 }
 };
 
 const zipGeocodeCache = {};
@@ -686,6 +733,18 @@ async function geocodeZipCode(zip) {
   return null;
 }
 
+function getJobCoords(job) {
+  if (job.lat && job.lon) return { lat: job.lat, lon: job.lon };
+
+  const loc = (job.location || '').toLowerCase();
+  for (const [city, coords] of Object.entries(US_CITY_COORDS)) {
+    if (loc.includes(city)) {
+      return coords;
+    }
+  }
+  return null;
+}
+
 function getDistanceMiles(lat1, lon1, lat2, lon2) {
   const R = 3958.8;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -773,7 +832,7 @@ async function filterJobs() {
     userCoords = await geocodeZipCode(zipVal);
   }
 
-  const filtered = allJobsData.filter(job => {
+  let filtered = allJobsData.filter(job => {
     // 1. Profile 1 displays full dataset; Custom profiles match OR terms
     if (currentProfileId !== 'profile1') {
       const jobText = (job.title + ' ' + job.company + ' ' + job.location + ' ' + (job.matchedKeyword || '')).toLowerCase();
@@ -828,38 +887,20 @@ async function filterJobs() {
     if (isHybrid && enableHybrid) matchWorkType = true;
     if (isOnsite && enableOnsite) matchWorkType = true;
 
-    if (!matchWorkType) return false;
-
-    // 6. Distance Radius & Location Filter
-    let matchRadius = true;
-    if (zipVal) {
-      if (userCoords && radiusVal !== 'any' && !isRemote) {
-        const maxMiles = parseFloat(radiusVal);
-        if (job.lat && job.lon) {
-          const dist = getDistanceMiles(userCoords.lat, userCoords.lon, job.lat, job.lon);
-          matchRadius = dist <= maxMiles;
-        } else if (userCoords.city || userCoords.state) {
-          const cleanCity = (userCoords.city || '').toLowerCase();
-          const cleanState = (userCoords.state || '').toLowerCase();
-          matchRadius = locLower.includes(cleanCity) || locLower.includes(cleanState) || locLower.includes(zipVal);
-        }
-      } else if (!userCoords) {
-        matchRadius = locLower.includes(zipVal);
-      }
-    }
-
-    return matchRadius;
+    return matchWorkType;
   });
 
-  // Calculate distance for sorting
+  // Calculate distance using US Metropolitan Geocode Lookup Table
   filtered.forEach(job => {
     const rawWt = (job.workType || '').toLowerCase();
     const locLower = (job.location || '').toLowerCase();
     const titleLower = (job.title || '').toLowerCase();
     const isRemote = rawWt.includes('remote') || locLower.includes('remote') || titleLower.includes('remote');
 
-    if (userCoords && job.lat && job.lon) {
-      job.distanceMiles = getDistanceMiles(userCoords.lat, userCoords.lon, job.lat, job.lon);
+    const jobCoords = getJobCoords(job);
+
+    if (userCoords && jobCoords) {
+      job.distanceMiles = getDistanceMiles(userCoords.lat, userCoords.lon, jobCoords.lat, jobCoords.lon);
     } else if (isRemote) {
       job.distanceMiles = 99999;
     } else {
@@ -867,10 +908,24 @@ async function filterJobs() {
     }
   });
 
+  // Filter out jobs beyond user-selected radius if radius != 'any' & zip entered
+  if (userCoords && radiusVal !== 'any') {
+    const maxMiles = parseFloat(radiusVal);
+    filtered = filtered.filter(job => {
+      const rawWt = (job.workType || '').toLowerCase();
+      const locLower = (job.location || '').toLowerCase();
+      const titleLower = (job.title || '').toLowerCase();
+      const isRemote = rawWt.includes('remote') || locLower.includes('remote') || titleLower.includes('remote');
+
+      if (isRemote) return true; // Keep remote roles
+      return job.distanceMiles <= maxMiles;
+    });
+  }
+
   // MULTI-SORT LOGIC (Time Posted, Salary, Distance)
   if (sortMode === 'salary') {
     filtered.sort((a, b) => parseSalaryMin(formatSalary(b)) - parseSalaryMin(formatSalary(a)));
-  } else if (sortMode === 'distance' || userCoords) {
+  } else if (sortMode === 'distance' || (userCoords && sortMode !== 'time')) {
     filtered.sort((a, b) => a.distanceMiles - b.distanceMiles);
   } else {
     // Default: Time Posted (Newest First)
@@ -931,7 +986,7 @@ function renderJobs(jobs) {
             <span class="job-company">${escapeHtml(job.company)}</span>
             <span class="job-location-top"><i data-lucide="map-pin"></i> ${escapeHtml(job.location || 'Remote')}</span>
             <span class="work-type-badge ${workTypeClass}">${workTypeLabel}</span>
-            ${job.distanceMiles && job.distanceMiles < 9000 ? `<span class="badge-distance"><i data-lucide="map-pin"></i> ${Math.round(job.distanceMiles)} mi away</span>` : ''}
+            ${job.distanceMiles && job.distanceMiles < 9000 ? `<span class="badge-distance"><i data-lucide="navigation"></i> ${Math.round(job.distanceMiles)} mi away</span>` : ''}
           </div>
           
           <h3 class="job-title">${escapeHtml(job.title)}</h3>
