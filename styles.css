@@ -76,8 +76,11 @@ body {
   gap: 0.6rem;
 }
 
-.brand-icon {
-  font-size: 1.4rem;
+.brand-logo-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 6px;
 }
 
 .brand-title {
@@ -90,17 +93,6 @@ body {
 
 .brand-title .highlight {
   color: var(--accent-cyan);
-}
-
-.role-badge {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: var(--accent-cyan);
-  background: rgba(56, 189, 248, 0.1);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  padding: 0.2rem 0.6rem;
-  border-radius: 4px;
 }
 
 .header-actions {
