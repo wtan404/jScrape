@@ -20,7 +20,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="styles.css?v=2.6">
+  <link rel="stylesheet" href="styles.css?v=2.7">
 </head>
 <body>
 
@@ -77,14 +77,16 @@
         </div>
       </div>
 
-      <!-- Active Keywords & Role Tags with Shopify-Style Interactive Editing -->
+      <!-- Active Keywords & Role Tags with Inline Edit Button -->
       <div class="profile-keywords-wrap" id="profileKeywordsContainer">
         <div class="kw-header">
-          <span class="kw-label">Target Job Titles & Search Keywords:</span>
-          <button class="btn btn-secondary btn-sm" onclick="openEditCriteriaModal()" id="btnEditCriteria">
-            <i data-lucide="lock"></i>
-            <span>Edit Keywords & Roles</span>
-          </button>
+          <div class="kw-title-row">
+            <span class="kw-label">Target Job Titles & Search Keywords:</span>
+            <button class="btn btn-secondary btn-xs" onclick="openEditCriteriaModal()" id="btnEditCriteria">
+              <i data-lucide="lock"></i>
+              <span>Edit Keywords</span>
+            </button>
+          </div>
         </div>
 
         <!-- Rendered Tags List -->
@@ -216,7 +218,7 @@
         </form>
       </div>
     </div>
-  </div>
+  </footer>
 
   <footer class="app-footer">
     <div class="container footer-wrap">
@@ -224,6 +226,6 @@
     </div>
   </footer>
 
-  <script src="main.js?v=2.6"></script>
+  <script src="main.js?v=2.7"></script>
 </body>
 </html>

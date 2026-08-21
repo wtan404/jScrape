@@ -333,6 +333,12 @@ body {
   justify-content: space-between;
 }
 
+.kw-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
 .kw-label {
   font-size: 0.82rem;
   font-weight: 600;
