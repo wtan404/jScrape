@@ -20,7 +20,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="styles.css?v=4.0">
+  <link rel="stylesheet" href="styles.css?v=5.0">
 </head>
 <body>
 
@@ -51,7 +51,7 @@
 
   <main class="container main-layout">
 
-    <!-- Active User Profile & Shopify-Style Interactive Keywords Box -->
+    <!-- Active User Profile, Min Salary & Shopify-Style Interactive Keywords Box -->
     <section class="active-profile-card">
       <div class="profile-card-header">
         <div class="profile-info">
@@ -65,6 +65,11 @@
               <span>Edit Name</span>
             </button>
           </div>
+        </div>
+
+        <!-- Minimum Acceptable Salary Criteria Container -->
+        <div class="profile-salary-criteria" id="profileSalaryCriteriaContainer">
+          <!-- Dynamic Min Salary Badge/Input -->
         </div>
       </div>
 
@@ -119,7 +124,7 @@
         </div>
       </div>
 
-      <!-- Box 3: Integrated Location & Workplace Filters with Apply CTA -->
+      <!-- Box 3: Location Filters with Multi-Select Setup Checkboxes & Apply CTA -->
       <div class="summary-card geo-card">
         <div class="geo-controls-grid">
           <div class="geo-group">
@@ -138,14 +143,23 @@
             </select>
           </div>
 
-          <div class="geo-group">
-            <label for="workTypeSelect"><i data-lucide="briefcase"></i> Setup:</label>
-            <select id="workTypeSelect">
-              <option value="all">All Setups</option>
-              <option value="remote">🟢 Remote</option>
-              <option value="hybrid">🔵 Hybrid</option>
-              <option value="onsite">🟠 Onsite</option>
-            </select>
+          <!-- Multi-Select Location Setup Checkboxes (Remote, Hybrid, Onsite) -->
+          <div class="geo-group setup-checkboxes-group">
+            <label><i data-lucide="briefcase"></i> Work Setup:</label>
+            <div class="setup-checkboxes">
+              <label class="chk-pill">
+                <input type="checkbox" id="chkRemote" checked onchange="filterJobs()">
+                <span>🟢 Remote</span>
+              </label>
+              <label class="chk-pill">
+                <input type="checkbox" id="chkHybrid" checked onchange="filterJobs()">
+                <span>🔵 Hybrid</span>
+              </label>
+              <label class="chk-pill">
+                <input type="checkbox" id="chkOnsite" checked onchange="filterJobs()">
+                <span>🟠 Onsite</span>
+              </label>
+            </div>
           </div>
 
           <div class="geo-group geo-btn-group">
@@ -159,19 +173,26 @@
       </div>
     </section>
 
-    <!-- In-Memory Search & Source Filter Controls -->
+    <!-- Search, Source & Sort Controls Row -->
     <section class="controls-row">
       <div class="search-box">
         <i data-lucide="search"></i>
         <input type="text" id="searchInput" placeholder="Filter active verified results by company, location, or keyword..." oninput="filterJobs()">
       </div>
 
-      <div class="source-filter">
-        <select id="sourceSelect" onchange="filterJobs()">
-          <option value="all">All Verified Sources (ATS + Google Jobs + Feeds)</option>
-          <option value="new">Newly Identified Postings Only</option>
-          <option value="ats">Company ATS Boards (Greenhouse/Lever)</option>
-          <option value="feeds">RemoteOK & WeWorkRemotely</option>
+      <div class="sort-and-source">
+        <!-- Sort By Control (Time Posted, Salary, Distance) -->
+        <select id="sortSelect" class="select-control" onchange="filterJobs()">
+          <option value="time">Sort: Time Posted (Newest First)</option>
+          <option value="distance">Sort: Distance (Closest First)</option>
+          <option value="salary">Sort: Salary (Highest First)</option>
+        </select>
+
+        <select id="sourceSelect" class="select-control" onchange="filterJobs()">
+          <option value="all">All Sources (ATS + Google + Feeds)</option>
+          <option value="new">Newly Identified Only</option>
+          <option value="ats">ATS Boards (Greenhouse/Lever)</option>
+          <option value="feeds">RemoteOK & WWR</option>
         </select>
       </div>
     </section>
@@ -214,7 +235,7 @@
         </form>
       </div>
     </div>
-  </footer>
+  </div>
 
   <footer class="app-footer">
     <div class="container footer-wrap">
@@ -222,6 +243,6 @@
     </div>
   </footer>
 
-  <script src="main.js?v=4.0"></script>
+  <script src="main.js?v=5.0"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Scrapedeez — Profile-Bound Job Engine & Distance Sort
+   Scrapedeez — Profile-Bound Job Engine & Multi-Sort
    ========================================================================== */
 
 let allJobsData = [];
@@ -10,6 +10,7 @@ let pendingEditTarget = null; // 'name' or 'criteria'
 
 let isEditingName = false;
 let isEditingKeywords = false;
+let isEditingSalary = false;
 let editingTagsList = [];
 
 // Default client-side profiles fallback with profile-bound job stores
@@ -19,6 +20,7 @@ let profilesData = {
     name: 'Will',
     hasPin: true,
     pin: '0418',
+    minSalary: 120000,
     targetTitles: ['Manager of IT', 'IT Manager', 'Web Operations', 'WebOps Manager', 'DevOps Manager', 'DevOps Lead', 'devops', 'web development'],
     keywords: [],
     greenhouseCompanies: ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel'],
@@ -31,6 +33,7 @@ let profilesData = {
     hasPin: false,
     targetTitles: [],
     keywords: [],
+    minSalary: 0,
     greenhouseCompanies: ['stripe', 'gitlab', 'github'],
     lastScraped: null,
     jobs: []
@@ -41,6 +44,7 @@ let profilesData = {
     hasPin: false,
     targetTitles: [],
     keywords: [],
+    minSalary: 0,
     greenhouseCompanies: ['stripe', 'gitlab', 'github'],
     lastScraped: null,
     jobs: []
@@ -121,6 +125,7 @@ function onProfileChange() {
   authenticatedPin = null;
   isEditingName = false;
   isEditingKeywords = false;
+  isEditingSalary = false;
 
   renderActiveProfileCard();
   fetchJobsDatabase();
@@ -128,7 +133,8 @@ function onProfileChange() {
 
 function renderActiveProfileCard() {
   const container = document.getElementById('profileNameContainer');
-  const activeProf = profilesData[currentProfileId] || { name: 'User Profile', targetTitles: [], keywords: [] };
+  const salaryContainer = document.getElementById('profileSalaryCriteriaContainer');
+  const activeProf = profilesData[currentProfileId] || { name: 'User Profile', targetTitles: [], keywords: [], minSalary: 120000 };
 
   if (container) {
     if (isEditingName) {
@@ -150,9 +156,90 @@ function renderActiveProfileCard() {
     }
   }
 
+  if (salaryContainer) {
+    const salaryVal = activeProf.minSalary || 0;
+    const formattedVal = salaryVal > 0 ? `$${(salaryVal/1000).toFixed(0)}k / yr` : 'Any Salary';
+
+    if (isEditingSalary) {
+      salaryContainer.innerHTML = `
+        <select id="inlineMinSalarySelect" class="salary-select-inline" onchange="saveInlineMinSalary()">
+          <option value="0" ${salaryVal === 0 ? 'selected' : ''}>Any Salary</option>
+          <option value="80000" ${salaryVal === 80000 ? 'selected' : ''}>Min. $80k / yr</option>
+          <option value="100000" ${salaryVal === 100000 ? 'selected' : ''}>Min. $100k / yr</option>
+          <option value="120000" ${salaryVal === 120000 ? 'selected' : ''}>Min. $120k / yr</option>
+          <option value="140000" ${salaryVal === 140000 ? 'selected' : ''}>Min. $140k / yr</option>
+          <option value="160000" ${salaryVal === 160000 ? 'selected' : ''}>Min. $160k / yr</option>
+          <option value="180000" ${salaryVal === 180000 ? 'selected' : ''}>Min. $180k / yr</option>
+          <option value="200000" ${salaryVal === 200000 ? 'selected' : ''}>Min. $200k+ / yr</option>
+        </select>
+        <button class="btn btn-secondary btn-xs" onclick="cancelInlineSalaryEdit()">Cancel</button>
+      `;
+    } else {
+      salaryContainer.innerHTML = `
+        <div class="salary-badge" title="Minimum acceptable salary filter">
+          <i data-lucide="dollar-sign"></i>
+          <span>Min. Salary: <strong>${formattedVal}</strong></span>
+        </div>
+        <button class="btn btn-secondary btn-xs" onclick="toggleSalaryEdit()">
+          <i data-lucide="sliders"></i>
+          <span>Edit</span>
+        </button>
+      `;
+    }
+  }
+
   renderKeywordsSection();
 
   if (window.lucide) lucide.createIcons();
+}
+
+function toggleSalaryEdit() {
+  isEditingSalary = !isEditingSalary;
+  renderActiveProfileCard();
+}
+
+function cancelInlineSalaryEdit() {
+  isEditingSalary = false;
+  renderActiveProfileCard();
+}
+
+async function saveInlineMinSalary() {
+  const select = document.getElementById('inlineMinSalarySelect');
+  const val = select ? parseInt(select.value, 10) : 0;
+
+  if (profilesData[currentProfileId]) {
+    profilesData[currentProfileId].minSalary = val;
+  }
+  localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
+
+  try {
+    let res = await fetch('./profiles.php?action=save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        profileId: currentProfileId,
+        pin: authenticatedPin,
+        name: profilesData[currentProfileId].name,
+        minSalary: val
+      })
+    });
+    if (!res.ok) {
+      await fetch('./api/profiles/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileId: currentProfileId,
+          pin: authenticatedPin,
+          name: profilesData[currentProfileId].name,
+          minSalary: val
+        })
+      });
+    }
+  } catch (e) {}
+
+  isEditingSalary = false;
+  renderActiveProfileCard();
+  filterJobs();
 }
 
 function renderKeywordsSection() {
@@ -622,14 +709,26 @@ function formatSalary(job) {
 
   const titleLower = job.title.toLowerCase();
   if (titleLower.includes('director') || titleLower.includes('head') || titleLower.includes('vp')) {
-    return '$175k - $245k / yr (est.)';
+    return '$175,000 - $245,000 / yr (est.)';
   } else if (titleLower.includes('manager') || titleLower.includes('lead')) {
-    return '$135k - $185k / yr (est.)';
+    return '$135,000 - $185,000 / yr (est.)';
   } else if (titleLower.includes('senior') || titleLower.includes('sr')) {
-    return '$120k - $165k / yr (est.)';
+    return '$120,000 - $165,000 / yr (est.)';
   } else {
-    return '$105k - $150k / yr (est.)';
+    return '$105,000 - $150,000 / yr (est.)';
   }
+}
+
+function parseSalaryMin(salaryStr) {
+  if (!salaryStr) return 0;
+  const clean = salaryStr.replace(/,/g, '');
+  const match = clean.match(/\$(\d+)(?:k|000)?/i);
+  if (match) {
+    let num = parseInt(match[1], 10);
+    if (num < 1000) num *= 1000;
+    return num;
+  }
+  return 0;
 }
 
 async function filterJobs() {
@@ -642,11 +741,18 @@ async function filterJobs() {
 
   const query = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
   const sourceFilter = document.getElementById('sourceSelect')?.value || 'all';
-  const workTypeFilter = document.getElementById('workTypeSelect')?.value || 'all';
+  const sortMode = document.getElementById('sortSelect')?.value || 'time';
+
+  const enableRemote = document.getElementById('chkRemote')?.checked ?? true;
+  const enableHybrid = document.getElementById('chkHybrid')?.checked ?? true;
+  const enableOnsite = document.getElementById('chkOnsite')?.checked ?? true;
+
   const zipVal = document.getElementById('zipInput')?.value.trim() || '';
   const radiusVal = document.getElementById('radiusSelect')?.value || 'any';
 
-  const activeProf = profilesData[currentProfileId] || { targetTitles: [], keywords: [] };
+  const activeProf = profilesData[currentProfileId] || { targetTitles: [], keywords: [], minSalary: 0 };
+  const minProfileSalary = activeProf.minSalary || 0;
+
   const profileTerms = [...(activeProf.targetTitles || []), ...(activeProf.keywords || [])]
     .map(t => t.toLowerCase().trim())
     .filter(Boolean);
@@ -678,7 +784,16 @@ async function filterJobs() {
       if (!matchesProfile) return false;
     }
 
-    // 2. In-Memory Search Box Input Query
+    // 2. Minimum Acceptable Salary Filter
+    if (minProfileSalary > 0) {
+      const jobSalaryStr = formatSalary(job);
+      const jobSalNum = parseSalaryMin(jobSalaryStr);
+      if (jobSalNum > 0 && jobSalNum < minProfileSalary) {
+        return false;
+      }
+    }
+
+    // 3. In-Memory Search Box Input Query
     const matchQuery = !query || 
       job.title.toLowerCase().includes(query) || 
       job.company.toLowerCase().includes(query) || 
@@ -687,7 +802,7 @@ async function filterJobs() {
 
     if (!matchQuery) return false;
 
-    // 3. Source Filter
+    // 4. Source Filter
     let matchSource = true;
     if (sourceFilter === 'new') {
       matchSource = job.isNew === true;
@@ -699,26 +814,23 @@ async function filterJobs() {
 
     if (!matchSource) return false;
 
-    // 4. Workplace Type Filter (Robust check across workType, location, and title)
-    let matchWorkType = true;
+    // 5. Multi-Select Location Setup Checkboxes (Remote, Hybrid, Onsite)
     const rawWt = (job.workType || '').toLowerCase();
     const locLower = (job.location || '').toLowerCase();
     const titleLower = (job.title || '').toLowerCase();
 
     const isRemote = rawWt.includes('remote') || locLower.includes('remote') || titleLower.includes('remote');
     const isHybrid = rawWt.includes('hybrid') || locLower.includes('hybrid') || titleLower.includes('hybrid');
+    const isOnsite = !isRemote && !isHybrid;
 
-    if (workTypeFilter === 'remote') {
-      matchWorkType = isRemote;
-    } else if (workTypeFilter === 'hybrid') {
-      matchWorkType = isHybrid;
-    } else if (workTypeFilter === 'onsite') {
-      matchWorkType = !isRemote && !isHybrid;
-    }
+    let matchWorkType = false;
+    if (isRemote && enableRemote) matchWorkType = true;
+    if (isHybrid && enableHybrid) matchWorkType = true;
+    if (isOnsite && enableOnsite) matchWorkType = true;
 
     if (!matchWorkType) return false;
 
-    // 5. Distance Radius & Location Filter
+    // 6. Distance Radius & Location Filter
     let matchRadius = true;
     if (zipVal) {
       if (userCoords && radiusVal !== 'any' && !isRemote) {
@@ -739,7 +851,7 @@ async function filterJobs() {
     return matchRadius;
   });
 
-  // Calculate distance & SORT: Closest to Furthest when Zip Code is entered
+  // Calculate distance for sorting
   filtered.forEach(job => {
     const rawWt = (job.workType || '').toLowerCase();
     const locLower = (job.location || '').toLowerCase();
@@ -755,8 +867,14 @@ async function filterJobs() {
     }
   });
 
-  if (userCoords) {
+  // MULTI-SORT LOGIC (Time Posted, Salary, Distance)
+  if (sortMode === 'salary') {
+    filtered.sort((a, b) => parseSalaryMin(formatSalary(b)) - parseSalaryMin(formatSalary(a)));
+  } else if (sortMode === 'distance' || userCoords) {
     filtered.sort((a, b) => a.distanceMiles - b.distanceMiles);
+  } else {
+    // Default: Time Posted (Newest First)
+    filtered.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
   }
 
   renderJobs(filtered);
@@ -779,7 +897,7 @@ function renderJobs(jobs) {
     jobsList.innerHTML = `
       <div class="empty-state">
         <i data-lucide="briefcase"></i>
-        <p>No active verified job postings matching your selected filters. Adjust your filters or click <strong>Re-Verify & Rescan Now</strong>.</p>
+        <p>No active verified job postings matching your selected filters. Adjust your filters or click <strong>Re-Scan</strong>.</p>
       </div>
     `;
     if (window.lucide) lucide.createIcons();
@@ -808,17 +926,19 @@ function renderJobs(jobs) {
       <article class="job-card ${job.isNew ? 'is-new' : ''}">
         <div class="job-info">
           <div class="job-meta-top">
+            <!-- Sleek Glowing Dots for Verified and New statuses -->
+            ${job.isNew ? '<span class="dot-new" title="New Role (Discovered Recent Hour)"></span>' : '<span class="dot-verified" title="Verified Live & Active"></span>'}
             <span class="work-type-badge ${workTypeClass}">${workTypeLabel}</span>
-            ${job.isNew ? '<span class="badge-new">NEW ROLE</span>' : '<span class="badge-verified"><i data-lucide="check"></i> VERIFIED LIVE</span>'}
             ${job.distanceMiles && job.distanceMiles < 9000 ? `<span class="badge-distance"><i data-lucide="map-pin"></i> ${Math.round(job.distanceMiles)} mi away</span>` : ''}
             <span class="job-company">${escapeHtml(job.company)}</span>
-            <span class="job-source">${escapeHtml(job.source)}</span>
           </div>
           <h3 class="job-title">${escapeHtml(job.title)}</h3>
+          
+          <!-- Line Order: Salary First, Time Posted Second, Location AT THE END -->
           <div class="job-footer-info">
-            <span><i data-lucide="map-pin"></i> ${escapeHtml(job.location || 'Remote')}</span>
             <span class="job-salary"><i data-lucide="dollar-sign"></i> ${escapeHtml(salaryVal)}</span>
             <span><i data-lucide="clock"></i> ${formatDate(job.date)}</span>
+            <span class="job-location-end"><i data-lucide="map-pin"></i> ${escapeHtml(job.location || 'Remote')}</span>
           </div>
         </div>
         <div class="job-action">

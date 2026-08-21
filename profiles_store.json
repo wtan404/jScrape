@@ -6,6 +6,7 @@
             "name": "Will",
             "hasPin": true,
             "pin": "0418",
+            "minSalary": 120000,
             "targetTitles": [
                 "Manager of IT",
                 "IT Manager",
@@ -34,6 +35,7 @@
             "name": "User Profile 2 (Custom)",
             "hasPin": false,
             "pin": null,
+            "minSalary": 0,
             "targetTitles": [],
             "keywords": [],
             "greenhouseCompanies": [
@@ -49,6 +51,7 @@
             "name": "User Profile 3 (Custom)",
             "hasPin": false,
             "pin": null,
+            "minSalary": 0,
             "targetTitles": [],
             "keywords": [],
             "greenhouseCompanies": [

@@ -18,11 +18,12 @@ if (!file_exists($file)) {
         'profiles' => [
             'profile1' => [
                 'id' => 'profile1',
-                'name' => 'User 1 - IT Management, WebOps & DevOps',
-                'hasPin' => false,
-                'pin' => null,
-                'targetTitles' => ['Manager of IT', 'IT Manager', 'Web Operations', 'WebOps Manager', 'Website Development', 'DevOps Manager', 'DevOps Lead', 'Director of IT', 'Web Engineering Manager'],
-                'keywords' => ['devops', 'webops', 'web development', 'infrastructure', 'cloud', 'terraform', 'kubernetes', 'change control', 'it management'],
+                'name' => 'Will',
+                'hasPin' => true,
+                'pin' => '0418',
+                'minSalary' => 120000,
+                'targetTitles' => ['Manager of IT', 'IT Manager', 'Web Operations', 'WebOps Manager', 'DevOps Manager', 'DevOps Lead', 'devops', 'web development'],
+                'keywords' => [],
                 'lastScraped' => date('c')
             ],
             'profile2' => [
@@ -30,6 +31,7 @@ if (!file_exists($file)) {
                 'name' => 'User Profile 2 (Custom)',
                 'hasPin' => false,
                 'pin' => null,
+                'minSalary' => 0,
                 'targetTitles' => [],
                 'keywords' => [],
                 'lastScraped' => null
@@ -39,6 +41,7 @@ if (!file_exists($file)) {
                 'name' => 'User Profile 3 (Custom)',
                 'hasPin' => false,
                 'pin' => null,
+                'minSalary' => 0,
                 'targetTitles' => [],
                 'keywords' => [],
                 'lastScraped' => null
@@ -86,6 +89,7 @@ if (($action === 'save' || $_SERVER['REQUEST_METHOD'] === 'POST') && $action !==
         }
 
         if (isset($input['name'])) $store['profiles'][$id]['name'] = trim($input['name']);
+        if (isset($input['minSalary'])) $store['profiles'][$id]['minSalary'] = intval($input['minSalary']);
         if (isset($input['targetTitles'])) $store['profiles'][$id]['targetTitles'] = $input['targetTitles'];
         if (isset($input['keywords'])) $store['profiles'][$id]['keywords'] = $input['keywords'];
         if (isset($input['pin']) && $input['pin']) {
