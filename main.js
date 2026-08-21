@@ -36,6 +36,7 @@ async function fetchProfiles() {
     }
 
     renderProfileDropdown();
+    renderActiveProfileCard();
   } catch (err) {
     console.warn('Profiles fetch note:', err);
   }
@@ -52,6 +53,25 @@ function renderProfileDropdown() {
   `).join('');
 }
 
+function renderActiveProfileCard() {
+  const nameEl = document.getElementById('activeProfileDisplayName');
+  const kwListEl = document.getElementById('activeKeywordsList');
+  const activeProf = profilesData[currentProfileId];
+
+  if (!activeProf) return;
+
+  if (nameEl) nameEl.textContent = activeProf.name;
+
+  if (kwListEl) {
+    const allTerms = [...(activeProf.targetTitles || []), ...(activeProf.keywords || [])];
+    if (allTerms.length === 0) {
+      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No search criteria set yet. Click Edit Profile & Keywords to add terms.</span>`;
+    } else {
+      kwListEl.innerHTML = allTerms.map(term => `<span class="kw-tag">${escapeHtml(term)}</span>`).join('');
+    }
+  }
+}
+
 function onProfileChange() {
   const dropdown = document.getElementById('profileSelectDropdown');
   if (!dropdown) return;
@@ -59,6 +79,7 @@ function onProfileChange() {
   currentProfileId = dropdown.value;
   authenticatedPin = null; // Lock criteria box when switching profiles
   lockProfileBox();
+  renderActiveProfileCard();
   fetchJobsDatabase();
 }
 
@@ -213,6 +234,7 @@ async function saveProfileCriteria(e) {
         profilesData[currentProfileId].greenhouseCompanies = greenhouseCompanies;
       }
       renderProfileDropdown();
+      renderActiveProfileCard();
       lockProfileBox();
       triggerScrapeNow();
     } else {

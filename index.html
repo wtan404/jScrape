@@ -20,7 +20,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="styles.css?v=2.1">
+  <link rel="stylesheet" href="styles.css?v=2.2">
 </head>
 <body>
 
@@ -34,21 +34,6 @@
       </div>
 
       <div class="header-actions">
-        <!-- 3-User Profile Selector -->
-        <div class="profile-selector-wrap">
-          <i data-lucide="user" class="profile-icon"></i>
-          <select id="profileSelectDropdown" onchange="onProfileChange()">
-            <option value="profile1">User 1 - IT Management, WebOps & DevOps</option>
-            <option value="profile2">User Profile 2 (Custom)</option>
-            <option value="profile3">User Profile 3 (Custom)</option>
-          </select>
-        </div>
-
-        <button class="btn btn-secondary btn-sm" onclick="openPinModal()" id="btnEditProfile">
-          <i data-lucide="lock"></i>
-          <span>Edit Profile Criteria</span>
-        </button>
-
         <!-- Live Time Elapsed Status Badge -->
         <div class="cron-status" id="elapsedTimerBadge" title="Time elapsed since last scan & verification">
           <span class="pulse-dot"></span>
@@ -65,12 +50,49 @@
 
   <main class="container main-layout">
 
-    <!-- PIN-Unlocked Profile Criteria & Search Control Box -->
+    <!-- Active User Profile & Keywords Box (Placed Top Above 3 Telemetry Cards) -->
+    <section class="active-profile-card">
+      <div class="profile-card-header">
+        <div class="profile-info">
+          <span class="profile-label">ACTIVE SEARCH PROFILE</span>
+          <h2 id="activeProfileDisplayName">User 1 - IT Management, WebOps & DevOps</h2>
+        </div>
+
+        <div class="profile-actions">
+          <!-- 3-User Profile Selector -->
+          <div class="profile-selector-wrap">
+            <i data-lucide="user" class="profile-icon"></i>
+            <select id="profileSelectDropdown" onchange="onProfileChange()">
+              <option value="profile1">User 1 - IT Management, WebOps & DevOps</option>
+              <option value="profile2">User Profile 2 (Custom)</option>
+              <option value="profile3">User Profile 3 (Custom)</option>
+            </select>
+          </div>
+
+          <button class="btn btn-secondary btn-sm" onclick="openPinModal()" id="btnEditProfile">
+            <i data-lucide="lock"></i>
+            <span>Edit Profile & Keywords</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Keywords & Role Tags -->
+      <div class="profile-keywords-wrap">
+        <span class="kw-label">Target Job Titles & Search Keywords:</span>
+        <div class="kw-tags-list" id="activeKeywordsList">
+          <span class="kw-tag">Manager of IT</span>
+          <span class="kw-tag">Web Operations</span>
+          <span class="kw-tag">DevOps Lead</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- PIN-Unlocked Profile Criteria Edit Box -->
     <section class="profile-criteria-box" id="profileCriteriaBox" style="display: none;">
       <div class="criteria-box-header">
         <div class="criteria-title">
           <i data-lucide="sliders"></i>
-          <h2 id="activeProfileBoxTitle">Editing Search Criteria: User 1</h2>
+          <h2 id="activeProfileBoxTitle">Editing Search Criteria</h2>
         </div>
         <span class="unlocked-badge"><i data-lucide="unlock"></i> PIN Authenticated</span>
       </div>
@@ -78,12 +100,12 @@
       <form id="profileCriteriaForm" onsubmit="saveProfileCriteria(event)">
         <div class="form-row">
           <div class="form-group flex-1">
-            <label for="profileNameInput"><i data-lucide="user"></i> Profile Name / Label</label>
+            <label for="profileNameInput"><i data-lucide="user"></i> User Profile Name / Label *</label>
             <input type="text" id="profileNameInput" placeholder="e.g. Will - IT Management & WebOps" required>
           </div>
 
           <div class="form-group flex-2">
-            <label for="profileTitlesInput"><i data-lucide="briefcase"></i> Target Job Titles & Roles (comma separated)</label>
+            <label for="profileTitlesInput"><i data-lucide="briefcase"></i> Target Job Titles & Roles (comma separated) *</label>
             <input type="text" id="profileTitlesInput" placeholder="e.g. Manager of IT, Web Operations, DevOps Lead" required>
           </div>
         </div>
@@ -110,7 +132,7 @@
       </form>
     </section>
 
-    <!-- Telemetry Bar -->
+    <!-- Telemetry Bar (3 Cards) -->
     <section class="summary-bar">
       <div class="summary-card">
         <div class="summary-metric" id="totalMatchesCount">0</div>
@@ -225,6 +247,6 @@
     </div>
   </footer>
 
-  <script src="main.js?v=2.1"></script>
+  <script src="main.js?v=2.2"></script>
 </body>
 </html>
