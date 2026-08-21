@@ -175,7 +175,7 @@ body {
 }
 
 .btn-xs {
-  padding: 0.25rem 0.6rem;
+  padding: 0.3rem 0.65rem;
   font-size: 0.75rem;
   border-radius: 4px;
 }
@@ -433,8 +433,8 @@ body {
 /* Summary Bar */
 .summary-bar {
   display: grid;
-  grid-template-columns: 200px 220px 1fr;
-  gap: 1.5rem;
+  grid-template-columns: 190px 210px 1fr;
+  gap: 1.2rem;
   margin-bottom: 1.8rem;
 }
 
@@ -453,14 +453,21 @@ body {
 }
 
 .geo-card {
-  padding: 1rem 1.2rem;
+  padding: 0.9rem 1.2rem;
 }
 
 .geo-controls-grid {
   display: grid;
-  grid-template-columns: 120px 130px 1fr;
-  gap: 0.8rem;
+  grid-template-columns: 100px 110px 1fr auto;
+  gap: 0.6rem;
+  align-items: flex-end;
   width: 100%;
+}
+
+.geo-btn-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 .geo-group {

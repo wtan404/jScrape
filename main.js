@@ -175,7 +175,7 @@ function renderKeywordsSection() {
 
     const allTerms = [...(activeProf.targetTitles || []), ...(activeProf.keywords || [])];
     if (allTerms.length === 0) {
-      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No keywords defined. Click Edit Keywords & Roles to add terms.</span>`;
+      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No keywords defined. Click Edit Keywords to add terms.</span>`;
     } else {
       kwListEl.innerHTML = allTerms.map(term => `<span class="kw-tag">${escapeHtml(term)}</span>`).join('');
     }
@@ -420,37 +420,20 @@ async function submitPinVerification(e) {
 async function fetchJobsDatabase() {
   const activeProf = profilesData[currentProfileId] || {};
 
+  // Always fetch master dataset from jobs_data.json
   try {
-    const res = await fetch(`./api/jobs?profileId=${currentProfileId}&t=${Date.now()}`);
+    const res = await fetch(`./jobs_data.json?t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
       allJobsData = data.jobs || [];
-
       if (data.lastScraped) {
+        lastScrapedTimestamp = new Date(data.lastScraped).getTime();
         activeProf.lastScraped = data.lastScraped;
       }
       activeProf.jobs = allJobsData;
-      localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
-    } else {
-      throw new Error('API offline');
     }
   } catch (err) {
-    if (activeProf.jobs && activeProf.jobs.length > 0) {
-      allJobsData = activeProf.jobs;
-    } else {
-      try {
-        const globalRes = await fetch('./jobs_data.json?t=' + Date.now());
-        if (globalRes.ok) {
-          const globalData = await globalRes.json();
-          allJobsData = globalData.jobs || [];
-          if (!activeProf.lastScraped && globalData.lastScraped) {
-            activeProf.lastScraped = globalData.lastScraped;
-          }
-        }
-      } catch (e) {
-        allJobsData = [];
-      }
-    }
+    console.warn('Jobs fetch note:', err);
   }
 
   const timeEl = document.getElementById('lastScrapedTime');
@@ -603,15 +586,15 @@ async function filterJobs() {
   }
 
   const filtered = allJobsData.filter(job => {
-    // 1. Strict OR Criteria: Job matches if it contains ANY ONE of the profile's keyword/title terms
-    const jobText = (job.title + ' ' + job.company + ' ' + job.location + ' ' + (job.matchedKeyword || '')).toLowerCase();
-
-    const matchesProfile = profileTerms.some(term => {
-      const cleanTerm = term.trim().toLowerCase();
-      return cleanTerm.length > 0 && jobText.includes(cleanTerm);
-    });
-
-    if (!matchesProfile) return false;
+    // 1. Profile 1 displays full dataset; Custom profiles match OR terms
+    if (currentProfileId !== 'profile1') {
+      const jobText = (job.title + ' ' + job.company + ' ' + job.location + ' ' + (job.matchedKeyword || '')).toLowerCase();
+      const matchesProfile = profileTerms.some(term => {
+        const cleanTerm = term.trim().toLowerCase();
+        return cleanTerm.length > 0 && jobText.includes(cleanTerm);
+      });
+      if (!matchesProfile) return false;
+    }
 
     // 2. In-Memory Search Box Input Query
     const matchQuery = !query || 
@@ -674,7 +657,7 @@ function renderJobs(jobs) {
     jobsList.innerHTML = `
       <div class="empty-state">
         <i data-lucide="briefcase"></i>
-        <p>No active verified job postings matching the active profile's search keywords. Click <strong>Edit Keywords & Roles</strong> to add terms.</p>
+        <p>No active verified job postings matching your selected filters. Adjust your filters or click <strong>Re-Verify & Rescan Now</strong>.</p>
       </div>
     `;
     if (window.lucide) lucide.createIcons();

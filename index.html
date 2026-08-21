@@ -20,7 +20,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="styles.css?v=2.8">
+  <link rel="stylesheet" href="styles.css?v=2.9">
 </head>
 <body>
 
@@ -113,7 +113,7 @@
         <div class="summary-label">Active Verified Postings (&lt; 30 Days)</div>
       </div>
 
-      <!-- Box 2: Live Last Scan Status Badge (Moved from Header) -->
+      <!-- Box 2: Live Last Scan Status Badge -->
       <div class="summary-card timer-card">
         <div class="summary-label mb-2">Last Scan Status:</div>
         <div class="cron-status" id="elapsedTimerBadge" title="Time elapsed since last scan & verification">
@@ -122,17 +122,17 @@
         </div>
       </div>
 
-      <!-- Box 3: Integrated Location & Workplace Filters (Moved from Row 3) -->
+      <!-- Box 3: Integrated Location & Workplace Filters with Apply CTA -->
       <div class="summary-card geo-card">
         <div class="geo-controls-grid">
           <div class="geo-group">
             <label for="zipInput"><i data-lucide="map-pin"></i> Zip Code:</label>
-            <input type="text" id="zipInput" placeholder="5-digit US Zip..." maxlength="5" oninput="filterJobs()">
+            <input type="text" id="zipInput" placeholder="US Zip..." maxlength="5">
           </div>
 
           <div class="geo-group">
             <label for="radiusSelect"><i data-lucide="compass"></i> Radius:</label>
-            <select id="radiusSelect" onchange="filterJobs()">
+            <select id="radiusSelect">
               <option value="any">Any Distance</option>
               <option value="25">25 Miles</option>
               <option value="50">50 Miles</option>
@@ -143,12 +143,20 @@
 
           <div class="geo-group">
             <label for="workTypeSelect"><i data-lucide="briefcase"></i> Setup:</label>
-            <select id="workTypeSelect" onchange="filterJobs()">
-              <option value="all">All Setup Types</option>
+            <select id="workTypeSelect">
+              <option value="all">All Setups</option>
               <option value="remote">🟢 Remote</option>
               <option value="hybrid">🔵 Hybrid</option>
               <option value="onsite">🟠 Onsite</option>
             </select>
+          </div>
+
+          <div class="geo-group geo-btn-group">
+            <label>&nbsp;</label>
+            <button type="button" class="btn btn-primary btn-xs" onclick="filterJobs()" id="btnApplyGeoFilters">
+              <i data-lucide="filter"></i>
+              <span>Apply Filters</span>
+            </button>
           </div>
         </div>
       </div>
@@ -217,6 +225,6 @@
     </div>
   </footer>
 
-  <script src="main.js?v=2.8"></script>
+  <script src="main.js?v=2.9"></script>
 </body>
 </html>
