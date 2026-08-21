@@ -1,11 +1,13 @@
 /* ==========================================================================
-   Scrapedeez — Hourly Automated Scraper & Link Verifier Engine
+   Scrapedeez — 3-Profile PIN Protected Job Engine
    ========================================================================== */
 
 let allJobsData = [];
 let lastScrapedTimestamp = null;
+let currentProfileId = 'profile1';
+let profilesData = {};
+let authenticatedPin = null;
 
-// Cache geocoded zip codes in memory: zip -> { lat, lon, city, state }
 const zipGeocodeCache = {};
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -16,11 +18,195 @@ document.addEventListener('DOMContentLoaded', () => {
   const yearEl = document.getElementById('year');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
+  fetchProfiles();
   fetchJobsDatabase();
 
-  // Tick live time elapsed badge every 10 seconds
   setInterval(updateElapsedBadge, 10000);
 });
+
+async function fetchProfiles() {
+  try {
+    const res = await fetch('./api/profiles');
+    if (!res.ok) return;
+    const data = await res.json();
+
+    profilesData = data.profiles || {};
+    if (data.activeProfileId) {
+      currentProfileId = data.activeProfileId;
+      const dropdown = document.getElementById('profileSelectDropdown');
+      if (dropdown) dropdown.value = currentProfileId;
+    }
+  } catch (err) {
+    console.warn('Profiles fetch note:', err);
+  }
+}
+
+function onProfileChange() {
+  const dropdown = document.getElementById('profileSelectDropdown');
+  if (!dropdown) return;
+
+  currentProfileId = dropdown.value;
+  authenticatedPin = null; // Lock criteria box when switching profiles
+  lockProfileBox();
+  fetchJobsDatabase();
+}
+
+function openPinModal() {
+  const targetProf = profilesData[currentProfileId];
+  const overlay = document.getElementById('pinModalOverlay');
+  const heading = document.getElementById('pinModalHeading');
+  const prompt = document.getElementById('pinModalPrompt');
+  const errorMsg = document.getElementById('pinErrorMessage');
+  const pinInput = document.getElementById('pinCodeInput');
+
+  if (!overlay || !targetProf) return;
+
+  if (errorMsg) errorMsg.style.display = 'none';
+  if (pinInput) pinInput.value = '';
+
+  if (!targetProf.hasPin) {
+    if (heading) heading.textContent = 'Set New Security PIN';
+    if (prompt) prompt.textContent = `No PIN set for ${targetProf.name}. Enter a 4-digit PIN to secure your search criteria.`;
+  } else {
+    if (heading) heading.textContent = 'Enter Security PIN';
+    if (prompt) prompt.textContent = `Enter 4-digit security PIN to unlock & edit search criteria for ${targetProf.name}.`;
+  }
+
+  overlay.style.display = 'flex';
+  if (pinInput) pinInput.focus();
+}
+
+function closePinModal() {
+  const overlay = document.getElementById('pinModalOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+async function submitPinVerification(e) {
+  e.preventDefault();
+
+  const pinInput = document.getElementById('pinCodeInput');
+  const errorMsg = document.getElementById('pinErrorMessage');
+  const btn = document.getElementById('btnVerifyPin');
+
+  const pinVal = pinInput ? pinInput.value.trim() : '';
+
+  if (!/^\d{4}$/.test(pinVal)) {
+    if (errorMsg) {
+      errorMsg.textContent = 'PIN must be exactly 4 digits.';
+      errorMsg.style.display = 'block';
+    }
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch('./api/profiles/verify-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profileId: currentProfileId, pin: pinVal })
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      authenticatedPin = pinVal;
+      if (profilesData[currentProfileId]) {
+        profilesData[currentProfileId].hasPin = true;
+      }
+
+      closePinModal();
+      unlockProfileBox();
+    } else {
+      if (errorMsg) {
+        errorMsg.textContent = data.error || 'Incorrect PIN entered.';
+        errorMsg.style.display = 'block';
+      }
+    }
+  } catch (err) {
+    if (errorMsg) {
+      errorMsg.textContent = 'PIN verification failed: ' + err.message;
+      errorMsg.style.display = 'block';
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function unlockProfileBox() {
+  const box = document.getElementById('profileCriteriaBox');
+  const title = document.getElementById('activeProfileBoxTitle');
+  const prof = profilesData[currentProfileId];
+
+  if (!box || !prof) return;
+
+  if (title) title.textContent = `Editing Search Criteria: ${prof.name}`;
+
+  document.getElementById('profileTitlesInput').value = (prof.targetTitles || []).join(', ');
+  document.getElementById('profileKeywordsInput').value = (prof.keywords || []).join(', ');
+  document.getElementById('profileCompaniesInput').value = (prof.greenhouseCompanies || []).join(', ');
+
+  box.style.display = 'block';
+  box.scrollIntoView({ behavior: 'smooth' });
+}
+
+function lockProfileBox() {
+  const box = document.getElementById('profileCriteriaBox');
+  if (box) box.style.display = 'none';
+}
+
+async function saveProfileCriteria(e) {
+  e.preventDefault();
+
+  if (!authenticatedPin) {
+    openPinModal();
+    return;
+  }
+
+  const titlesVal = document.getElementById('profileTitlesInput')?.value || '';
+  const keywordsVal = document.getElementById('profileKeywordsInput')?.value || '';
+  const companiesVal = document.getElementById('profileCompaniesInput')?.value || '';
+
+  const targetTitles = titlesVal.split(',').map(s => s.trim()).filter(Boolean);
+  const keywords = keywordsVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const greenhouseCompanies = companiesVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+  const btn = document.getElementById('btnSaveProfile');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Saving & Rescanning...</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  try {
+    const res = await fetch('./api/profiles/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        profileId: currentProfileId,
+        pin: authenticatedPin,
+        targetTitles,
+        keywords,
+        greenhouseCompanies
+      })
+    });
+
+    if (res.ok) {
+      lockProfileBox();
+      triggerScrapeNow();
+    } else {
+      alert('Save failed: Invalid PIN authentication.');
+    }
+  } catch (err) {
+    alert('Save error: ' + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<i data-lucide="save"></i><span>Save & Re-Scan Profile</span>`;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+}
 
 async function fetchJobsDatabase() {
   const jobsList = document.getElementById('jobsList');
@@ -112,7 +298,6 @@ async function triggerScrapeNow() {
   }
 }
 
-// Fetch Lat/Lon for ANY 5-digit US Zip Code using Zippopotam API
 async function geocodeZipCode(zip) {
   const cleanZip = String(zip).trim();
   if (!/^\d{5}$/.test(cleanZip)) return null;
@@ -143,9 +328,8 @@ async function geocodeZipCode(zip) {
   return null;
 }
 
-// Haversine formula to calculate distance in miles
 function getDistanceMiles(lat1, lon1, lat2, lon2) {
-  const R = 3958.8; // Earth radius in miles
+  const R = 3958.8;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = 
@@ -169,14 +353,12 @@ async function filterJobs() {
   }
 
   const filtered = allJobsData.filter(job => {
-    // 1. Text Query Filter
     const matchQuery = !query || 
       job.title.toLowerCase().includes(query) || 
       job.company.toLowerCase().includes(query) || 
       job.location.toLowerCase().includes(query) ||
       (job.matchedKeyword && job.matchedKeyword.toLowerCase().includes(query));
 
-    // 2. Source Filter
     let matchSource = true;
     if (sourceFilter === 'new') {
       matchSource = job.isNew === true;
@@ -186,7 +368,6 @@ async function filterJobs() {
       matchSource = job.source.includes('RemoteOK') || job.source.includes('WeWorkRemotely');
     }
 
-    // 3. Workplace Setup Filter (Remote / Hybrid / Onsite)
     let matchWorkType = true;
     const wt = (job.workType || 'Onsite').toLowerCase();
     if (workTypeFilter === 'remote') {
@@ -197,11 +378,9 @@ async function filterJobs() {
       matchWorkType = wt === 'onsite';
     }
 
-    // 4. Zip Code Distance Radius Filter
     let matchRadius = true;
     if (userCoords && radiusVal !== 'any' && wt !== 'remote') {
       const maxMiles = parseFloat(radiusVal);
-      // Approximate city coordinates or location match
       if (job.lat && job.lon) {
         const dist = getDistanceMiles(userCoords.lat, userCoords.lon, job.lat, job.lon);
         matchRadius = dist <= maxMiles;
