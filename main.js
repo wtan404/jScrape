@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Scrapedeez — Interactive Dashboard Engine
+   Scrapedeez — Multi-Source Dashboard Engine
    ========================================================================== */
 
 let allJobsData = [];
@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const yearEl = document.getElementById('year');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
+  fetchConfig();
   fetchJobsDatabase();
 });
 
@@ -23,7 +24,6 @@ async function fetchJobsDatabase() {
 
     allJobsData = data.jobs || [];
 
-    // Update Telemetry Header Metrics
     const totalEl = document.getElementById('totalMatchesCount');
     const timeEl = document.getElementById('lastScrapedTime');
 
@@ -37,18 +37,68 @@ async function fetchJobsDatabase() {
     if (jobsList) {
       jobsList.innerHTML = `
         <div class="empty-state">
-          <p>Failed to connect to Scrapedeez server. Please start backend server via <code>npm start</code>.</p>
+          <p>Failed to connect to Scrapedeez server. Ensure local server is running on port 8090.</p>
         </div>
       `;
     }
   }
 }
 
+async function fetchConfig() {
+  try {
+    const res = await fetch('/api/config');
+    const data = await res.json();
+
+    const ghInput = document.getElementById('ghCompaniesInput');
+    const leverInput = document.getElementById('leverCompaniesInput');
+    const serpInput = document.getElementById('serpApiKeyInput');
+
+    if (ghInput && data.greenhouseCompanies) {
+      ghInput.value = data.greenhouseCompanies.join(', ');
+    }
+    if (leverInput && data.leverCompanies) {
+      leverInput.value = data.leverCompanies.join(', ');
+    }
+    if (serpInput && data.serpApiKey) {
+      serpInput.value = data.serpApiKey;
+    }
+  } catch (err) {
+    console.error('Config fetch failed:', err);
+  }
+}
+
+async function saveConfig(e) {
+  e.preventDefault();
+  const ghVal = document.getElementById('ghCompaniesInput')?.value || '';
+  const leverVal = document.getElementById('leverCompaniesInput')?.value || '';
+  const serpKey = document.getElementById('serpApiKeyInput')?.value || '';
+
+  const greenhouseCompanies = ghVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const leverCompanies = leverVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+  try {
+    await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ greenhouseCompanies, leverCompanies, serpApiKey: serpKey })
+    });
+    toggleConfigModal();
+    alert('Target ATS company boards & API configuration saved! Click "Scrape All Sources" to fetch live postings.');
+  } catch (err) {
+    alert('Failed to save config: ' + err.message);
+  }
+}
+
+function toggleConfigModal() {
+  const modal = document.getElementById('configModal');
+  if (modal) modal.classList.toggle('active');
+}
+
 async function triggerScrapeNow() {
   const btn = document.getElementById('btnScrape');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Scraping Feeds...</span>`;
+    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Scraping Sources...</span>`;
     if (window.lucide) lucide.createIcons();
   }
 
@@ -61,7 +111,7 @@ async function triggerScrapeNow() {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = `<i data-lucide="refresh-cw"></i><span>Scrape Jobs Now</span>`;
+      btn.innerHTML = `<i data-lucide="refresh-cw"></i><span>Scrape All Sources</span>`;
       if (window.lucide) lucide.createIcons();
     }
   }
@@ -74,7 +124,7 @@ function renderJobs(jobs) {
   if (jobs.length === 0) {
     jobsList.innerHTML = `
       <div class="empty-state">
-        <p>No matching IT Manager, WebOps, or DevOps job postings found for this search filter.</p>
+        <p>No matching IT Manager, WebOps, or DevOps postings found for this search filter. Click <strong>Scrape All Sources</strong> above to run a fresh multi-source scrape.</p>
       </div>
     `;
     return;
@@ -86,7 +136,7 @@ function renderJobs(jobs) {
         <div class="job-meta-top">
           <span class="job-company">${escapeHtml(job.company)}</span>
           <span class="job-source">${escapeHtml(job.source)}</span>
-          <span class="job-matched-badge">Match: ${escapeHtml(job.matchedKeyword)}</span>
+          <span class="job-matched-badge">${escapeHtml(job.matchedKeyword)}</span>
         </div>
         <h3 class="job-title">${escapeHtml(job.title)}</h3>
         <div class="job-footer-info">
@@ -96,7 +146,7 @@ function renderJobs(jobs) {
       </div>
       <div class="job-action">
         <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer">
-          <span>View Posting</span>
+          <span>Apply / View</span>
           <i data-lucide="external-link"></i>
         </a>
       </div>
@@ -110,7 +160,7 @@ function renderJobs(jobs) {
 
 function filterJobs() {
   const query = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
-  const source = document.getElementById('sourceSelect')?.value || 'all';
+  const sourceFilter = document.getElementById('sourceSelect')?.value || 'all';
 
   const filtered = allJobsData.filter(job => {
     const matchQuery = !query || 
@@ -118,7 +168,14 @@ function filterJobs() {
       job.company.toLowerCase().includes(query) || 
       job.matchedKeyword.toLowerCase().includes(query);
 
-    const matchSource = source === 'all' || job.source === source;
+    let matchSource = true;
+    if (sourceFilter === 'ats') {
+      matchSource = job.source.includes('Greenhouse') || job.source.includes('Lever');
+    } else if (sourceFilter === 'gjobs') {
+      matchSource = job.source.includes('Google Jobs');
+    } else if (sourceFilter === 'feeds') {
+      matchSource = job.source.includes('RemoteOK') || job.source.includes('WeWorkRemotely');
+    }
 
     return matchQuery && matchSource;
   });
@@ -129,9 +186,9 @@ function filterJobs() {
 function formatDate(isoStr) {
   if (!isoStr) return 'Recently';
   const d = new Date(isoStr);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return isNaN(d.getTime()) ? isoStr : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function escapeHtml(text) {
-  return text ? text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
+  return text ? String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
 }

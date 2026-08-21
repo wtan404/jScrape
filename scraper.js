@@ -1,6 +1,8 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const { scrapeAllATSCompanies } = require('./ats_scraper');
+const { scrapeGoogleJobs } = require('./google_jobs_scraper');
 
 // Target Job Keywords & Role Titles
 const TARGET_TITLES = [
@@ -23,10 +25,11 @@ const KEYWORDS = ['devops', 'webops', 'web development', 'infrastructure', 'sysa
 async function scrapeRemoteOK() {
   try {
     const response = await axios.get('https://remoteok.com/api', {
-      headers: { 'User-Agent': 'ScrapedeezJobScraper/1.0' }
+      headers: { 'User-Agent': 'ScrapedeezJobScraper/1.0' },
+      timeout: 8000
     });
 
-    const jobs = response.data.slice(1); // First item is meta
+    const jobs = response.data.slice(1);
     const matches = [];
 
     for (const job of jobs) {
@@ -42,13 +45,13 @@ async function scrapeRemoteOK() {
       if (matchedTitle || hasKeywords) {
         matches.push({
           id: `remoteok-${job.id}`,
-          source: 'RemoteOK',
+          source: 'RemoteOK Feed',
           title,
           company,
           location: job.location || 'Remote',
           url,
           tags: job.tags || [],
-          matchedKeyword: matchedTitle || 'DevOps/WebOps Filter',
+          matchedKeyword: matchedTitle || 'DEVOPS / WEBOPS FILTER',
           date
         });
       }
@@ -56,7 +59,7 @@ async function scrapeRemoteOK() {
 
     return matches;
   } catch (err) {
-    console.error('[Scraper] Error scraping RemoteOK:', err.message);
+    console.error('[Scraper] RemoteOK feed offline or timed out.');
     return [];
   }
 }
@@ -65,7 +68,8 @@ async function scrapeRemoteOK() {
 async function scrapeWeWorkRemotely() {
   try {
     const response = await axios.get('https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss', {
-      headers: { 'User-Agent': 'ScrapedeezJobScraper/1.0' }
+      headers: { 'User-Agent': 'ScrapedeezJobScraper/1.0' },
+      timeout: 8000
     });
 
     const xml = response.data;
@@ -88,12 +92,12 @@ async function scrapeWeWorkRemotely() {
       if (matchedTitle || hasKeywords) {
         matches.push({
           id: `wwr-${Buffer.from(link).toString('base64').substring(0, 10)}`,
-          source: 'WeWorkRemotely',
+          source: 'WeWorkRemotely Feed',
           title,
           company,
           location: 'Remote',
           url: link,
-          matchedKeyword: matchedTitle || 'DevOps/WebOps Filter',
+          matchedKeyword: matchedTitle || 'DEVOPS / WEBOPS FILTER',
           date: new Date(pubDate).toISOString()
         });
       }
@@ -101,32 +105,49 @@ async function scrapeWeWorkRemotely() {
 
     return matches;
   } catch (err) {
-    console.error('[Scraper] Error scraping WeWorkRemotely:', err.message);
+    console.error('[Scraper] WeWorkRemotely feed offline or timed out.');
     return [];
   }
 }
 
-// Master Run Scrape & Save Results
-async function runScraperJob() {
-  console.log('[Scrapedeez] Running job scraper pipeline...');
-  
-  const [remoteOkJobs, wwrJobs] = await Promise.all([
+// Master Scraper Pipeline
+async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey = process.env.SERPAPI_KEY) {
+  console.log('[Scrapedeez] Launching Master Multi-Source Job Scraper Pipeline...');
+
+  const [remoteOkJobs, wwrJobs, atsJobs, googleJobs] = await Promise.all([
     scrapeRemoteOK(),
-    scrapeWeWorkRemotely()
+    scrapeWeWorkRemotely(),
+    scrapeAllATSCompanies(customGreenhouse, customLever),
+    scrapeGoogleJobs(serpApiKey)
   ]);
 
-  const allMatches = [...remoteOkJobs, ...wwrJobs];
+  const allMatches = [...atsJobs, ...googleJobs, ...remoteOkJobs, ...wwrJobs];
 
-  // Save results to local JSON store
+  // Remove duplicates by URL or title+company
+  const seen = new Set();
+  const uniqueMatches = allMatches.filter(job => {
+    const key = (job.title + '|' + job.company).toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  // Save to local data store
   const dataPath = path.join(__dirname, 'jobs_data.json');
   fs.writeFileSync(dataPath, JSON.stringify({
     lastScraped: new Date().toISOString(),
-    totalMatches: allMatches.length,
-    jobs: allMatches
+    totalMatches: uniqueMatches.length,
+    sources: {
+      atsCompanyCount: atsJobs.length,
+      googleJobsCount: googleJobs.length,
+      remoteOkCount: remoteOkJobs.length,
+      weWorkRemotelyCount: wwrJobs.length
+    },
+    jobs: uniqueMatches
   }, null, 2));
 
-  console.log(`[Scrapedeez] Scrape Complete. Found ${allMatches.length} matching IT Manager / WebOps / DevOps postings.`);
-  return allMatches;
+  console.log(`[Scrapedeez] Pipeline Complete. ${uniqueMatches.length} total IT Manager, WebOps & DevOps job opportunities stored.`);
+  return uniqueMatches;
 }
 
 if (require.main === module) {

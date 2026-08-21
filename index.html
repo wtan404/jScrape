@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scrapedeez | IT Manager & WebOps Job Scraper</title>
-  <meta name="description" content="Scrapedeez automated job scraper and notification engine for IT Management, Web Operations, and DevOps roles.">
+  <title>Scrapedeez | Multi-Source IT & WebOps Job Scraper</title>
+  <meta name="description" content="Automated Multi-Source Job Scraper & ATS Engine for IT Management, Web Operations, and DevOps leadership roles.">
   <meta name="theme-color" content="#090d16">
 
   <!-- Google Fonts -->
@@ -25,54 +25,60 @@
       <div class="brand">
         <span class="brand-icon">🕷️</span>
         <span class="brand-title">SCRAPE<span class="highlight">DEEZ</span></span>
-        <span class="role-badge">IT MANAGER & WEBOPS FEED</span>
+        <span class="role-badge">MULTI-SOURCE ENGINE</span>
       </div>
 
       <div class="header-actions">
+        <button class="btn btn-secondary btn-sm" onclick="toggleConfigModal()">
+          <i data-lucide="settings"></i>
+          <span>Configure ATS & API Keys</span>
+        </button>
+
         <button class="btn btn-primary btn-sm" onclick="triggerScrapeNow()" id="btnScrape">
           <i data-lucide="refresh-cw"></i>
-          <span>Scrape Jobs Now</span>
+          <span>Scrape All Sources</span>
         </button>
       </div>
     </div>
   </header>
 
   <main class="container main-layout">
-    <!-- Filter & Target Summary Bar -->
+    <!-- Telemetry Bar -->
     <section class="summary-bar">
       <div class="summary-card">
         <div class="summary-metric" id="totalMatchesCount">0</div>
-        <div class="summary-label">Matching Roles Found</div>
+        <div class="summary-label">Matching Roles Scraped</div>
       </div>
 
       <div class="summary-card">
         <div class="summary-value" id="lastScrapedTime">Never</div>
-        <div class="summary-label">Last Scraped Timestamp</div>
+        <div class="summary-label">Last Pipeline Execution</div>
       </div>
 
       <div class="summary-card filters-card">
-        <div class="summary-label">Target Role Filter:</div>
+        <div class="summary-label">Active Sources Monitored:</div>
         <div class="pill-tags">
-          <span class="pill">IT Manager</span>
-          <span class="pill">Web Operations</span>
-          <span class="pill">DevOps Manager</span>
-          <span class="pill">Web Engineering Lead</span>
+          <span class="pill green">Greenhouse Boards</span>
+          <span class="pill green">Lever Boards</span>
+          <span class="pill blue">Google Jobs (SerpAPI)</span>
+          <span class="pill gray">RemoteOK & WWR</span>
         </div>
       </div>
     </section>
 
-    <!-- Search & Live Filter Row -->
+    <!-- Search & Live Filter Bar -->
     <section class="controls-row">
       <div class="search-box">
         <i data-lucide="search"></i>
-        <input type="text" id="searchInput" placeholder="Filter by title, company, or keyword (e.g. Terraform, Kubernetes, Manager)..." oninput="filterJobs()">
+        <input type="text" id="searchInput" placeholder="Filter by role title, company, or tech (e.g. IT Manager, WebOps, Terraform)..." oninput="filterJobs()">
       </div>
 
       <div class="source-filter">
         <select id="sourceSelect" onchange="filterJobs()">
-          <option value="all">All Sources (RemoteOK + WeWorkRemotely)</option>
-          <option value="RemoteOK">RemoteOK Feed</option>
-          <option value="WeWorkRemotely">WeWorkRemotely Feed</option>
+          <option value="all">All Sources (ATS + Google Jobs + Feeds)</option>
+          <option value="ats">Company ATS Boards (Greenhouse/Lever)</option>
+          <option value="gjobs">Google Jobs (LinkedIn/Indeed)</option>
+          <option value="feeds">RemoteOK & WeWorkRemotely</option>
         </select>
       </div>
     </section>
@@ -80,18 +86,50 @@
     <!-- Jobs Feed Grid -->
     <section class="jobs-section">
       <div class="jobs-list" id="jobsList">
-        <!-- Rendered via JS -->
         <div class="loading-state">
           <i data-lucide="loader-2" class="spin"></i>
-          <p>Fetching IT Manager, WebOps & DevOps job postings...</p>
+          <p>Loading multi-source job postings for Manager of IT, Web Operations & DevOps...</p>
         </div>
       </div>
     </section>
   </main>
 
+  <!-- Configuration Modal (Company ATS & SerpAPI Keys) -->
+  <div class="modal-overlay" id="configModal">
+    <div class="modal-card">
+      <button class="modal-close" onclick="toggleConfigModal()"><i data-lucide="x"></i></button>
+
+      <div class="modal-header">
+        <i data-lucide="sliders"></i>
+        <h2>Target Sources & API Key Config</h2>
+        <p>Add company boards to monitor via Greenhouse/Lever APIs or connect Google Jobs SerpAPI.</p>
+      </div>
+
+      <form id="configForm" onsubmit="saveConfig(event)">
+        <div class="form-group">
+          <label for="ghCompaniesInput">Greenhouse Target Companies (comma separated)</label>
+          <input type="text" id="ghCompaniesInput" placeholder="stripe, gitlab, github, cloudflare, datadog, hashicorp, vercel">
+        </div>
+
+        <div class="form-group">
+          <label for="leverCompaniesInput">Lever Target Companies (comma separated)</label>
+          <input type="text" id="leverCompaniesInput" placeholder="netflix, spotify, palantir, figma, postman">
+        </div>
+
+        <div class="form-group">
+          <label for="serpApiKeyInput">SerpAPI Key for Live Google Jobs (Optional)</label>
+          <input type="password" id="serpApiKeyInput" placeholder="Enter SerpAPI key from serpapi.com">
+          <span class="help-text">Grabs live aggregated listings across LinkedIn, Indeed, and ZipRecruiter. Free 100 searches/mo.</span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Save Configuration</button>
+      </form>
+    </div>
+  </div>
+
   <footer class="app-footer">
     <div class="container footer-wrap">
-      <p>&copy; <span id="year">2026</span> Scrapedeez Job Alert Engine. Monitored for Web Development & IT Operations Leadership.</p>
+      <p>&copy; <span id="year">2026</span> Scrapedeez Multi-Source Job Engine. Built for Web Development & IT Operations Leadership.</p>
     </div>
   </footer>
 
