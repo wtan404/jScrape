@@ -1,11 +1,13 @@
 const axios = require('axios');
 
 async function scrapeGoogleJobs(apiKey = process.env.SERPAPI_KEY, targetTitles = ['IT Manager', 'DevOps Manager']) {
-  if (!apiKey || apiKey === 'your_serpapi_key_here') {
+  // Ignore empty, undefined, or dummy placeholder keys
+  if (!apiKey || typeof apiKey !== 'string' || apiKey.trim() === '' || apiKey === 'your_serpapi_key_here' || apiKey.length < 15) {
     return [];
   }
 
-  const queries = targetTitles.length > 0 ? targetTitles.slice(0, 5) : ['IT Manager', 'DevOps Manager'];
+  const cleanKey = apiKey.trim();
+  const queries = targetTitles.length > 0 ? targetTitles.slice(0, 3) : ['IT Manager', 'DevOps Manager'];
   const allJobs = [];
 
   for (const query of queries) {
@@ -16,10 +18,16 @@ async function scrapeGoogleJobs(apiKey = process.env.SERPAPI_KEY, targetTitles =
           q: query,
           hl: 'en',
           gl: 'us',
-          api_key: apiKey
+          api_key: cleanKey
         },
-        timeout: 10000
+        timeout: 8000
       });
+
+      // Check if SerpAPI returned an error object
+      if (response.data && response.data.error) {
+        console.warn(`[Google Jobs Scraper] SerpAPI notice: ${response.data.error}`);
+        break;
+      }
 
       const jobs = response.data.jobs_results || [];
       for (const job of jobs) {
@@ -35,7 +43,11 @@ async function scrapeGoogleJobs(apiKey = process.env.SERPAPI_KEY, targetTitles =
         });
       }
     } catch (err) {
-      console.error(`[Google Jobs Scraper] SerpAPI search failed for query "${query}":`, err.message);
+      // Catch 401 / Invalid key errors gracefully without interrupting ATS scrape
+      if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+        console.warn('[Google Jobs Scraper] SerpAPI Key is invalid or expired. Skipping Google Jobs query.');
+        break;
+      }
     }
   }
 
