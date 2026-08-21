@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Scrapedeez — Multi-Source & User-Configurable Dashboard Engine
+   Scrapedeez — Ever-Present Search Dashboard Engine
    ========================================================================== */
 
 let allJobsData = [];
@@ -50,11 +50,9 @@ async function fetchConfig() {
     const res = await fetch('/api/config');
     currentConfig = await res.json();
 
-    // Populate modal inputs
     const titlesInput = document.getElementById('targetTitlesInput');
     const keywordsInput = document.getElementById('keywordsInput');
     const ghInput = document.getElementById('ghCompaniesInput');
-    const leverInput = document.getElementById('leverCompaniesInput');
     const serpInput = document.getElementById('serpApiKeyInput');
 
     if (titlesInput && currentConfig.targetTitles) {
@@ -66,87 +64,52 @@ async function fetchConfig() {
     if (ghInput && currentConfig.greenhouseCompanies) {
       ghInput.value = currentConfig.greenhouseCompanies.join(', ');
     }
-    if (leverInput && currentConfig.leverCompanies) {
-      leverInput.value = currentConfig.leverCompanies.join(', ');
-    }
     if (serpInput && currentConfig.serpApiKey) {
       serpInput.value = currentConfig.serpApiKey;
     }
-
-    // Render Tag Bar
-    renderKeywordTags(currentConfig.targetTitles || [], currentConfig.keywords || []);
   } catch (err) {
     console.error('Config fetch failed:', err);
   }
 }
 
-function renderKeywordTags(titles, keywords) {
-  const container = document.getElementById('activeKeywordsTags');
-  if (!container) return;
-
-  if (titles.length === 0 && keywords.length === 0) {
-    container.innerHTML = `<span class="tag-loading">No custom search terms defined. Click "Edit Target Terms" to add job titles.</span>`;
-    return;
-  }
-
-  const titleTags = titles.map(t => `<span class="user-tag">${escapeHtml(t)}</span>`).join('');
-  const skillTags = keywords.map(k => `<span class="user-tag skill">${escapeHtml(k)}</span>`).join('');
-
-  container.innerHTML = titleTags + skillTags;
-}
-
-async function saveConfig(e) {
+async function saveAndScrape(e) {
   e.preventDefault();
+
   const titlesVal = document.getElementById('targetTitlesInput')?.value || '';
   const keywordsVal = document.getElementById('keywordsInput')?.value || '';
   const ghVal = document.getElementById('ghCompaniesInput')?.value || '';
-  const leverVal = document.getElementById('leverCompaniesInput')?.value || '';
   const serpKey = document.getElementById('serpApiKeyInput')?.value || '';
 
   const targetTitles = titlesVal.split(',').map(s => s.trim()).filter(Boolean);
   const keywords = keywordsVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
   const greenhouseCompanies = ghVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-  const leverCompanies = leverVal.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 
-  try {
-    await fetch('/api/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ targetTitles, keywords, greenhouseCompanies, leverCompanies, serpApiKey: serpKey })
-    });
-    
-    toggleConfigModal();
-    fetchConfig();
-    alert('Search terms & company settings saved! Running fresh multi-source scrape now...');
-    triggerScrapeNow();
-  } catch (err) {
-    alert('Failed to save configuration: ' + err.message);
-  }
-}
-
-function toggleConfigModal() {
-  const modal = document.getElementById('configModal');
-  if (modal) modal.classList.toggle('active');
-}
-
-async function triggerScrapeNow() {
   const btn = document.getElementById('btnScrape');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Scraping Sources...</span>`;
+    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Saving & Scraping All Sources...</span>`;
     if (window.lucide) lucide.createIcons();
   }
 
   try {
+    // 1. Save Config
+    await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetTitles, keywords, greenhouseCompanies, leverCompanies: currentConfig.leverCompanies || [], serpApiKey: serpKey })
+    });
+
+    // 2. Trigger Scrape Job
     const res = await fetch('/api/scrape-now', { method: 'POST' });
     const data = await res.json();
+
     fetchJobsDatabase();
   } catch (err) {
-    alert('Scrape request failed: ' + err.message);
+    alert('Save and Scrape failed: ' + err.message);
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = `<i data-lucide="refresh-cw"></i><span>Scrape All Sources</span>`;
+      btn.innerHTML = `<i data-lucide="refresh-cw"></i><span>Save & Scrape All Sources</span>`;
       if (window.lucide) lucide.createIcons();
     }
   }
@@ -159,7 +122,7 @@ function renderJobs(jobs) {
   if (jobs.length === 0) {
     jobsList.innerHTML = `
       <div class="empty-state">
-        <p>No matching postings found for your current target search terms. Click <strong>Scrape All Sources</strong> or update your target search terms above.</p>
+        <p>No matching postings found for your current target search terms. Adjust your search controls above and click <strong>Save & Scrape All Sources</strong>.</p>
       </div>
     `;
     return;
