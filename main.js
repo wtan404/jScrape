@@ -1,9 +1,12 @@
 /* ==========================================================================
    Scrapedeez — Hourly Automated Scraper & Link Verifier Engine
-   ========================================================================= */
+   ========================================================================== */
 
 let allJobsData = [];
 let lastScrapedTimestamp = null;
+
+// Cache geocoded zip codes in memory: zip -> { lat, lon, city, state }
+const zipGeocodeCache = {};
 
 document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) {
@@ -22,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fetchJobsDatabase() {
   const jobsList = document.getElementById('jobsList');
   try {
-    // Fetch static jobs_data.json with timestamp query to prevent browser caching
     const dataUrl = './jobs_data.json?t=' + Date.now();
     const response = await fetch(dataUrl);
 
@@ -44,10 +46,10 @@ async function fetchJobsDatabase() {
       updateElapsedBadge();
     }
 
-    renderJobs(allJobsData);
+    filterJobs();
   } catch (err) {
     console.warn('Fallback: Unable to fetch jobs_data.json directly:', err);
-    renderJobs(allJobsData);
+    filterJobs();
   }
 }
 
@@ -79,7 +81,6 @@ function updateElapsedBadge() {
 
 async function triggerScrapeNow() {
   const btn = document.getElementById('btnScrape');
-  const jobsList = document.getElementById('jobsList');
 
   if (btn) {
     btn.disabled = true;
@@ -88,7 +89,6 @@ async function triggerScrapeNow() {
   }
 
   try {
-    // Attempt POST to live API, or fallback to re-fetching static data
     try {
       const res = await fetch('./api/scrape-now', { method: 'POST' });
       if (res.ok) {
@@ -98,22 +98,120 @@ async function triggerScrapeNow() {
           if (data.scrapedAt) lastScrapedTimestamp = new Date(data.scrapedAt).getTime();
         }
       }
-    } catch (e) {
-      // Static host fallback
-    }
+    } catch (e) {}
 
-    // Refresh dataset from jobs_data.json
     await fetchJobsDatabase();
   } catch (err) {
     console.error('Trigger error:', err);
   } finally {
-    // Always restore button state
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = `<i data-lucide="refresh-cw"></i><span>Re-Verify & Rescan Now</span>`;
       if (window.lucide) lucide.createIcons();
     }
   }
+}
+
+// Fetch Lat/Lon for ANY 5-digit US Zip Code using Zippopotam API
+async function geocodeZipCode(zip) {
+  const cleanZip = String(zip).trim();
+  if (!/^\d{5}$/.test(cleanZip)) return null;
+
+  if (zipGeocodeCache[cleanZip]) {
+    return zipGeocodeCache[cleanZip];
+  }
+
+  try {
+    const res = await fetch(`https://api.zippopotam.us/us/${cleanZip}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+
+    if (data.places && data.places[0]) {
+      const place = data.places[0];
+      const coords = {
+        lat: parseFloat(place.latitude),
+        lon: parseFloat(place.longitude),
+        city: place['place name'],
+        state: place['state abbreviation']
+      };
+      zipGeocodeCache[cleanZip] = coords;
+      return coords;
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
+}
+
+// Haversine formula to calculate distance in miles
+function getDistanceMiles(lat1, lon1, lat2, lon2) {
+  const R = 3958.8; // Earth radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+async function filterJobs() {
+  const query = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
+  const sourceFilter = document.getElementById('sourceSelect')?.value || 'all';
+  const workTypeFilter = document.getElementById('workTypeSelect')?.value || 'all';
+  const zipVal = document.getElementById('zipInput')?.value.trim() || '';
+  const radiusVal = document.getElementById('radiusSelect')?.value || 'any';
+
+  let userCoords = null;
+  if (/^\d{5}$/.test(zipVal)) {
+    userCoords = await geocodeZipCode(zipVal);
+  }
+
+  const filtered = allJobsData.filter(job => {
+    // 1. Text Query Filter
+    const matchQuery = !query || 
+      job.title.toLowerCase().includes(query) || 
+      job.company.toLowerCase().includes(query) || 
+      job.location.toLowerCase().includes(query) ||
+      (job.matchedKeyword && job.matchedKeyword.toLowerCase().includes(query));
+
+    // 2. Source Filter
+    let matchSource = true;
+    if (sourceFilter === 'new') {
+      matchSource = job.isNew === true;
+    } else if (sourceFilter === 'ats') {
+      matchSource = job.source.includes('Greenhouse') || job.source.includes('Lever');
+    } else if (sourceFilter === 'feeds') {
+      matchSource = job.source.includes('RemoteOK') || job.source.includes('WeWorkRemotely');
+    }
+
+    // 3. Workplace Setup Filter (Remote / Hybrid / Onsite)
+    let matchWorkType = true;
+    const wt = (job.workType || 'Onsite').toLowerCase();
+    if (workTypeFilter === 'remote') {
+      matchWorkType = wt === 'remote';
+    } else if (workTypeFilter === 'hybrid') {
+      matchWorkType = wt === 'hybrid';
+    } else if (workTypeFilter === 'onsite') {
+      matchWorkType = wt === 'onsite';
+    }
+
+    // 4. Zip Code Distance Radius Filter
+    let matchRadius = true;
+    if (userCoords && radiusVal !== 'any' && wt !== 'remote') {
+      const maxMiles = parseFloat(radiusVal);
+      // Approximate city coordinates or location match
+      if (job.lat && job.lon) {
+        const dist = getDistanceMiles(userCoords.lat, userCoords.lon, job.lat, job.lon);
+        matchRadius = dist <= maxMiles;
+      }
+    }
+
+    return matchQuery && matchSource && matchWorkType && matchRadius;
+  });
+
+  renderJobs(filtered);
 }
 
 function renderJobs(jobs) {
@@ -127,65 +225,45 @@ function renderJobs(jobs) {
     jobsList.innerHTML = `
       <div class="empty-state">
         <i data-lucide="briefcase"></i>
-        <p>No active verified job postings available right now. Click <strong>Re-Verify & Rescan Now</strong> above.</p>
+        <p>No active verified job postings available matching your workplace/distance filters. Adjust your filters or click <strong>Re-Verify & Rescan Now</strong>.</p>
       </div>
     `;
     if (window.lucide) lucide.createIcons();
     return;
   }
 
-  jobsList.innerHTML = jobs.map(job => `
-    <article class="job-card ${job.isNew ? 'is-new' : ''}">
-      <div class="job-info">
-        <div class="job-meta-top">
-          ${job.isNew ? '<span class="badge-new">NEW ROLE</span>' : '<span class="badge-verified"><i data-lucide="check"></i> VERIFIED LIVE</span>'}
-          <span class="job-company">${escapeHtml(job.company)}</span>
-          <span class="job-source">${escapeHtml(job.source)}</span>
+  jobsList.innerHTML = jobs.map(job => {
+    const workTypeClass = (job.workType || 'Onsite').toLowerCase();
+    const workTypeLabel = (job.workType || 'ONSITE').toUpperCase();
+
+    return `
+      <article class="job-card ${job.isNew ? 'is-new' : ''}">
+        <div class="job-info">
+          <div class="job-meta-top">
+            <span class="work-type-badge ${workTypeClass}">${workTypeLabel}</span>
+            ${job.isNew ? '<span class="badge-new">NEW ROLE</span>' : '<span class="badge-verified"><i data-lucide="check"></i> VERIFIED LIVE</span>'}
+            <span class="job-company">${escapeHtml(job.company)}</span>
+            <span class="job-source">${escapeHtml(job.source)}</span>
+          </div>
+          <h3 class="job-title">${escapeHtml(job.title)}</h3>
+          <div class="job-footer-info">
+            <span><i data-lucide="map-pin"></i> ${escapeHtml(job.location || 'Remote')}</span>
+            <span><i data-lucide="clock"></i> ${formatDate(job.date)}</span>
+          </div>
         </div>
-        <h3 class="job-title">${escapeHtml(job.title)}</h3>
-        <div class="job-footer-info">
-          <span><i data-lucide="map-pin"></i> ${escapeHtml(job.location || 'Remote')}</span>
-          <span><i data-lucide="clock"></i> ${formatDate(job.date)}</span>
+        <div class="job-action">
+          <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer">
+            <span>Apply / View</span>
+            <i data-lucide="external-link"></i>
+          </a>
         </div>
-      </div>
-      <div class="job-action">
-        <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer">
-          <span>Apply / View</span>
-          <i data-lucide="external-link"></i>
-        </a>
-      </div>
-    </article>
-  `).join('');
+      </article>
+    `;
+  }).join('');
 
   if (window.lucide) {
     lucide.createIcons();
   }
-}
-
-function filterJobs() {
-  const query = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
-  const sourceFilter = document.getElementById('sourceSelect')?.value || 'all';
-
-  const filtered = allJobsData.filter(job => {
-    const matchQuery = !query || 
-      job.title.toLowerCase().includes(query) || 
-      job.company.toLowerCase().includes(query) || 
-      job.location.toLowerCase().includes(query) ||
-      (job.matchedKeyword && job.matchedKeyword.toLowerCase().includes(query));
-
-    let matchSource = true;
-    if (sourceFilter === 'new') {
-      matchSource = job.isNew === true;
-    } else if (sourceFilter === 'ats') {
-      matchSource = job.source.includes('Greenhouse') || job.source.includes('Lever');
-    } else if (sourceFilter === 'feeds') {
-      matchSource = job.source.includes('RemoteOK') || job.source.includes('WeWorkRemotely');
-    }
-
-    return matchQuery && matchSource;
-  });
-
-  renderJobs(filtered);
 }
 
 function formatDate(isoStr) {

@@ -4,6 +4,7 @@ const path = require('path');
 const { scrapeAllATSCompanies } = require('./ats_scraper');
 const { scrapeGoogleJobs } = require('./google_jobs_scraper');
 const { verifyAndPruneJobs, isWithin30Days } = require('./verifier');
+const { classifyWorkType } = require('./geo_helper');
 
 const PREDEFINED_ROLES = [
   'Manager of IT',
@@ -41,11 +42,11 @@ async function scrapeRemoteOK() {
       if (!job || typeof job !== 'object') continue;
       const dateStr = job.date ? new Date(job.date).toISOString() : new Date().toISOString();
       
-      // Enforce 30-day cutoff
       if (!isWithin30Days(dateStr)) continue;
 
       const title = (job.position || '').toLowerCase();
       const description = (job.description || '').toLowerCase();
+      const location = job.location || 'Remote';
 
       const matchedRole = PREDEFINED_ROLES.find(r => title.includes(r.toLowerCase()));
       const hasKeyword = PREDEFINED_KEYWORDS.some(k => (title + ' ' + description).includes(k));
@@ -56,7 +57,8 @@ async function scrapeRemoteOK() {
           source: 'RemoteOK Feed',
           title: job.position || 'Remote Position',
           company: job.company || 'Unknown',
-          location: job.location || 'Remote',
+          location,
+          workType: classifyWorkType(location, job.position),
           url: job.url || `https://remoteok.com/remote-jobs/${job.id}`,
           matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'DEVOPS / WEBOPS FILTER',
           date: dateStr
@@ -86,7 +88,6 @@ async function scrapeWeWorkRemotely() {
       const pubDate = match[3];
       const dateStr = new Date(pubDate).toISOString();
 
-      // Enforce 30-day cutoff
       if (!isWithin30Days(dateStr)) continue;
 
       const parts = rawTitle.split(':');
@@ -103,6 +104,7 @@ async function scrapeWeWorkRemotely() {
           title,
           company,
           location: 'Remote',
+          workType: 'Remote',
           url: link,
           matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'DEVOPS / WEBOPS FILTER',
           date: dateStr
@@ -125,11 +127,9 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
     try { existingStore = JSON.parse(fs.readFileSync(dataPath, 'utf8')); } catch (e) {}
   }
 
-  // 1. Re-verify & Auto-prune dead links and jobs > 30 days old
   const verifiedExistingJobs = await verifyAndPruneJobs(existingStore.jobs || []);
   const existingIdSet = new Set(verifiedExistingJobs.map(j => j.id || j.url));
 
-  // 2. Fetch fresh postings from all sources
   const [remoteOkJobs, wwrJobs, atsJobs, googleJobs] = await Promise.all([
     scrapeRemoteOK(),
     scrapeWeWorkRemotely(),
@@ -139,7 +139,6 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
 
   const newlyScraped = [...atsJobs, ...googleJobs, ...remoteOkJobs, ...wwrJobs].filter(j => isWithin30Days(j.date));
 
-  // 3. Mark newly discovered jobs vs verified existing jobs
   const mergedJobs = [];
   const seenUrls = new Set();
 
@@ -149,17 +148,18 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
     seenUrls.add(key);
 
     const isNew = !existingIdSet.has(job.id || job.url);
+    const workType = job.workType || classifyWorkType(job.location, job.title);
+
     mergedJobs.push({
       ...job,
+      workType,
       isNew: isNew,
       verifiedAt: new Date().toISOString()
     });
   }
 
-  // Sort: NEW jobs first, then by date
   mergedJobs.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0) || new Date(b.date) - new Date(a.date));
 
-  // 4. Save updated results
   fs.writeFileSync(dataPath, JSON.stringify({
     lastScraped: new Date().toISOString(),
     totalMatches: mergedJobs.length,

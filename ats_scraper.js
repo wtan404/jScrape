@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { classifyWorkType } = require('./geo_helper');
 
 const DEFAULT_GREENHOUSE_COMPANIES = ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel'];
 const DEFAULT_LEVER_COMPANIES = ['netflix', 'spotify', 'palantir', 'figma', 'postman'];
@@ -31,12 +32,14 @@ async function scrapeGreenhouseCompany(company, targetTitles = [], keywords = []
       const matchedTerm = searchTerms.find(term => title.includes(term) || content.includes(term));
 
       if (matchedTerm || searchTerms.length === 0) {
+        const workType = classifyWorkType(location, job.title);
         matches.push({
           id: `gh-${company}-${job.id}`,
           source: `Greenhouse (${company.toUpperCase()})`,
           title: job.title,
           company: company.charAt(0).toUpperCase() + company.slice(1),
           location,
+          workType,
           url: job.absolute_url,
           matchedKeyword: matchedTerm ? matchedTerm.toUpperCase() : 'USER MATCH',
           date: job.updated_at || new Date().toISOString()
@@ -71,12 +74,14 @@ async function scrapeLeverCompany(company, targetTitles = [], keywords = []) {
       const matchedTerm = searchTerms.find(term => title.includes(term) || description.includes(term));
 
       if (matchedTerm || searchTerms.length === 0) {
+        const workType = classifyWorkType(location, job.text);
         matches.push({
           id: `lever-${company}-${job.id}`,
           source: `Lever (${company.toUpperCase()})`,
           title: job.text,
           company: company.charAt(0).toUpperCase() + company.slice(1),
           location,
+          workType,
           url: job.hostedUrl,
           matchedKeyword: matchedTerm ? matchedTerm.toUpperCase() : 'USER MATCH',
           date: job.createdAt ? new Date(job.createdAt).toISOString() : new Date().toISOString()

@@ -180,78 +180,12 @@ body {
   padding: 2.2rem 1.5rem 5rem 1.5rem;
 }
 
-/* Target Criteria Panel */
-.target-criteria-panel {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-hover);
-  border-radius: var(--radius-lg);
-  padding: 1.8rem 2.2rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-}
-
-.panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.2rem;
-}
-
-.panel-title {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.panel-title i {
-  color: var(--accent-cyan);
-}
-
-.panel-title h2 {
-  font-family: var(--font-heading);
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: #fff;
-}
-
-.panel-subtitle {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-}
-
-.criteria-pill-list {
-  display: flex;
-  gap: 0.8rem;
-  flex-wrap: wrap;
-}
-
-.criteria-pill {
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #fff;
-  background: rgba(56, 189, 248, 0.1);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  padding: 0.4rem 1rem;
-  border-radius: 50px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.criteria-pill i {
-  color: var(--accent-emerald);
-  width: 16px;
-  height: 16px;
-}
-
 /* Summary Bar */
 .summary-bar {
   display: grid;
   grid-template-columns: 200px 220px 1fr;
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.8rem;
 }
 
 .summary-card {
@@ -318,6 +252,55 @@ body {
   color: var(--accent-cyan);
   border-color: rgba(56, 189, 248, 0.3);
   background: rgba(56, 189, 248, 0.08);
+}
+
+/* Geo & Distance Controls Row */
+.geo-controls-row {
+  display: grid;
+  grid-template-columns: 220px 200px 1fr;
+  gap: 1.2rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.2rem 1.5rem;
+  margin-bottom: 1.2rem;
+}
+
+.geo-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.geo-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.geo-group label i {
+  width: 14px;
+  height: 14px;
+  color: var(--accent-cyan);
+}
+
+.geo-group input, .geo-group select {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.85rem;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.geo-group input:focus, .geo-group select:focus {
+  border-color: var(--accent-cyan);
 }
 
 /* Search & Filters */
@@ -398,6 +381,35 @@ body {
   gap: 0.8rem;
   margin-bottom: 0.4rem;
   flex-wrap: wrap;
+}
+
+/* Workplace Badges */
+.work-type-badge {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.55rem;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.work-type-badge.remote {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--accent-emerald);
+}
+
+.work-type-badge.hybrid {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: var(--accent-cyan);
+}
+
+.work-type-badge.onsite {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: var(--accent-amber);
 }
 
 .badge-new {
@@ -489,7 +501,7 @@ body {
 
 /* Responsive */
 @media (max-width: 900px) {
-  .panel-head, .summary-bar, .controls-row {
+  .geo-controls-row, .summary-bar, .controls-row {
     flex-direction: column;
     grid-template-columns: 1fr;
   }
