@@ -183,7 +183,6 @@ function renderKeywordsSection() {
 }
 
 function onProfileChange() {
-  // Retained for backward compatibility
   selectProfile(currentProfileId);
 }
 
@@ -604,15 +603,13 @@ async function filterJobs() {
   }
 
   const filtered = allJobsData.filter(job => {
-    // 1. Profile Keyword Binding Match
-    const jobTitle = job.title.toLowerCase();
-    const jobCompany = job.company.toLowerCase();
-    const jobLoc = job.location.toLowerCase();
-    const jobKw = (job.matchedKeyword || '').toLowerCase();
+    // 1. Strict OR Criteria: Job matches if it contains ANY ONE of the profile's keyword/title terms
+    const jobText = (job.title + ' ' + job.company + ' ' + job.location + ' ' + (job.matchedKeyword || '')).toLowerCase();
 
-    const matchesProfile = profileTerms.some(term => 
-      jobTitle.includes(term) || jobCompany.includes(term) || jobLoc.includes(term) || jobKw.includes(term)
-    );
+    const matchesProfile = profileTerms.some(term => {
+      const cleanTerm = term.trim().toLowerCase();
+      return cleanTerm.length > 0 && jobText.includes(cleanTerm);
+    });
 
     if (!matchesProfile) return false;
 
