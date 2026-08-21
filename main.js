@@ -146,7 +146,7 @@ function renderKeywordsSection() {
     if (inputBar) inputBar.style.display = 'flex';
 
     if (editingTagsList.length === 0) {
-      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No tags currently added. Type a keyword below and press Enter to add.</span>`;
+      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No keywords set. Type a keyword below and press Enter to add.</span>`;
     } else {
       kwListEl.innerHTML = editingTagsList.map((term, index) => `
         <span class="kw-tag editable">
@@ -161,7 +161,7 @@ function renderKeywordsSection() {
 
     const allTerms = [...(activeProf.targetTitles || []), ...(activeProf.keywords || [])];
     if (allTerms.length === 0) {
-      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No search criteria set yet. Click Edit Keywords & Roles to add terms.</span>`;
+      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No keywords defined. Click Edit Keywords & Roles to add terms.</span>`;
     } else {
       kwListEl.innerHTML = allTerms.map(term => `<span class="kw-tag">${escapeHtml(term)}</span>`).join('');
     }
@@ -178,7 +178,7 @@ function onProfileChange() {
   isEditingKeywords = false;
 
   renderActiveProfileCard();
-  fetchJobsDatabase(); // Immediately fetch & render job database bound to newly selected profile
+  fetchJobsDatabase();
 }
 
 // 1. Trigger Edit Profile Name (Inline)
@@ -304,6 +304,7 @@ async function saveShopifyTags() {
 
   isEditingKeywords = false;
   renderKeywordsSection();
+  filterJobs();
   triggerScrapeNow();
 }
 
@@ -416,7 +417,6 @@ async function fetchJobsDatabase() {
   const activeProf = profilesData[currentProfileId] || {};
 
   try {
-    // 1. Try fetching profile-bound jobs from backend API
     const res = await fetch(`./api/jobs?profileId=${currentProfileId}&t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
@@ -432,7 +432,6 @@ async function fetchJobsDatabase() {
       throw new Error('API offline');
     }
   } catch (err) {
-    // 2. Static Fallback: Use profile's bound jobs from memory/localStorage or global fallback
     if (activeProf.jobs && activeProf.jobs.length > 0) {
       allJobsData = activeProf.jobs;
       if (activeProf.lastScraped) lastScrapedTimestamp = new Date(activeProf.lastScraped).getTime();
@@ -450,7 +449,6 @@ async function fetchJobsDatabase() {
     }
   }
 
-  // Update Telemetry Cards for Active Profile
   const timeEl = document.getElementById('lastScrapedTime');
   if (timeEl) {
     timeEl.textContent = lastScrapedTimestamp ? formatDate(new Date(lastScrapedTimestamp).toISOString()) : 'Never';
@@ -507,7 +505,7 @@ async function triggerScrapeNow() {
           allJobsData = data.jobs;
           lastScrapedTimestamp = new Date(data.scrapedAt).getTime();
           if (profilesData[currentProfileId]) {
-            profilesData[currentProfileId].jobs = matches;
+            profilesData[currentProfileId].jobs = data.jobs;
             profilesData[currentProfileId].lastScraped = data.scrapedAt;
             localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
           }
@@ -581,6 +579,12 @@ async function filterJobs() {
     .map(t => t.toLowerCase().trim())
     .filter(Boolean);
 
+  // IF NO KEYWORDS ENTERED: Show "No Results" message immediately
+  if (profileTerms.length === 0) {
+    renderJobs([]);
+    return;
+  }
+
   let userCoords = null;
   if (/^\d{5}$/.test(zipVal)) {
     userCoords = await geocodeZipCode(zipVal);
@@ -588,18 +592,16 @@ async function filterJobs() {
 
   const filtered = allJobsData.filter(job => {
     // 1. Profile Keyword Binding Match
-    if (profileTerms.length > 0) {
-      const jobTitle = job.title.toLowerCase();
-      const jobCompany = job.company.toLowerCase();
-      const jobLoc = job.location.toLowerCase();
-      const jobKw = (job.matchedKeyword || '').toLowerCase();
+    const jobTitle = job.title.toLowerCase();
+    const jobCompany = job.company.toLowerCase();
+    const jobLoc = job.location.toLowerCase();
+    const jobKw = (job.matchedKeyword || '').toLowerCase();
 
-      const matchesProfile = profileTerms.some(term => 
-        jobTitle.includes(term) || jobCompany.includes(term) || jobLoc.includes(term) || jobKw.includes(term)
-      );
+    const matchesProfile = profileTerms.some(term => 
+      jobTitle.includes(term) || jobCompany.includes(term) || jobLoc.includes(term) || jobKw.includes(term)
+    );
 
-      if (!matchesProfile) return false;
-    }
+    if (!matchesProfile) return false;
 
     // 2. In-Memory Search Box Input Query
     const matchQuery = !query || 
