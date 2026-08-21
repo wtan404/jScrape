@@ -92,7 +92,6 @@ function renderActiveProfileCard() {
   const container = document.getElementById('profileNameContainer');
   const activeProf = profilesData[currentProfileId] || { name: 'User Profile', targetTitles: [], keywords: [] };
 
-  // Render Name Title or Inline Input
   if (container) {
     if (isEditingName) {
       container.innerHTML = `
@@ -288,6 +287,7 @@ async function saveShopifyTags() {
 
   isEditingKeywords = false;
   renderKeywordsSection();
+  filterJobs();
   triggerScrapeNow();
 }
 
@@ -534,18 +534,42 @@ async function filterJobs() {
   const zipVal = document.getElementById('zipInput')?.value.trim() || '';
   const radiusVal = document.getElementById('radiusSelect')?.value || 'any';
 
+  // Get active profile terms
+  const activeProf = profilesData[currentProfileId] || { targetTitles: [], keywords: [] };
+  const profileTerms = [...(activeProf.targetTitles || []), ...(activeProf.keywords || [])]
+    .map(t => t.toLowerCase().trim())
+    .filter(Boolean);
+
   let userCoords = null;
   if (/^\d{5}$/.test(zipVal)) {
     userCoords = await geocodeZipCode(zipVal);
   }
 
   const filtered = allJobsData.filter(job => {
+    // 1. Profile Keyword Binding Match
+    if (profileTerms.length > 0) {
+      const jobTitle = job.title.toLowerCase();
+      const jobCompany = job.company.toLowerCase();
+      const jobLoc = job.location.toLowerCase();
+      const jobKw = (job.matchedKeyword || '').toLowerCase();
+
+      const matchesProfile = profileTerms.some(term => 
+        jobTitle.includes(term) || jobCompany.includes(term) || jobLoc.includes(term) || jobKw.includes(term)
+      );
+
+      if (!matchesProfile) return false;
+    }
+
+    // 2. In-Memory Search Box Input Query
     const matchQuery = !query || 
       job.title.toLowerCase().includes(query) || 
       job.company.toLowerCase().includes(query) || 
       job.location.toLowerCase().includes(query) ||
       (job.matchedKeyword && job.matchedKeyword.toLowerCase().includes(query));
 
+    if (!matchQuery) return false;
+
+    // 3. Source Filter
     let matchSource = true;
     if (sourceFilter === 'new') {
       matchSource = job.isNew === true;
@@ -555,6 +579,9 @@ async function filterJobs() {
       matchSource = job.source.includes('RemoteOK') || job.source.includes('WeWorkRemotely');
     }
 
+    if (!matchSource) return false;
+
+    // 4. Workplace Type Filter
     let matchWorkType = true;
     const wt = (job.workType || 'Onsite').toLowerCase();
     if (workTypeFilter === 'remote') {
@@ -565,6 +592,9 @@ async function filterJobs() {
       matchWorkType = wt === 'onsite';
     }
 
+    if (!matchWorkType) return false;
+
+    // 5. Distance Radius Filter
     let matchRadius = true;
     if (userCoords && radiusVal !== 'any' && wt !== 'remote') {
       const maxMiles = parseFloat(radiusVal);
@@ -574,7 +604,7 @@ async function filterJobs() {
       }
     }
 
-    return matchQuery && matchSource && matchWorkType && matchRadius;
+    return matchRadius;
   });
 
   renderJobs(filtered);
@@ -591,7 +621,7 @@ function renderJobs(jobs) {
     jobsList.innerHTML = `
       <div class="empty-state">
         <i data-lucide="briefcase"></i>
-        <p>No active verified job postings available matching your workplace/distance filters. Adjust your filters or click <strong>Re-Verify & Rescan Now</strong>.</p>
+        <p>No active verified job postings matching the active profile's search keywords. Click <strong>Edit Keywords & Roles</strong> to add terms.</p>
       </div>
     `;
     if (window.lucide) lucide.createIcons();
