@@ -61,6 +61,17 @@ document.addEventListener('DOMContentLoaded', () => {
     try { profilesData = JSON.parse(savedProfs); } catch (e) {}
   }
 
+  // Setup Event Listeners for Filters
+  const zipInput = document.getElementById('zipInput');
+  if (zipInput) {
+    zipInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        filterJobs();
+      }
+    });
+  }
+
   fetchProfiles();
   fetchJobsDatabase();
 
@@ -479,7 +490,7 @@ async function triggerScrapeNow() {
 
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Re-Verifying & Rescanning Profile...</span>`;
+    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Re-Scanning...</span>`;
     if (window.lucide) lucide.createIcons();
   }
 
@@ -509,7 +520,7 @@ async function triggerScrapeNow() {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = `<i data-lucide="refresh-cw"></i><span>Re-Verify & Rescan Now</span>`;
+      btn.innerHTML = `<i data-lucide="refresh-cw"></i><span>Re-Scan</span>`;
       if (window.lucide) lucide.createIcons();
     }
   }
@@ -558,6 +569,13 @@ function getDistanceMiles(lat1, lon1, lat2, lon2) {
 }
 
 async function filterJobs() {
+  const applyBtn = document.getElementById('btnApplyGeoFilters');
+  if (applyBtn) {
+    applyBtn.disabled = true;
+    applyBtn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Filtering...</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
   const query = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
   const sourceFilter = document.getElementById('sourceSelect')?.value || 'all';
   const workTypeFilter = document.getElementById('workTypeSelect')?.value || 'all';
@@ -569,9 +587,14 @@ async function filterJobs() {
     .map(t => t.toLowerCase().trim())
     .filter(Boolean);
 
-  // IF NO KEYWORDS ENTERED: Show "No Results" message immediately
-  if (profileTerms.length === 0) {
+  // IF NO KEYWORDS ENTERED FOR CUSTOM PROFILE: Show "No Results" message
+  if (profileTerms.length === 0 && currentProfileId !== 'profile1') {
     renderJobs([]);
+    if (applyBtn) {
+      applyBtn.disabled = false;
+      applyBtn.innerHTML = `<i data-lucide="filter"></i><span>Apply Filters</span>`;
+      if (window.lucide) lucide.createIcons();
+    }
     return;
   }
 
@@ -612,26 +635,42 @@ async function filterJobs() {
 
     if (!matchSource) return false;
 
-    // 4. Workplace Type Filter
+    // 4. Workplace Type Filter (Robust check across workType, location, and title)
     let matchWorkType = true;
-    const wt = (job.workType || 'Onsite').toLowerCase();
+    const rawWt = (job.workType || '').toLowerCase();
+    const locLower = (job.location || '').toLowerCase();
+    const titleLower = (job.title || '').toLowerCase();
+
+    const isRemote = rawWt.includes('remote') || locLower.includes('remote') || titleLower.includes('remote');
+    const isHybrid = rawWt.includes('hybrid') || locLower.includes('hybrid') || titleLower.includes('hybrid');
+
     if (workTypeFilter === 'remote') {
-      matchWorkType = wt === 'remote';
+      matchWorkType = isRemote;
     } else if (workTypeFilter === 'hybrid') {
-      matchWorkType = wt === 'hybrid';
+      matchWorkType = isHybrid;
     } else if (workTypeFilter === 'onsite') {
-      matchWorkType = wt === 'onsite';
+      matchWorkType = !isRemote && !isHybrid;
     }
 
     if (!matchWorkType) return false;
 
-    // 5. Distance Radius Filter
+    // 5. Distance Radius & Location Filter
     let matchRadius = true;
-    if (userCoords && radiusVal !== 'any' && wt !== 'remote') {
-      const maxMiles = parseFloat(radiusVal);
-      if (job.lat && job.lon) {
-        const dist = getDistanceMiles(userCoords.lat, userCoords.lon, job.lat, job.lon);
-        matchRadius = dist <= maxMiles;
+    if (zipVal) {
+      if (userCoords && radiusVal !== 'any' && !isRemote) {
+        const maxMiles = parseFloat(radiusVal);
+        if (job.lat && job.lon) {
+          const dist = getDistanceMiles(userCoords.lat, userCoords.lon, job.lat, job.lon);
+          matchRadius = dist <= maxMiles;
+        } else if (userCoords.city || userCoords.state) {
+          // Substring location fallback when exact lat/lon isn't present
+          const cleanCity = (userCoords.city || '').toLowerCase();
+          const cleanState = (userCoords.state || '').toLowerCase();
+          matchRadius = locLower.includes(cleanCity) || locLower.includes(cleanState) || locLower.includes(zipVal);
+        }
+      } else if (!userCoords) {
+        // Zip code string match fallback if geocoding is loading
+        matchRadius = locLower.includes(zipVal);
       }
     }
 
@@ -639,6 +678,12 @@ async function filterJobs() {
   });
 
   renderJobs(filtered);
+
+  if (applyBtn) {
+    applyBtn.disabled = false;
+    applyBtn.innerHTML = `<i data-lucide="filter"></i><span>Apply Filters</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
 }
 
 function renderJobs(jobs) {
@@ -660,8 +705,20 @@ function renderJobs(jobs) {
   }
 
   jobsList.innerHTML = jobs.map(job => {
-    const workTypeClass = (job.workType || 'Onsite').toLowerCase();
-    const workTypeLabel = (job.workType || 'ONSITE').toUpperCase();
+    const rawWt = (job.workType || '').toLowerCase();
+    const locLower = (job.location || '').toLowerCase();
+    const titleLower = (job.title || '').toLowerCase();
+
+    let workTypeClass = 'onsite';
+    let workTypeLabel = 'ONSITE';
+
+    if (rawWt.includes('remote') || locLower.includes('remote') || titleLower.includes('remote')) {
+      workTypeClass = 'remote';
+      workTypeLabel = 'REMOTE';
+    } else if (rawWt.includes('hybrid') || locLower.includes('hybrid') || titleLower.includes('hybrid')) {
+      workTypeClass = 'hybrid';
+      workTypeLabel = 'HYBRID';
+    }
 
     return `
       <article class="job-card ${job.isNew ? 'is-new' : ''}">
