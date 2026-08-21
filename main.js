@@ -33,12 +33,23 @@ async function fetchProfiles() {
     profilesData = data.profiles || {};
     if (data.activeProfileId) {
       currentProfileId = data.activeProfileId;
-      const dropdown = document.getElementById('profileSelectDropdown');
-      if (dropdown) dropdown.value = currentProfileId;
     }
+
+    renderProfileDropdown();
   } catch (err) {
     console.warn('Profiles fetch note:', err);
   }
+}
+
+function renderProfileDropdown() {
+  const dropdown = document.getElementById('profileSelectDropdown');
+  if (!dropdown || !profilesData) return;
+
+  dropdown.innerHTML = Object.values(profilesData).map(p => `
+    <option value="${p.id}" ${p.id === currentProfileId ? 'selected' : ''}>
+      ${escapeHtml(p.name)}
+    </option>
+  `).join('');
 }
 
 function onProfileChange() {
@@ -142,6 +153,7 @@ function unlockProfileBox() {
 
   if (title) title.textContent = `Editing Search Criteria: ${prof.name}`;
 
+  document.getElementById('profileNameInput').value = prof.name || '';
   document.getElementById('profileTitlesInput').value = (prof.targetTitles || []).join(', ');
   document.getElementById('profileKeywordsInput').value = (prof.keywords || []).join(', ');
   document.getElementById('profileCompaniesInput').value = (prof.greenhouseCompanies || []).join(', ');
@@ -163,6 +175,7 @@ async function saveProfileCriteria(e) {
     return;
   }
 
+  const nameVal = document.getElementById('profileNameInput')?.value || '';
   const titlesVal = document.getElementById('profileTitlesInput')?.value || '';
   const keywordsVal = document.getElementById('profileKeywordsInput')?.value || '';
   const companiesVal = document.getElementById('profileCompaniesInput')?.value || '';
@@ -185,6 +198,7 @@ async function saveProfileCriteria(e) {
       body: JSON.stringify({
         profileId: currentProfileId,
         pin: authenticatedPin,
+        name: nameVal,
         targetTitles,
         keywords,
         greenhouseCompanies
@@ -192,6 +206,13 @@ async function saveProfileCriteria(e) {
     });
 
     if (res.ok) {
+      if (profilesData[currentProfileId]) {
+        profilesData[currentProfileId].name = nameVal;
+        profilesData[currentProfileId].targetTitles = targetTitles;
+        profilesData[currentProfileId].keywords = keywords;
+        profilesData[currentProfileId].greenhouseCompanies = greenhouseCompanies;
+      }
+      renderProfileDropdown();
       lockProfileBox();
       triggerScrapeNow();
     } else {

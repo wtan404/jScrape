@@ -20,7 +20,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="styles.css?v=2.0">
+  <link rel="stylesheet" href="styles.css?v=2.1">
 </head>
 <body>
 
@@ -38,9 +38,9 @@
         <div class="profile-selector-wrap">
           <i data-lucide="user" class="profile-icon"></i>
           <select id="profileSelectDropdown" onchange="onProfileChange()">
-            <option value="profile1">Profile 1 - IT Management</option>
-            <option value="profile2">Profile 2 - Web Operations (WebOps)</option>
-            <option value="profile3">Profile 3 - DevOps Leadership</option>
+            <option value="profile1">User 1 - IT Management, WebOps & DevOps</option>
+            <option value="profile2">User Profile 2 (Custom)</option>
+            <option value="profile3">User Profile 3 (Custom)</option>
           </select>
         </div>
 
@@ -70,25 +70,30 @@
       <div class="criteria-box-header">
         <div class="criteria-title">
           <i data-lucide="sliders"></i>
-          <h2 id="activeProfileBoxTitle">Editing Search Criteria: Profile 1</h2>
+          <h2 id="activeProfileBoxTitle">Editing Search Criteria: User 1</h2>
         </div>
         <span class="unlocked-badge"><i data-lucide="unlock"></i> PIN Authenticated</span>
       </div>
 
       <form id="profileCriteriaForm" onsubmit="saveProfileCriteria(event)">
         <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="profileNameInput"><i data-lucide="user"></i> Profile Name / Label</label>
+            <input type="text" id="profileNameInput" placeholder="e.g. Will - IT Management & WebOps" required>
+          </div>
+
           <div class="form-group flex-2">
             <label for="profileTitlesInput"><i data-lucide="briefcase"></i> Target Job Titles & Roles (comma separated)</label>
             <input type="text" id="profileTitlesInput" placeholder="e.g. Manager of IT, Web Operations, DevOps Lead" required>
           </div>
+        </div>
 
+        <div class="form-row mt-3">
           <div class="form-group flex-1">
             <label for="profileKeywordsInput"><i data-lucide="tag"></i> Skill & Tech Keywords</label>
             <input type="text" id="profileKeywordsInput" placeholder="e.g. devops, webops, cloud, terraform">
           </div>
-        </div>
 
-        <div class="form-row mt-3">
           <div class="form-group flex-2">
             <label for="profileCompaniesInput"><i data-lucide="building"></i> Target ATS Company Career Boards (Greenhouse/Lever)</label>
             <input type="text" id="profileCompaniesInput" placeholder="stripe, gitlab, github, cloudflare, datadog, hashicorp, vercel">
@@ -220,6 +225,6 @@
     </div>
   </footer>
 
-  <script src="main.js?v=2.0"></script>
+  <script src="main.js?v=2.1"></script>
 </body>
 </html>

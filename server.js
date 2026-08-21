@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const cron = require('node-cron');
-const { runScraperJob, PREDEFINED_ROLES } = require('./scraper');
+const { runScraperJob } = require('./scraper');
 
 const app = express();
 const PORT = process.env.PORT || 8090;
@@ -13,44 +13,55 @@ app.use(express.static(__dirname));
 const DATA_FILE = path.join(__dirname, 'jobs_data.json');
 const PROFILES_FILE = path.join(__dirname, 'profiles.json');
 
-// Default 3 User Profiles Store
+// Correct 3 User Profiles Setup: Profile 1 has ALL original criteria, Profiles 2 & 3 are custom user slots
 const DEFAULT_PROFILES = {
   activeProfileId: 'profile1',
   profiles: {
     profile1: {
       id: 'profile1',
-      name: 'Profile 1 - IT Management',
+      name: 'User 1 - IT Management, WebOps & DevOps',
       pin: null,
-      targetTitles: ['Manager of IT', 'IT Manager', 'Director of IT'],
-      keywords: ['management', 'devops', 'webops', 'infrastructure'],
-      greenhouseCompanies: ['stripe', 'gitlab', 'github', 'cloudflare'],
-      leverCompanies: ['netflix', 'spotify']
+      targetTitles: [
+        'Manager of IT',
+        'IT Manager',
+        'Web Operations',
+        'WebOps Manager',
+        'Website Development',
+        'DevOps Manager',
+        'DevOps Lead',
+        'Director of IT',
+        'Web Engineering Manager'
+      ],
+      keywords: [
+        'devops', 'webops', 'web development', 'infrastructure', 
+        'cloud', 'terraform', 'kubernetes', 'change control', 'it management'
+      ],
+      greenhouseCompanies: ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel'],
+      leverCompanies: ['netflix', 'spotify', 'palantir', 'figma', 'postman']
     },
     profile2: {
       id: 'profile2',
-      name: 'Profile 2 - Web Operations (WebOps)',
+      name: 'User Profile 2 (Custom)',
       pin: null,
-      targetTitles: ['Web Operations', 'WebOps Manager', 'Website Development'],
-      keywords: ['webops', 'web development', 'cloudflare', 'terraform', 'vercel'],
-      greenhouseCompanies: ['datadog', 'hashicorp', 'vercel'],
-      leverCompanies: ['figma', 'postman']
+      targetTitles: [],
+      keywords: [],
+      greenhouseCompanies: ['stripe', 'gitlab', 'github', 'cloudflare'],
+      leverCompanies: ['netflix', 'spotify']
     },
     profile3: {
       id: 'profile3',
-      name: 'Profile 3 - DevOps Leadership',
+      name: 'User Profile 3 (Custom)',
       pin: null,
-      targetTitles: ['DevOps Manager', 'DevOps Lead', 'Web Engineering Manager'],
-      keywords: ['devops', 'kubernetes', 'cloud', 'aws', 'ci/cd'],
-      greenhouseCompanies: ['gitlab', 'datadog', 'hashicorp'],
-      leverCompanies: ['palantir', 'spotify']
+      targetTitles: [],
+      keywords: [],
+      greenhouseCompanies: ['stripe', 'gitlab', 'github', 'cloudflare'],
+      leverCompanies: ['netflix', 'spotify']
     }
   }
 };
 
-// Ensure profile store exists
-if (!fs.existsSync(PROFILES_FILE)) {
-  fs.writeFileSync(PROFILES_FILE, JSON.stringify(DEFAULT_PROFILES, null, 2));
-}
+// Always sync profiles file to use correct schema
+fs.writeFileSync(PROFILES_FILE, JSON.stringify(DEFAULT_PROFILES, null, 2));
 
 // GET /api/profiles
 app.get('/api/profiles', (req, res) => {
@@ -58,13 +69,12 @@ app.get('/api/profiles', (req, res) => {
     const raw = fs.readFileSync(PROFILES_FILE, 'utf8');
     const store = JSON.parse(raw);
 
-    // Sanitize pins for security response (indicate hasPin boolean)
     const sanitizedProfiles = {};
     for (const [id, prof] of Object.entries(store.profiles)) {
       sanitizedProfiles[id] = {
         ...prof,
         hasPin: Boolean(prof.pin),
-        pin: undefined // Hide actual PIN hash/value
+        pin: undefined
       };
     }
 
@@ -77,7 +87,7 @@ app.get('/api/profiles', (req, res) => {
   }
 });
 
-// POST /api/profiles/verify-pin (Verify or set initial PIN)
+// POST /api/profiles/verify-pin
 app.post('/api/profiles/verify-pin', (req, res) => {
   const { profileId, pin } = req.body;
   if (!profileId || !pin) {
@@ -88,18 +98,14 @@ app.post('/api/profiles/verify-pin', (req, res) => {
     const store = JSON.parse(fs.readFileSync(PROFILES_FILE, 'utf8'));
     const target = store.profiles[profileId];
 
-    if (!target) {
-      return res.status(404).json({ error: 'Profile not found.' });
-    }
+    if (!target) return res.status(404).json({ error: 'Profile not found.' });
 
-    // Set PIN if first time
     if (!target.pin) {
       target.pin = String(pin).trim();
       fs.writeFileSync(PROFILES_FILE, JSON.stringify(store, null, 2));
       return res.json({ status: 'pin_created', success: true, message: 'New 4-digit PIN set successfully!' });
     }
 
-    // Verify existing PIN
     if (target.pin === String(pin).trim()) {
       return res.json({ status: 'pin_verified', success: true });
     } else {
@@ -110,7 +116,7 @@ app.post('/api/profiles/verify-pin', (req, res) => {
   }
 });
 
-// POST /api/profiles/save (Save profile criteria after PIN authentication)
+// POST /api/profiles/save
 app.post('/api/profiles/save', (req, res) => {
   const { profileId, pin, name, targetTitles, keywords, greenhouseCompanies } = req.body;
 
@@ -164,7 +170,9 @@ app.post('/api/scrape-now', async (req, res) => {
     const matches = await runScraperJob(
       activeProf.greenhouseCompanies || [],
       activeProf.leverCompanies || [],
-      process.env.SERPAPI_KEY
+      process.env.SERPAPI_KEY,
+      activeProf.targetTitles,
+      activeProf.keywords
     );
 
     res.json({
@@ -187,13 +195,13 @@ cron.schedule('0 * * * *', async () => {
       try { store = JSON.parse(fs.readFileSync(PROFILES_FILE, 'utf8')); } catch (e) {}
     }
     const activeProf = store.profiles[store.activeProfileId] || store.profiles.profile1;
-    await runScraperJob(activeProf.greenhouseCompanies || [], activeProf.leverCompanies || []);
+    await runScraperJob(activeProf.greenhouseCompanies || [], activeProf.leverCompanies || [], process.env.SERPAPI_KEY, activeProf.targetTitles, activeProf.keywords);
   } catch (err) {
     console.error('[Hourly Cron Scheduler] Automated run error:', err.message);
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`[Scrapedeez] 3-Profile PIN Protected Job Engine running on http://localhost:${PORT}`);
+  console.log(`[Scrapedeez] 3-Profile Engine running on http://localhost:${PORT}`);
   runScraperJob().catch(err => console.error('[Scrapedeez] Startup scan error:', err.message));
 });
