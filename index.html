@@ -20,7 +20,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="styles.css?v=2.7">
+  <link rel="stylesheet" href="styles.css?v=2.8">
 </head>
 <body>
 
@@ -33,12 +33,6 @@
       </div>
 
       <div class="header-actions">
-        <!-- Live Time Elapsed Status Badge -->
-        <div class="cron-status" id="elapsedTimerBadge" title="Time elapsed since last scan & verification">
-          <span class="pulse-dot"></span>
-          <span id="elapsedTimerText">Refreshed just now</span>
-        </div>
-
         <button class="btn btn-primary btn-sm" onclick="triggerScrapeNow()" id="btnScrape">
           <i data-lucide="refresh-cw"></i>
           <span>Re-Verify & Rescan Now</span>
@@ -111,55 +105,52 @@
       </div>
     </section>
 
-    <!-- Telemetry Bar (3 Cards) -->
+    <!-- Telemetry & Location Controls Row (3 Cards) -->
     <section class="summary-bar">
+      <!-- Box 1: Active Verified Postings -->
       <div class="summary-card">
         <div class="summary-metric" id="totalMatchesCount">0</div>
         <div class="summary-label">Active Verified Postings (&lt; 30 Days)</div>
       </div>
 
-      <div class="summary-card">
-        <div class="summary-value" id="lastScrapedTime">Never</div>
-        <div class="summary-label">Last Hourly Execution</div>
-      </div>
-
-      <div class="summary-card sources-card">
-        <div class="summary-label">Verification Engine Status:</div>
-        <div class="sources-breakdown">
-          <span class="pill green">Prune &gt; 30 Days Old</span>
-          <span class="pill green">Dead Link Auto-Prune</span>
-          <span class="pill blue">New Role Detection</span>
-          <span class="pill gray">Greenhouse / Lever / Feeds</span>
+      <!-- Box 2: Live Last Scan Status Badge (Moved from Header) -->
+      <div class="summary-card timer-card">
+        <div class="summary-label mb-2">Last Scan Status:</div>
+        <div class="cron-status" id="elapsedTimerBadge" title="Time elapsed since last scan & verification">
+          <span class="pulse-dot"></span>
+          <span id="elapsedTimerText">Refreshed just now</span>
         </div>
       </div>
-    </section>
 
-    <!-- Workplace Type & Zip Code Distance Control Bar -->
-    <section class="geo-controls-row">
-      <div class="geo-group zip-input-group">
-        <label for="zipInput"><i data-lucide="map-pin"></i> US Zip Code:</label>
-        <input type="text" id="zipInput" placeholder="Enter Zip Code (e.g. 90210, 30301)..." maxlength="5" oninput="filterJobs()">
-      </div>
+      <!-- Box 3: Integrated Location & Workplace Filters (Moved from Row 3) -->
+      <div class="summary-card geo-card">
+        <div class="geo-controls-grid">
+          <div class="geo-group">
+            <label for="zipInput"><i data-lucide="map-pin"></i> Zip Code:</label>
+            <input type="text" id="zipInput" placeholder="5-digit US Zip..." maxlength="5" oninput="filterJobs()">
+          </div>
 
-      <div class="geo-group">
-        <label for="radiusSelect"><i data-lucide="compass"></i> Radius (Miles):</label>
-        <select id="radiusSelect" onchange="filterJobs()">
-          <option value="any">Any Distance</option>
-          <option value="25">Within 25 Miles</option>
-          <option value="50">Within 50 Miles</option>
-          <option value="100">Within 100 Miles</option>
-          <option value="250">Within 250 Miles</option>
-        </select>
-      </div>
+          <div class="geo-group">
+            <label for="radiusSelect"><i data-lucide="compass"></i> Radius:</label>
+            <select id="radiusSelect" onchange="filterJobs()">
+              <option value="any">Any Distance</option>
+              <option value="25">25 Miles</option>
+              <option value="50">50 Miles</option>
+              <option value="100">100 Miles</option>
+              <option value="250">250 Miles</option>
+            </select>
+          </div>
 
-      <div class="geo-group">
-        <label for="workTypeSelect"><i data-lucide="briefcase"></i> Workplace Setup:</label>
-        <select id="workTypeSelect" onchange="filterJobs()">
-          <option value="all">All Workplace Types (Remote, Hybrid, Onsite)</option>
-          <option value="remote">🟢 Remote Only</option>
-          <option value="hybrid">🔵 Hybrid Only</option>
-          <option value="onsite">🟠 Onsite Only</option>
-        </select>
+          <div class="geo-group">
+            <label for="workTypeSelect"><i data-lucide="briefcase"></i> Setup:</label>
+            <select id="workTypeSelect" onchange="filterJobs()">
+              <option value="all">All Setup Types</option>
+              <option value="remote">🟢 Remote</option>
+              <option value="hybrid">🔵 Hybrid</option>
+              <option value="onsite">🟠 Onsite</option>
+            </select>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -226,6 +217,6 @@
     </div>
   </footer>
 
-  <script src="main.js?v=2.7"></script>
+  <script src="main.js?v=2.8"></script>
 </body>
 </html>
