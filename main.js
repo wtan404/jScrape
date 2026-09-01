@@ -1,54 +1,29 @@
 /* ==========================================================================
-   Scrapedeez — Profile-Bound Job Engine, Distance Geocoding & Multi-Sort
+   Scrapedeez — Automated Hourly Job Engine, Link Verifier & Multi-Sort
    ========================================================================== */
 
 let allJobsData = [];
 let lastScrapedTimestamp = null;
-let currentProfileId = 'profile1';
-let authenticatedPin = null;
-let pendingEditTarget = null; // 'name' or 'criteria'
+let isScrapingActive = false;
 
-let isEditingName = false;
 let isEditingKeywords = false;
 let isEditingSalary = false;
 let editingTagsList = [];
 
-// Default client-side profiles fallback with profile-bound job stores
-let profilesData = {
-  profile1: {
-    id: 'profile1',
-    name: 'Will',
-    hasPin: true,
-    pin: '0418',
-    minSalary: 120000,
-    targetTitles: ['Manager of IT', 'IT Manager', 'Web Operations', 'WebOps Manager', 'DevOps Manager', 'DevOps Lead', 'devops', 'web development'],
-    keywords: [],
-    greenhouseCompanies: ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel'],
-    lastScraped: new Date().toISOString(),
-    jobs: []
-  },
-  profile2: {
-    id: 'profile2',
-    name: 'User Profile 2 (Custom)',
-    hasPin: false,
-    targetTitles: [],
-    keywords: [],
-    minSalary: 0,
-    greenhouseCompanies: ['stripe', 'gitlab', 'github'],
-    lastScraped: null,
-    jobs: []
-  },
-  profile3: {
-    id: 'profile3',
-    name: 'User Profile 3 (Custom)',
-    hasPin: false,
-    targetTitles: [],
-    keywords: [],
-    minSalary: 0,
-    greenhouseCompanies: ['stripe', 'gitlab', 'github'],
-    lastScraped: null,
-    jobs: []
-  }
+// Default search configuration
+let userConfig = {
+  minSalary: 120000,
+  targetTitles: [
+    'Manager of IT', 'IT Manager', 'Web Operations', 'WebOps Manager',
+    'Website Development', 'DevOps Manager', 'DevOps Lead', 'Director of IT',
+    'Web Engineering Manager', 'Software Engineering Manager'
+  ],
+  keywords: [
+    'devops', 'webops', 'web development', 'infrastructure',
+    'cloud', 'terraform', 'kubernetes', 'change control', 'it management'
+  ],
+  greenhouseCompanies: ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel'],
+  leverCompanies: ['netflix', 'spotify', 'palantir', 'figma', 'postman']
 };
 
 // High-Speed US Metropolitan Area Geocode Dictionary
@@ -99,6 +74,7 @@ const US_CITY_COORDS = {
 };
 
 const zipGeocodeCache = {};
+const ONE_HOUR_MS = 60 * 60 * 1000;
 
 document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) {
@@ -108,9 +84,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const yearEl = document.getElementById('year');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-  const savedProfs = localStorage.getItem('scrapedeez_profiles');
-  if (savedProfs) {
-    try { profilesData = JSON.parse(savedProfs); } catch (e) {}
+  // Load cached settings & jobs from localStorage
+  const savedCfg = localStorage.getItem('scrapedeez_config');
+  if (savedCfg) {
+    try { userConfig = { ...userConfig, ...JSON.parse(savedCfg) }; } catch (e) {}
+  }
+
+  const savedJobs = localStorage.getItem('scrapedeez_jobs');
+  const savedScrapedAt = localStorage.getItem('scrapedeez_last_scraped');
+  if (savedJobs) {
+    try {
+      allJobsData = JSON.parse(savedJobs);
+      if (savedScrapedAt) lastScrapedTimestamp = new Date(savedScrapedAt).getTime();
+    } catch (e) {}
   }
 
   // Setup Event Listeners for Filters
@@ -124,87 +110,69 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  fetchProfiles();
-  fetchJobsDatabase();
+  renderCriteriaCard();
+  filterJobs();
 
+  // Load server config and jobs database
+  initApp();
+
+  // Update status badge timer every 10 seconds
   setInterval(updateElapsedBadge, 10000);
+
+  // Background Auto-Fetch Hourly Check (checks every 30 seconds if > 1 hour elapsed)
+  setInterval(() => {
+    checkAndAutoRescan();
+  }, 30000);
 });
 
-async function fetchProfiles() {
+async function initApp() {
+  await fetchConfig();
+  await fetchJobsDatabase();
+
+  // If jobs are missing or older than 1 hour, auto-trigger a live scan immediately
+  const now = Date.now();
+  if (allJobsData.length === 0 || !lastScrapedTimestamp || (now - lastScrapedTimestamp) >= ONE_HOUR_MS) {
+    console.log('[Scrapedeez] Data is missing or > 1 hour old. Running auto-scan on startup...');
+    triggerScrapeNow();
+  }
+}
+
+function checkAndAutoRescan() {
+  if (isScrapingActive) return;
+  const now = Date.now();
+  if (!lastScrapedTimestamp || (now - lastScrapedTimestamp) >= ONE_HOUR_MS) {
+    console.log('[Scrapedeez] Auto-hourly threshold reached. Running scheduled rescan...');
+    triggerScrapeNow();
+  }
+}
+
+async function fetchConfig() {
   try {
-    let res = await fetch(`./profiles.php?t=${Date.now()}`);
-    if (!res.ok) {
-      res = await fetch(`./api/profiles?t=${Date.now()}`);
-    }
+    const res = await fetch(`./api/config?t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
-      if (data.profiles) {
-        profilesData = data.profiles;
-        localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
+      userConfig = { ...userConfig, ...data };
+      localStorage.setItem('scrapedeez_config', JSON.stringify(userConfig));
+    } else {
+      const cfgRes = await fetch(`./config.json?t=${Date.now()}`);
+      if (cfgRes.ok) {
+        const data = await cfgRes.json();
+        userConfig = { ...userConfig, ...data };
+        localStorage.setItem('scrapedeez_config', JSON.stringify(userConfig));
       }
-      if (data.activeProfileId) currentProfileId = data.activeProfileId;
     }
   } catch (err) {
-    console.warn('Profiles fetch note:', err);
+    console.warn('Config fetch note:', err);
   } finally {
-    renderProfileDropdown();
-    renderActiveProfileCard();
-    filterJobs();
+    renderCriteriaCard();
   }
 }
 
-function renderProfileDropdown() {
-  const dropdown = document.getElementById('profileSelectDropdown');
-  if (!dropdown || !profilesData) return;
-
-  dropdown.innerHTML = Object.values(profilesData).map(p => `
-    <option value="${p.id}" ${p.id === currentProfileId ? 'selected' : ''}>
-      ${escapeHtml(p.name)}
-    </option>
-  `).join('');
-}
-
-function onProfileChange() {
-  const dropdown = document.getElementById('profileSelectDropdown');
-  if (!dropdown) return;
-
-  currentProfileId = dropdown.value;
-  authenticatedPin = null;
-  isEditingName = false;
-  isEditingKeywords = false;
-  isEditingSalary = false;
-
-  renderActiveProfileCard();
-  fetchJobsDatabase();
-}
-
-function renderActiveProfileCard() {
-  const container = document.getElementById('profileNameContainer');
+function renderCriteriaCard() {
   const salaryContainer = document.getElementById('profileSalaryCriteriaContainer');
-  const activeProf = profilesData[currentProfileId] || { name: 'User Profile', targetTitles: [], keywords: [], minSalary: 120000 };
-
-  if (container) {
-    if (isEditingName) {
-      container.innerHTML = `
-        <div class="inline-name-input-group">
-          <input type="text" id="inlineNameInput" value="${escapeHtml(activeProf.name)}" autofocus>
-          <button class="btn btn-secondary btn-xs" onclick="cancelInlineNameEdit()">Cancel</button>
-          <button class="btn btn-primary btn-xs" onclick="saveInlineName()">Save</button>
-        </div>
-      `;
-    } else {
-      container.innerHTML = `
-        <h2 id="activeProfileDisplayName">${escapeHtml(activeProf.name)}</h2>
-        <button class="btn btn-secondary btn-xs" onclick="openEditNameModal()" id="btnEditName">
-          <i data-lucide="edit-2"></i>
-          <span>Edit Name</span>
-        </button>
-      `;
-    }
-  }
 
   if (salaryContainer) {
-    const salaryVal = activeProf.minSalary || 0;
+    const salaryVal = userConfig.minSalary || 0;
     const formattedVal = salaryVal > 0 ? `$${(salaryVal/1000).toFixed(0)}k / yr` : 'Any Salary';
 
     if (isEditingSalary) {
@@ -236,56 +204,36 @@ function renderActiveProfileCard() {
   }
 
   renderKeywordsSection();
-
   if (window.lucide) lucide.createIcons();
 }
 
 function toggleSalaryEdit() {
   isEditingSalary = !isEditingSalary;
-  renderActiveProfileCard();
+  renderCriteriaCard();
 }
 
 function cancelInlineSalaryEdit() {
   isEditingSalary = false;
-  renderActiveProfileCard();
+  renderCriteriaCard();
 }
 
 async function saveInlineMinSalary() {
   const select = document.getElementById('inlineMinSalarySelect');
   const val = select ? parseInt(select.value, 10) : 0;
 
-  if (profilesData[currentProfileId]) {
-    profilesData[currentProfileId].minSalary = val;
-  }
-  localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
+  userConfig.minSalary = val;
+  localStorage.setItem('scrapedeez_config', JSON.stringify(userConfig));
 
   try {
-    let res = await fetch('./profiles.php?action=save', {
+    await fetch('./api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        profileId: currentProfileId,
-        pin: authenticatedPin,
-        name: profilesData[currentProfileId].name,
-        minSalary: val
-      })
+      body: JSON.stringify({ minSalary: val })
     });
-    if (!res.ok) {
-      await fetch('./api/profiles/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profileId: currentProfileId,
-          pin: authenticatedPin,
-          name: profilesData[currentProfileId].name,
-          minSalary: val
-        })
-      });
-    }
   } catch (e) {}
 
   isEditingSalary = false;
-  renderActiveProfileCard();
+  renderCriteriaCard();
   filterJobs();
 }
 
@@ -293,7 +241,6 @@ function renderKeywordsSection() {
   const kwListEl = document.getElementById('activeKeywordsList');
   const inputBar = document.getElementById('shopifyTagInputBar');
   const btnEditCriteria = document.getElementById('btnEditCriteria');
-  const activeProf = profilesData[currentProfileId] || { targetTitles: [], keywords: [] };
 
   if (!kwListEl) return;
 
@@ -315,7 +262,7 @@ function renderKeywordsSection() {
     if (btnEditCriteria) btnEditCriteria.style.display = 'inline-flex';
     if (inputBar) inputBar.style.display = 'none';
 
-    const allTerms = [...(activeProf.targetTitles || []), ...(activeProf.keywords || [])];
+    const allTerms = [...(userConfig.targetTitles || []), ...(userConfig.keywords || [])];
     if (allTerms.length === 0) {
       kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No keywords defined. Click Edit Keywords to add terms.</span>`;
     } else {
@@ -324,74 +271,9 @@ function renderKeywordsSection() {
   }
 }
 
-// 1. Trigger Edit Profile Name (Inline)
-function openEditNameModal() {
-  pendingEditTarget = 'name';
-  if (authenticatedPin) {
-    isEditingName = true;
-    renderActiveProfileCard();
-  } else {
-    openPinModal();
-  }
-}
-
-function cancelInlineNameEdit() {
-  isEditingName = false;
-  renderActiveProfileCard();
-}
-
-async function saveInlineName() {
-  const nameInput = document.getElementById('inlineNameInput');
-  const nameVal = nameInput ? nameInput.value.trim() : '';
-
-  if (!nameVal) return;
-
-  if (profilesData[currentProfileId]) {
-    profilesData[currentProfileId].name = nameVal;
-  }
-  localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
-
-  try {
-    let res = await fetch('./profiles.php?action=save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        profileId: currentProfileId,
-        pin: authenticatedPin,
-        name: nameVal
-      })
-    });
-    if (!res.ok) {
-      await fetch('./api/profiles/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profileId: currentProfileId,
-          pin: authenticatedPin,
-          name: nameVal
-        })
-      });
-    }
-  } catch (e) {}
-
-  isEditingName = false;
-  renderProfileDropdown();
-  renderActiveProfileCard();
-}
-
-// 2. Trigger Edit Keywords (Shopify-style Tag Manager)
-function openEditCriteriaModal() {
-  pendingEditTarget = 'criteria';
-  if (authenticatedPin) {
-    startShopifyTagEdit();
-  } else {
-    openPinModal();
-  }
-}
-
 function startShopifyTagEdit() {
-  const activeProf = profilesData[currentProfileId] || { targetTitles: [], keywords: [] };
-  editingTagsList = [...(activeProf.targetTitles || []), ...(activeProf.keywords || [])];
+  const allTerms = [...(userConfig.targetTitles || []), ...(userConfig.keywords || [])];
+  editingTagsList = [...allTerms];
   isEditingKeywords = true;
   renderKeywordsSection();
 
@@ -415,7 +297,7 @@ function handleShopifyTagInput(e) {
     const input = document.getElementById('shopifyTagInput');
     const val = input ? input.value.replace(/,/g, '').trim() : '';
 
-    if (val && !editingTagsList.includes(val)) {
+    if (val && !editingTagsList.some(t => t.toLowerCase() === val.toLowerCase())) {
       editingTagsList.push(val);
       input.value = '';
       renderKeywordsSection();
@@ -436,44 +318,26 @@ function cancelShopifyTagEdit() {
 }
 
 async function saveShopifyTags() {
-  if (profilesData[currentProfileId]) {
-    profilesData[currentProfileId].targetTitles = editingTagsList;
-    profilesData[currentProfileId].keywords = [];
-  }
-  localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
+  userConfig.targetTitles = [...editingTagsList];
+  userConfig.keywords = [];
+  localStorage.setItem('scrapedeez_config', JSON.stringify(userConfig));
 
   const btn = document.getElementById('btnSaveTags');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Saving to Server...</span>`;
+    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Saving...</span>`;
     if (window.lucide) lucide.createIcons();
   }
 
   try {
-    let res = await fetch('./profiles.php?action=save', {
+    await fetch('./api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        profileId: currentProfileId,
-        pin: authenticatedPin,
-        name: profilesData[currentProfileId].name,
         targetTitles: editingTagsList,
         keywords: []
       })
     });
-    if (!res.ok) {
-      await fetch('./api/profiles/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profileId: currentProfileId,
-          pin: authenticatedPin,
-          name: profilesData[currentProfileId].name,
-          targetTitles: editingTagsList,
-          keywords: []
-        })
-      });
-    }
   } catch (e) {
     console.error('Save error:', e);
   } finally {
@@ -490,139 +354,48 @@ async function saveShopifyTags() {
   triggerScrapeNow();
 }
 
-function openPinModal() {
-  const targetProf = profilesData[currentProfileId] || { name: 'User Profile', hasPin: false };
-  const overlay = document.getElementById('pinModalOverlay');
-  const heading = document.getElementById('pinModalHeading');
-  const prompt = document.getElementById('pinModalPrompt');
-  const errorMsg = document.getElementById('pinErrorMessage');
-  const pinInput = document.getElementById('pinCodeInput');
-
-  if (!overlay) return;
-
-  if (errorMsg) errorMsg.style.display = 'none';
-  if (pinInput) pinInput.value = '';
-
-  if (!targetProf.hasPin && !targetProf.pin) {
-    if (heading) heading.textContent = 'Set New Security PIN';
-    if (prompt) prompt.textContent = `No PIN set for ${targetProf.name}. Enter a 4-digit PIN to lock your profile.`;
-  } else {
-    if (heading) heading.textContent = 'Enter Security PIN';
-    if (prompt) prompt.textContent = `Enter 4-digit security PIN to unlock & edit details for ${targetProf.name}.`;
-  }
-
-  overlay.style.display = 'flex';
-  if (pinInput) pinInput.focus();
-}
-
-function closePinModal() {
-  const overlay = document.getElementById('pinModalOverlay');
-  if (overlay) overlay.style.display = 'none';
-}
-
-async function submitPinVerification(e) {
-  e.preventDefault();
-
-  const pinInput = document.getElementById('pinCodeInput');
-  const errorMsg = document.getElementById('pinErrorMessage');
-  const btn = document.getElementById('btnVerifyPin');
-
-  const pinVal = pinInput ? pinInput.value.trim() : '';
-
-  if (!/^\d{4}$/.test(pinVal)) {
-    if (errorMsg) {
-      errorMsg.textContent = 'PIN must be exactly 4 digits.';
-      errorMsg.style.display = 'block';
-    }
-    return;
-  }
-
-  if (btn) btn.disabled = true;
-
+async function fetchJobsDatabase() {
   try {
-    const targetProf = profilesData[currentProfileId];
+    let loaded = false;
 
-    let success = false;
+    // 1. Try GET /api/jobs
     try {
-      let res = await fetch('./profiles.php?action=verify-pin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profileId: currentProfileId, pin: pinVal })
-      });
-      if (!res.ok) {
-        res = await fetch('./api/profiles/verify-pin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ profileId: currentProfileId, pin: pinVal })
-        });
-      }
+      const res = await fetch(`./api/jobs?t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
-        success = data.success;
+        if (data.jobs && data.jobs.length > 0) {
+          allJobsData = data.jobs;
+          if (data.lastScraped) {
+            lastScrapedTimestamp = new Date(data.lastScraped).getTime();
+            localStorage.setItem('scrapedeez_last_scraped', data.lastScraped);
+          }
+          localStorage.setItem('scrapedeez_jobs', JSON.stringify(allJobsData));
+          loaded = true;
+        }
       }
-    } catch (apiErr) {}
+    } catch (e) {}
 
-    if (!success) {
-      if (!targetProf.pin) {
-        targetProf.pin = pinVal;
-        targetProf.hasPin = true;
-        success = true;
-      } else if (targetProf.pin === pinVal) {
-        success = true;
-      }
-    }
-
-    if (success) {
-      authenticatedPin = pinVal;
-      if (targetProf) targetProf.hasPin = true;
-      localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
-
-      closePinModal();
-
-      if (pendingEditTarget === 'name') {
-        isEditingName = true;
-        renderActiveProfileCard();
-      } else {
-        startShopifyTagEdit();
-      }
-    } else {
-      if (errorMsg) {
-        errorMsg.textContent = 'Incorrect PIN entered.';
-        errorMsg.style.display = 'block';
-      }
+    // 2. Try static jobs_data.json fallback
+    if (!loaded) {
+      try {
+        const res = await fetch(`./jobs_data.json?t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.jobs && data.jobs.length > 0) {
+            allJobsData = data.jobs;
+            if (data.lastScraped) {
+              lastScrapedTimestamp = new Date(data.lastScraped).getTime();
+              localStorage.setItem('scrapedeez_last_scraped', data.lastScraped);
+            }
+            localStorage.setItem('scrapedeez_jobs', JSON.stringify(allJobsData));
+          }
+        }
+      } catch (e) {}
     }
   } catch (err) {
-    if (errorMsg) {
-      errorMsg.textContent = 'PIN verification failed: ' + err.message;
-      errorMsg.style.display = 'block';
-    }
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
-
-async function fetchJobsDatabase() {
-  const activeProf = profilesData[currentProfileId] || {};
-
-  try {
-    const res = await fetch(`./jobs_data.json?t=${Date.now()}`);
-    if (res.ok) {
-      const data = await res.json();
-      allJobsData = data.jobs || [];
-      if (data.lastScraped) {
-        lastScrapedTimestamp = new Date(data.lastScraped).getTime();
-        activeProf.lastScraped = data.lastScraped;
-      }
-      activeProf.jobs = allJobsData;
-    }
-  } catch (err) {
-    console.warn('Jobs fetch note:', err);
+    console.warn('Jobs fetch error:', err);
   }
 
-  const timeEl = document.getElementById('lastScrapedTime');
-  if (timeEl) {
-    timeEl.textContent = activeProf.lastScraped ? formatDate(activeProf.lastScraped) : 'Never';
-  }
   updateElapsedBadge();
   filterJobs();
 }
@@ -631,22 +404,13 @@ function updateElapsedBadge() {
   const badgeText = document.getElementById('elapsedTimerText');
   if (!badgeText) return;
 
-  const activeProf = profilesData[currentProfileId] || {};
-  const lastScraped = activeProf.lastScraped;
-
-  if (!lastScraped) {
-    badgeText.textContent = 'Not scanned yet';
-    return;
-  }
-
-  const scrapedTime = new Date(lastScraped).getTime();
-  if (isNaN(scrapedTime)) {
+  if (!lastScrapedTimestamp) {
     badgeText.textContent = 'Not scanned yet';
     return;
   }
 
   const now = Date.now();
-  const elapsedSec = Math.max(0, Math.floor((now - scrapedTime) / 1000));
+  const elapsedSec = Math.max(0, Math.floor((now - lastScrapedTimestamp) / 1000));
 
   if (elapsedSec < 15) {
     badgeText.textContent = 'Refreshed just now';
@@ -662,9 +426,12 @@ function updateElapsedBadge() {
   }
 }
 
+// Manual or Auto Trigger: Re-Scan Pipeline
 async function triggerScrapeNow() {
-  const btn = document.getElementById('btnScrape');
+  if (isScrapingActive) return;
+  isScrapingActive = true;
 
+  const btn = document.getElementById('btnScrape');
   if (btn) {
     btn.disabled = true;
     btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Re-Scanning...</span>`;
@@ -672,35 +439,206 @@ async function triggerScrapeNow() {
   }
 
   try {
+    let backendSuccess = false;
+
+    // 1. Try Backend API Trigger (/api/scrape-now)
     try {
       const res = await fetch('./api/scrape-now', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profileId: currentProfileId })
+        body: JSON.stringify({
+          targetTitles: userConfig.targetTitles,
+          keywords: userConfig.keywords
+        })
       });
+
       if (res.ok) {
         const data = await res.json();
-        if (data.jobs) {
+        if (data.jobs && data.jobs.length > 0) {
           allJobsData = data.jobs;
-          if (profilesData[currentProfileId]) {
-            profilesData[currentProfileId].jobs = data.jobs;
-            profilesData[currentProfileId].lastScraped = data.scrapedAt || new Date().toISOString();
-            localStorage.setItem('scrapedeez_profiles', JSON.stringify(profilesData));
-          }
+          lastScrapedTimestamp = data.scrapedAt ? new Date(data.scrapedAt).getTime() : Date.now();
+          localStorage.setItem('scrapedeez_last_scraped', new Date(lastScrapedTimestamp).toISOString());
+          localStorage.setItem('scrapedeez_jobs', JSON.stringify(allJobsData));
+          backendSuccess = true;
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Backend scrape endpoint not reached, activating live client fallback...');
+    }
 
-    await fetchJobsDatabase();
+    // 2. Client-Side Live Scraper Fallback (Direct public Greenhouse / Lever / Feeds)
+    if (!backendSuccess) {
+      console.log('[Scrapedeez] Executing live client-side scrape fallback...');
+      const clientJobs = await runClientSideScraper();
+      if (clientJobs && clientJobs.length > 0) {
+        allJobsData = clientJobs;
+        lastScrapedTimestamp = Date.now();
+        localStorage.setItem('scrapedeez_last_scraped', new Date(lastScrapedTimestamp).toISOString());
+        localStorage.setItem('scrapedeez_jobs', JSON.stringify(allJobsData));
+      }
+    }
   } catch (err) {
-    console.error('Trigger error:', err);
+    console.error('Trigger scrape error:', err);
   } finally {
+    isScrapingActive = false;
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = `<i data-lucide="refresh-cw"></i><span>Re-Scan</span>`;
       if (window.lucide) lucide.createIcons();
     }
+    updateElapsedBadge();
+    filterJobs();
   }
+}
+
+// Client-Side Scraper Engine (Direct Browser Calls to Public ATS APIs)
+async function runClientSideScraper() {
+  const ghCompanies = userConfig.greenhouseCompanies || ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel'];
+  const leverCompanies = userConfig.leverCompanies || ['netflix', 'spotify', 'palantir', 'figma', 'postman'];
+  const searchTerms = [...(userConfig.targetTitles || []), ...(userConfig.keywords || [])]
+    .map(t => t.toLowerCase().trim())
+    .filter(Boolean);
+
+  const promises = [];
+
+  // Scrape Greenhouse Boards (CORS-friendly public REST API)
+  for (const company of ghCompanies) {
+    promises.push(
+      fetch(`https://boards-api.greenhouse.io/v1/boards/${company}/jobs?content=true`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (!data || !data.jobs) return [];
+          const matches = [];
+          for (const job of data.jobs) {
+            const title = (job.title || '').toLowerCase();
+            const content = (job.content || '').toLowerCase();
+            const location = job.location ? job.location.name : 'Remote / Various';
+
+            const matched = searchTerms.find(term => title.includes(term) || content.includes(term));
+            if (matched || searchTerms.length === 0) {
+              matches.push({
+                id: `gh-${company}-${job.id}`,
+                source: `Greenhouse (${company.toUpperCase()})`,
+                title: job.title,
+                company: company.charAt(0).toUpperCase() + company.slice(1),
+                location,
+                workType: classifyClientWorkType(location, job.title),
+                url: job.absolute_url,
+                matchedKeyword: matched ? matched.toUpperCase() : 'TARGET ROLE',
+                date: job.updated_at || new Date().toISOString()
+              });
+            }
+          }
+          return matches;
+        })
+        .catch(() => [])
+    );
+  }
+
+  // Scrape Lever Boards (CORS-friendly public REST API)
+  for (const company of leverCompanies) {
+    promises.push(
+      fetch(`https://api.lever.co/v0/postings/${company}?mode=json`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (!data || !Array.isArray(data)) return [];
+          const matches = [];
+          for (const job of data) {
+            const title = (job.text || '').toLowerCase();
+            const description = (job.descriptionPlain || '').toLowerCase();
+            const location = job.categories ? job.categories.location : 'Remote';
+
+            const matched = searchTerms.find(term => title.includes(term) || description.includes(term));
+            if (matched || searchTerms.length === 0) {
+              matches.push({
+                id: `lever-${company}-${job.id}`,
+                source: `Lever (${company.toUpperCase()})`,
+                title: job.text,
+                company: company.charAt(0).toUpperCase() + company.slice(1),
+                location,
+                workType: classifyClientWorkType(location, job.text),
+                url: job.hostedUrl,
+                matchedKeyword: matched ? matched.toUpperCase() : 'TARGET ROLE',
+                date: job.createdAt ? new Date(job.createdAt).toISOString() : new Date().toISOString()
+              });
+            }
+          }
+          return matches;
+        })
+        .catch(() => [])
+    );
+  }
+
+  // Scrape WeWorkRemotely RSS via public RSS-to-JSON
+  promises.push(
+    fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss')}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data || !data.items) return [];
+        const matches = [];
+        for (const item of data.items) {
+          const rawTitle = item.title || '';
+          const parts = rawTitle.split(':');
+          const company = parts.length > 1 ? parts[0].trim() : 'Unknown';
+          const title = parts.length > 1 ? parts.slice(1).join(':').trim() : rawTitle;
+
+          const matched = searchTerms.find(term => title.toLowerCase().includes(term));
+          if (matched || searchTerms.length === 0) {
+            matches.push({
+              id: `wwr-${btoa(item.link || Math.random().toString()).substring(0, 10)}`,
+              source: 'WeWorkRemotely Feed',
+              title,
+              company,
+              location: 'Remote',
+              workType: 'Remote',
+              url: item.link,
+              matchedKeyword: matched ? matched.toUpperCase() : 'DEVOPS / WEBOPS',
+              date: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()
+            });
+          }
+        }
+        return matches;
+      })
+      .catch(() => [])
+  );
+
+  const results = await Promise.all(promises);
+  const flatResults = results.flat();
+
+  // Merge with existing cached jobs, deduplicate, filter < 30 days
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const merged = [];
+  const seen = new Set();
+
+  for (const job of [...flatResults, ...allJobsData]) {
+    const jobTime = new Date(job.date || now).getTime();
+    if (!isNaN(jobTime) && (now - jobTime) > THIRTY_DAYS_MS) continue;
+
+    const key = (job.title + '|' + job.company).toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    merged.push({
+      ...job,
+      workType: job.workType || classifyClientWorkType(job.location, job.title),
+      verifiedAt: new Date().toISOString()
+    });
+  }
+
+  merged.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+  return merged;
+}
+
+function classifyClientWorkType(location = '', title = '') {
+  const text = (location + ' ' + title).toLowerCase();
+  if (text.includes('remote') || text.includes('anywhere') || text.includes('virtual') || text.includes('wfh')) {
+    return 'Remote';
+  }
+  if (text.includes('hybrid') || text.includes('flexible')) {
+    return 'Hybrid';
+  }
+  return 'Onsite';
 }
 
 async function geocodeZipCode(zip) {
@@ -809,23 +747,7 @@ async function filterJobs() {
   const zipVal = document.getElementById('zipInput')?.value.trim() || '';
   const radiusVal = document.getElementById('radiusSelect')?.value || 'any';
 
-  const activeProf = profilesData[currentProfileId] || { targetTitles: [], keywords: [], minSalary: 0 };
-  const minProfileSalary = activeProf.minSalary || 0;
-
-  const profileTerms = [...(activeProf.targetTitles || []), ...(activeProf.keywords || [])]
-    .map(t => t.toLowerCase().trim())
-    .filter(Boolean);
-
-  // IF NO KEYWORDS ENTERED FOR CUSTOM PROFILE: Show "No Results" message
-  if (profileTerms.length === 0 && currentProfileId !== 'profile1') {
-    renderJobs([]);
-    if (applyBtn) {
-      applyBtn.disabled = false;
-      applyBtn.innerHTML = `<i data-lucide="filter"></i><span>Apply Filters</span>`;
-      if (window.lucide) lucide.createIcons();
-    }
-    return;
-  }
+  const minProfileSalary = userConfig.minSalary || 0;
 
   let userCoords = null;
   if (/^\d{5}$/.test(zipVal)) {
@@ -833,17 +755,7 @@ async function filterJobs() {
   }
 
   let filtered = allJobsData.filter(job => {
-    // 1. Profile 1 displays full dataset; Custom profiles match OR terms
-    if (currentProfileId !== 'profile1') {
-      const jobText = (job.title + ' ' + job.company + ' ' + job.location + ' ' + (job.matchedKeyword || '')).toLowerCase();
-      const matchesProfile = profileTerms.some(term => {
-        const cleanTerm = term.trim().toLowerCase();
-        return cleanTerm.length > 0 && jobText.includes(cleanTerm);
-      });
-      if (!matchesProfile) return false;
-    }
-
-    // 2. Minimum Acceptable Salary Filter
+    // 1. Minimum Acceptable Salary Filter
     if (minProfileSalary > 0) {
       const jobSalaryStr = formatSalary(job);
       const jobSalNum = parseSalaryMin(jobSalaryStr);
@@ -852,7 +764,7 @@ async function filterJobs() {
       }
     }
 
-    // 3. In-Memory Search Box Input Query
+    // 2. In-Memory Search Box Input Query
     const matchQuery = !query || 
       job.title.toLowerCase().includes(query) || 
       job.company.toLowerCase().includes(query) || 
@@ -861,19 +773,19 @@ async function filterJobs() {
 
     if (!matchQuery) return false;
 
-    // 4. Source Filter
+    // 3. Source Filter
     let matchSource = true;
     if (sourceFilter === 'new') {
       matchSource = job.isNew === true;
     } else if (sourceFilter === 'ats') {
-      matchSource = job.source.includes('Greenhouse') || job.source.includes('Lever');
+      matchSource = (job.source || '').includes('Greenhouse') || (job.source || '').includes('Lever');
     } else if (sourceFilter === 'feeds') {
-      matchSource = job.source.includes('RemoteOK') || job.source.includes('WeWorkRemotely');
+      matchSource = (job.source || '').includes('RemoteOK') || (job.source || '').includes('WeWorkRemotely');
     }
 
     if (!matchSource) return false;
 
-    // 5. Multi-Select Location Setup Checkboxes (Remote, Hybrid, Onsite)
+    // 4. Multi-Select Location Setup Checkboxes (Remote, Hybrid, Onsite)
     const rawWt = (job.workType || '').toLowerCase();
     const locLower = (job.location || '').toLowerCase();
     const titleLower = (job.title || '').toLowerCase();
@@ -922,7 +834,7 @@ async function filterJobs() {
     });
   }
 
-  // MULTI-SORT LOGIC (Time Posted, Salary, Distance)
+  // Multi-Sort (Time Posted, Salary, Distance)
   if (sortMode === 'salary') {
     filtered.sort((a, b) => parseSalaryMin(formatSalary(b)) - parseSalaryMin(formatSalary(a)));
   } else if (sortMode === 'distance' || (userCoords && sortMode !== 'time')) {
@@ -1012,7 +924,7 @@ function renderJobs(jobs) {
   }
 }
 
-// Date-Only Formatting (Time Removed)
+// Date-Only Formatting
 function formatDate(isoStr) {
   if (!isoStr) return 'Recently';
   const d = new Date(isoStr);
@@ -1022,3 +934,4 @@ function formatDate(isoStr) {
 function escapeHtml(text) {
   return text ? String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
 }
+

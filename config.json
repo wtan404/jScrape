@@ -1,34 +1,46 @@
 {
+  "minSalary": 120000,
   "targetTitles": [
-    "IT Manager",
     "Manager of IT",
+    "IT Manager",
     "Web Operations",
+    "WebOps Manager",
+    "Website Development",
     "DevOps Manager",
+    "DevOps Lead",
+    "Director of IT",
+    "Web Engineering Manager",
     "Software Engineering Manager"
   ],
   "keywords": [
     "devops",
     "webops",
+    "web development",
     "infrastructure",
     "cloud",
     "terraform",
-    "management"
+    "kubernetes",
+    "change control",
+    "it management"
   ],
   "greenhouseCompanies": [
     "stripe",
     "gitlab",
-    "github",
     "cloudflare",
     "datadog",
-    "hashicorp",
-    "vercel"
+    "vercel",
+    "figma",
+    "pinterest",
+    "reddit",
+    "discord",
+    "instacart",
+    "affirm",
+    "brex",
+    "robinhood"
   ],
   "leverCompanies": [
-    "netflix",
-    "spotify",
     "palantir",
-    "figma",
-    "postman"
+    "spotify"
   ],
   "serpApiKey": ""
 }

@@ -30,13 +30,15 @@ const BROWSER_HEADERS = {
 };
 
 // Scrape RemoteOK Feed (Filtered for < 30 days old)
-async function scrapeRemoteOK() {
+async function scrapeRemoteOK(targetTitles = PREDEFINED_ROLES, keywords = PREDEFINED_KEYWORDS) {
   try {
     const response = await axios.get('https://remoteok.com/api', { headers: BROWSER_HEADERS, timeout: 8000 });
     if (response.status !== 200 || !Array.isArray(response.data)) return [];
 
     const jobs = response.data.slice(1);
     const matches = [];
+    const searchRoles = targetTitles.length > 0 ? targetTitles : PREDEFINED_ROLES;
+    const searchKeywords = keywords.length > 0 ? keywords : PREDEFINED_KEYWORDS;
 
     for (const job of jobs) {
       if (!job || typeof job !== 'object') continue;
@@ -48,8 +50,8 @@ async function scrapeRemoteOK() {
       const description = (job.description || '').toLowerCase();
       const location = job.location || 'Remote';
 
-      const matchedRole = PREDEFINED_ROLES.find(r => title.includes(r.toLowerCase()));
-      const hasKeyword = PREDEFINED_KEYWORDS.some(k => (title + ' ' + description).includes(k));
+      const matchedRole = searchRoles.find(r => title.includes(r.toLowerCase()));
+      const hasKeyword = searchKeywords.some(k => (title + ' ' + description).includes(k.toLowerCase()));
 
       if (matchedRole || hasKeyword) {
         matches.push({
@@ -60,7 +62,7 @@ async function scrapeRemoteOK() {
           location,
           workType: classifyWorkType(location, job.position),
           url: job.url || `https://remoteok.com/remote-jobs/${job.id}`,
-          matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'DEVOPS / WEBOPS FILTER',
+          matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'SEARCH MATCH',
           date: dateStr
         });
       }
@@ -72,7 +74,7 @@ async function scrapeRemoteOK() {
 }
 
 // Scrape WeWorkRemotely Feed (Filtered for < 30 days old)
-async function scrapeWeWorkRemotely() {
+async function scrapeWeWorkRemotely(targetTitles = PREDEFINED_ROLES, keywords = PREDEFINED_KEYWORDS) {
   try {
     const response = await axios.get('https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss', { headers: BROWSER_HEADERS, timeout: 8000 });
     if (response.status !== 200 || typeof response.data !== 'string') return [];
@@ -80,6 +82,8 @@ async function scrapeWeWorkRemotely() {
     const xml = response.data;
     const matches = [];
     const itemRegex = /<item>[\s\S]*?<title><!\[CDATA\[(.*?)\]\]><\/title>[\s\S]*?<link>(.*?)<\/link>[\s\S]*?<pubDate>(.*?)<\/pubDate>/g;
+    const searchRoles = targetTitles.length > 0 ? targetTitles : PREDEFINED_ROLES;
+    const searchKeywords = keywords.length > 0 ? keywords : PREDEFINED_KEYWORDS;
 
     let match;
     while ((match = itemRegex.exec(xml)) !== null) {
@@ -94,8 +98,8 @@ async function scrapeWeWorkRemotely() {
       const company = parts.length > 1 ? parts[0].trim() : 'Unknown';
       const title = parts.length > 1 ? parts.slice(1).join(':').trim() : rawTitle;
 
-      const matchedRole = PREDEFINED_ROLES.find(r => title.toLowerCase().includes(r.toLowerCase()));
-      const hasKeyword = PREDEFINED_KEYWORDS.some(k => title.toLowerCase().includes(k));
+      const matchedRole = searchRoles.find(r => title.toLowerCase().includes(r.toLowerCase()));
+      const hasKeyword = searchKeywords.some(k => title.toLowerCase().includes(k.toLowerCase()));
 
       if (matchedRole || hasKeyword) {
         matches.push({
@@ -106,7 +110,7 @@ async function scrapeWeWorkRemotely() {
           location: 'Remote',
           workType: 'Remote',
           url: link,
-          matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'DEVOPS / WEBOPS FILTER',
+          matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'SEARCH MATCH',
           date: dateStr
         });
       }
@@ -118,8 +122,21 @@ async function scrapeWeWorkRemotely() {
 }
 
 // Master Pipeline Run & Re-Verification
-async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey = process.env.SERPAPI_KEY) {
-  console.log('[Scrapedeez] Launching Pipeline for Locked Criteria (< 30 days old)...');
+async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey = process.env.SERPAPI_KEY, customTitles = [], customKeywords = []) {
+  console.log('[Scrapedeez] Launching Pipeline for Active Criteria (< 30 days old)...');
+
+  // Load config if available
+  let cfg = {};
+  const configPath = path.join(__dirname, 'config.json');
+  if (fs.existsSync(configPath)) {
+    try { cfg = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch (e) {}
+  }
+
+  const greenhouseCompanies = customGreenhouse.length > 0 ? customGreenhouse : (cfg.greenhouseCompanies || []);
+  const leverCompanies = customLever.length > 0 ? customLever : (cfg.leverCompanies || []);
+  const targetTitles = customTitles.length > 0 ? customTitles : (cfg.targetTitles || PREDEFINED_ROLES);
+  const keywords = customKeywords.length > 0 ? customKeywords : (cfg.keywords || PREDEFINED_KEYWORDS);
+  const apiKey = serpApiKey || cfg.serpApiKey || process.env.SERPAPI_KEY;
 
   const dataPath = path.join(__dirname, 'jobs_data.json');
   let existingStore = { jobs: [] };
@@ -131,10 +148,10 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
   const existingIdSet = new Set(verifiedExistingJobs.map(j => j.id || j.url));
 
   const [remoteOkJobs, wwrJobs, atsJobs, googleJobs] = await Promise.all([
-    scrapeRemoteOK(),
-    scrapeWeWorkRemotely(),
-    scrapeAllATSCompanies(customGreenhouse, customLever, PREDEFINED_ROLES, PREDEFINED_KEYWORDS),
-    scrapeGoogleJobs(serpApiKey, PREDEFINED_ROLES)
+    scrapeRemoteOK(targetTitles, keywords).catch(() => []),
+    scrapeWeWorkRemotely(targetTitles, keywords).catch(() => []),
+    scrapeAllATSCompanies(greenhouseCompanies, leverCompanies, targetTitles, keywords).catch(() => []),
+    scrapeGoogleJobs(apiKey, targetTitles).catch(() => [])
   ]);
 
   const newlyScraped = [...atsJobs, ...googleJobs, ...remoteOkJobs, ...wwrJobs].filter(j => isWithin30Days(j.date));
@@ -160,13 +177,20 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
 
   mergedJobs.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0) || new Date(b.date) - new Date(a.date));
 
-  fs.writeFileSync(dataPath, JSON.stringify({
+  const outputData = {
     lastScraped: new Date().toISOString(),
     totalMatches: mergedJobs.length,
     maxAgeDays: 30,
-    targetCriteria: PREDEFINED_ROLES,
+    targetCriteria: targetTitles,
+    keywords: keywords,
     jobs: mergedJobs
-  }, null, 2));
+  };
+
+  try {
+    fs.writeFileSync(dataPath, JSON.stringify(outputData, null, 2));
+  } catch (err) {
+    console.error('[Scrapedeez] Error writing jobs_data.json:', err.message);
+  }
 
   console.log(`[Scrapedeez] Rescan Complete. ${mergedJobs.length} active verified jobs (< 30 days old) stored.`);
   return mergedJobs;

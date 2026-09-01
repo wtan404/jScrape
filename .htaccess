@@ -8,16 +8,12 @@ PassengerAppType node
 # Passenger Nodejs Path
 PassengerNodejs "/opt/alt/alt-nodejs18/root/usr/bin/node"
 
-# Enable Rewrite Engine for PHP Profiles Store API & Passenger Proxy
+# Enable Rewrite Engine for Passenger Proxy
 <IfModule mod_rewrite.c>
     RewriteEngine On
-
-    # PHP Persistent Profile Store API Routes
-    RewriteRule ^api/profiles/save$ profiles.php?action=save [QSA,L]
-    RewriteRule ^api/profiles/verify-pin$ profiles.php?action=verify-pin [QSA,L]
-    RewriteRule ^api/profiles$ profiles.php [QSA,L]
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ server.js [QSA,L]
 </IfModule>
+

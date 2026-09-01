@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Scrapedeez </title>
-  <meta name="description" content="Automated hourly job scraper ">
+  <title>Scrapedeez — Automated Job Scraper & Link Verifier</title>
+  <meta name="description" content="Automated hourly job scraper & link verifier for IT Management, WebOps & DevOps roles.">
   <meta name="theme-color" content="#090d16">
 
   <!-- Cache Control Headers -->
@@ -20,7 +20,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="styles.css?v=7.0">
+  <link rel="stylesheet" href="styles.css?v=8.0">
 </head>
 <body>
 
@@ -33,14 +33,6 @@
       </div>
 
       <div class="header-actions">
-        <!-- User Profile Dropdown (Header Left of Rescan) -->
-        <div class="header-profile-wrap">
-          <i data-lucide="user" class="header-profile-icon"></i>
-          <select id="profileSelectDropdown" class="header-profile-select" onchange="onProfileChange()">
-            <!-- Dynamic Profile Options -->
-          </select>
-        </div>
-
         <button class="btn btn-primary btn-sm" onclick="triggerScrapeNow()" id="btnScrape">
           <i data-lucide="refresh-cw"></i>
           <span>Re-Scan</span>
@@ -51,19 +43,13 @@
 
   <main class="container main-layout">
 
-    <!-- Active User Profile, Min Salary & Shopify-Style Interactive Keywords Box -->
+    <!-- Search Criteria, Min Salary & Interactive Keywords Box -->
     <section class="active-profile-card">
       <div class="profile-card-header">
         <div class="profile-info">
-          <span class="profile-label">ACTIVE SEARCH PROFILE</span>
-          
-          <!-- Inline Editable Profile Name Title -->
-          <div class="profile-name-row" id="profileNameContainer">
-            <h2 id="activeProfileDisplayName">Loading Profile...</h2>
-            <button class="btn btn-secondary btn-xs" onclick="openEditNameModal()" id="btnEditName">
-              <i data-lucide="edit-2"></i>
-              <span>Edit Name</span>
-            </button>
+          <span class="profile-label">JOB PREFERENCES</span>
+          <div class="profile-name-row">
+            <h2>Search Criteria & Target Roles</h2>
           </div>
         </div>
 
@@ -78,8 +64,8 @@
         <div class="kw-header">
           <div class="kw-title-row">
             <span class="kw-label">Target Job Titles & Search Keywords:</span>
-            <button class="btn btn-secondary btn-xs" onclick="openEditCriteriaModal()" id="btnEditCriteria">
-              <i data-lucide="lock"></i>
+            <button class="btn btn-secondary btn-xs" onclick="startShopifyTagEdit()" id="btnEditCriteria">
+              <i data-lucide="edit-3"></i>
               <span>Edit Keywords</span>
             </button>
           </div>
@@ -212,41 +198,12 @@
     </section>
   </main>
 
-  <!-- PIN Protection Modal -->
-  <div class="modal-overlay" id="pinModalOverlay" style="display: none;">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">
-          <i data-lucide="shield-lock"></i>
-          <h3 id="pinModalHeading">Enter Security PIN</h3>
-        </div>
-        <button class="btn-close" onclick="closePinModal()"><i data-lucide="x"></i></button>
-      </div>
-
-      <div class="modal-body">
-        <p id="pinModalPrompt" class="modal-subtitle">Enter 4-digit security PIN to access and edit search criteria.</p>
-
-        <form id="pinForm" onsubmit="submitPinVerification(event)">
-          <div class="pin-input-wrap">
-            <input type="password" id="pinCodeInput" placeholder="••••" maxlength="4" pattern="\d{4}" required autofocus>
-          </div>
-          <div id="pinErrorMessage" class="pin-error-text" style="display: none;"></div>
-
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" onclick="closePinModal()">Cancel</button>
-            <button type="submit" class="btn btn-primary" id="btnVerifyPin">Authenticate PIN</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
   <footer class="app-footer">
     <div class="container footer-wrap">
       <p>&copy; <span id="year">2026</span> Scrapedeez Hourly Job Engine. Auto-Pruning Link Verification & IT Management Tracker.</p>
     </div>
   </footer>
 
-  <script src="main.js?v=7.0"></script>
+  <script src="main.js?v=8.0"></script>
 </body>
 </html>

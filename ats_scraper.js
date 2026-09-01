@@ -1,8 +1,8 @@
 const axios = require('axios');
 const { classifyWorkType } = require('./geo_helper');
 
-const DEFAULT_GREENHOUSE_COMPANIES = ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel'];
-const DEFAULT_LEVER_COMPANIES = ['netflix', 'spotify', 'palantir', 'figma', 'postman'];
+const DEFAULT_GREENHOUSE_COMPANIES = ['stripe', 'gitlab', 'cloudflare', 'datadog', 'vercel', 'figma', 'pinterest', 'reddit', 'discord', 'instacart', 'affirm', 'brex', 'robinhood'];
+const DEFAULT_LEVER_COMPANIES = ['palantir', 'spotify'];
 
 const BROWSER_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
