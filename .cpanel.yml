@@ -1,0 +1,18 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/synopsdi/public_html/list/
+    - /bin/cp -R index.html $DEPLOYPATH
+    - /bin/cp -R main.js $DEPLOYPATH
+    - /bin/cp -R styles.css $DEPLOYPATH
+    - /bin/cp -R synops_logo.jpg $DEPLOYPATH
+    - /bin/cp -R config.json $DEPLOYPATH
+    - /bin/cp -R jobs_data.json $DEPLOYPATH
+    - /bin/cp -R server.js $DEPLOYPATH
+    - /bin/cp -R scraper.js $DEPLOYPATH
+    - /bin/cp -R ats_scraper.js $DEPLOYPATH
+    - /bin/cp -R verifier.js $DEPLOYPATH
+    - /bin/cp -R geo_helper.js $DEPLOYPATH
+    - /bin/cp -R google_jobs_scraper.js $DEPLOYPATH
+    - /bin/cp -R package.json $DEPLOYPATH
+    - /bin/cp -R .htaccess $DEPLOYPATH
