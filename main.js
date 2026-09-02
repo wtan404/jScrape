@@ -22,8 +22,8 @@ let userConfig = {
     'devops', 'webops', 'web development', 'infrastructure',
     'cloud', 'terraform', 'kubernetes', 'change control', 'it management'
   ],
-  greenhouseCompanies: ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel'],
-  leverCompanies: ['netflix', 'spotify', 'palantir', 'figma', 'postman']
+  greenhouseCompanies: ['stripe', 'gitlab', 'cloudflare', 'datadog', 'vercel', 'figma', 'pinterest', 'reddit', 'discord', 'instacart', 'affirm', 'brex', 'robinhood'],
+  leverCompanies: ['palantir', 'spotify']
 };
 
 // High-Speed US Metropolitan Area Geocode Dictionary
@@ -491,10 +491,19 @@ async function triggerScrapeNow() {
   }
 }
 
+function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timeoutId));
+}
+
 // Client-Side Scraper Engine (Direct Browser Calls to Public ATS APIs)
 async function runClientSideScraper() {
-  const ghCompanies = userConfig.greenhouseCompanies || ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel'];
-  const leverCompanies = userConfig.leverCompanies || ['netflix', 'spotify', 'palantir', 'figma', 'postman'];
+  const ghCompanies = userConfig.greenhouseCompanies || [
+    'stripe', 'gitlab', 'cloudflare', 'datadog', 'vercel', 'figma', 'pinterest', 'reddit', 'discord', 'instacart', 'affirm', 'brex', 'robinhood'
+  ];
+  const leverCompanies = userConfig.leverCompanies || ['palantir', 'spotify'];
   const searchTerms = [...(userConfig.targetTitles || []), ...(userConfig.keywords || [])]
     .map(t => t.toLowerCase().trim())
     .filter(Boolean);
@@ -504,7 +513,7 @@ async function runClientSideScraper() {
   // Scrape Greenhouse Boards (CORS-friendly public REST API)
   for (const company of ghCompanies) {
     promises.push(
-      fetch(`https://boards-api.greenhouse.io/v1/boards/${company}/jobs?content=true`)
+      fetchWithTimeout(`https://boards-api.greenhouse.io/v1/boards/${company}/jobs?content=true`, {}, 4500)
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if (!data || !data.jobs) return [];
@@ -524,7 +533,7 @@ async function runClientSideScraper() {
                 location,
                 workType: classifyClientWorkType(location, job.title),
                 url: job.absolute_url,
-                matchedKeyword: matched ? matched.toUpperCase() : 'TARGET ROLE',
+                matchedKeyword: matched ? matched.toUpperCase() : 'SEARCH MATCH',
                 date: job.updated_at || new Date().toISOString()
               });
             }
@@ -538,7 +547,7 @@ async function runClientSideScraper() {
   // Scrape Lever Boards (CORS-friendly public REST API)
   for (const company of leverCompanies) {
     promises.push(
-      fetch(`https://api.lever.co/v0/postings/${company}?mode=json`)
+      fetchWithTimeout(`https://api.lever.co/v0/postings/${company}?mode=json`, {}, 4500)
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if (!data || !Array.isArray(data)) return [];
@@ -558,7 +567,7 @@ async function runClientSideScraper() {
                 location,
                 workType: classifyClientWorkType(location, job.text),
                 url: job.hostedUrl,
-                matchedKeyword: matched ? matched.toUpperCase() : 'TARGET ROLE',
+                matchedKeyword: matched ? matched.toUpperCase() : 'SEARCH MATCH',
                 date: job.createdAt ? new Date(job.createdAt).toISOString() : new Date().toISOString()
               });
             }
@@ -571,7 +580,7 @@ async function runClientSideScraper() {
 
   // Scrape WeWorkRemotely RSS via public RSS-to-JSON
   promises.push(
-    fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss')}`)
+    fetchWithTimeout(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss')}`, {}, 4500)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (!data || !data.items) return [];
