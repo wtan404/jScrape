@@ -117,12 +117,12 @@
           <div class="geo-row-1">
             <div class="geo-group">
               <label for="zipInput"><i data-lucide="map-pin"></i> Zip Code:</label>
-              <input type="text" id="zipInput" placeholder="US Zip..." maxlength="5">
+              <input type="text" id="zipInput" placeholder="US Zip..." maxlength="5" oninput="handleZipInput()">
             </div>
 
             <div class="geo-group">
               <label for="radiusSelect"><i data-lucide="compass"></i> Radius:</label>
-              <select id="radiusSelect">
+              <select id="radiusSelect" onchange="filterJobs()">
                 <option value="any">Any Distance</option>
                 <option value="25">25 Miles</option>
                 <option value="50">50 Miles</option>

@@ -41,50 +41,190 @@ let userConfig = {
 
 // High-Speed US Metropolitan Area Geocode Dictionary
 const US_CITY_COORDS = {
+  // Silicon Valley & SF Bay Area
   'san francisco': { lat: 37.7749, lon: -122.4194 },
   'sf': { lat: 37.7749, lon: -122.4194 },
   'bay area': { lat: 37.7749, lon: -122.4194 },
-  'austin': { lat: 30.2672, lon: -97.7431 },
-  'new york': { lat: 40.7128, lon: -74.0060 },
-  'nyc': { lat: 40.7128, lon: -74.0060 },
-  'chicago': { lat: 41.8781, lon: -87.6298 },
+  'south san francisco': { lat: 37.6547, lon: -122.4077 },
+  'san bruno': { lat: 37.6305, lon: -122.4111 },
+  'mountain view': { lat: 37.3861, lon: -122.0839 },
+  'sunnyvale': { lat: 37.3688, lon: -122.0363 },
+  'palo alto': { lat: 37.4419, lon: -122.1430 },
+  'santa clara': { lat: 37.3541, lon: -121.9552 },
+  'san jose': { lat: 37.3382, lon: -121.8863 },
+  'redwood city': { lat: 37.4852, lon: -122.2364 },
+  'san mateo': { lat: 37.5630, lon: -122.3255 },
+  'menlo park': { lat: 37.4530, lon: -122.1817 },
+  'cupertino': { lat: 37.3230, lon: -122.0322 },
+  'foster city': { lat: 37.5585, lon: -122.2711 },
+  'fremont': { lat: 37.5485, lon: -121.9886 },
+  'oakland': { lat: 37.8044, lon: -122.2712 },
+  'berkeley': { lat: 37.8716, lon: -122.2727 },
+  'pleasanton': { lat: 37.6624, lon: -121.8747 },
+
+  // Pacific Northwest
+  'seattle': { lat: 47.6062, lon: -122.3321 },
+  'bellevue': { lat: 47.6101, lon: -122.2015 },
+  'kirkland': { lat: 47.6769, lon: -122.2060 },
+  'redmond': { lat: 47.6740, lon: -122.1215 },
+  'portland': { lat: 45.5152, lon: -122.6784 },
+
+  // Southern California
   'los angeles': { lat: 34.0522, lon: -118.2437 },
   'la': { lat: 34.0522, lon: -118.2437 },
-  'seattle': { lat: 47.6062, lon: -122.3321 },
-  'denver': { lat: 39.7392, lon: -104.9903 },
-  'boston': { lat: 42.3601, lon: -71.0589 },
-  'atlanta': { lat: 33.7490, lon: -84.3880 },
+  'irvine': { lat: 33.6846, lon: -117.8265 },
+  'culver city': { lat: 34.0211, lon: -118.3965 },
+  'santa monica': { lat: 34.0195, lon: -118.4912 },
+  'pasadena': { lat: 34.1478, lon: -118.1445 },
+  'san diego': { lat: 32.7157, lon: -117.1611 },
+
+  // Texas
+  'austin': { lat: 30.2672, lon: -97.7431 },
   'dallas': { lat: 32.7767, lon: -96.7970 },
-  'washington': { lat: 38.9072, lon: -77.0369 },
-  'dc': { lat: 38.9072, lon: -77.0369 },
-  'raleigh': { lat: 35.7796, lon: -78.6382 },
-  'miami': { lat: 25.7617, lon: -80.1918 },
-  'phoenix': { lat: 33.4484, lon: -112.0740 },
-  'san jose': { lat: 37.3382, lon: -121.8863 },
+  'plano': { lat: 33.0198, lon: -96.6989 },
+  'frisco': { lat: 33.1507, lon: -96.8236 },
+  'irving': { lat: 32.8140, lon: -96.9489 },
   'houston': { lat: 29.7604, lon: -95.3698 },
+  'san antonio': { lat: 29.4241, lon: -98.4936 },
+  'fort worth': { lat: 32.7555, lon: -97.3308 },
+
+  // New York & Tri-State
+  'new york': { lat: 40.7128, lon: -74.0060 },
+  'nyc': { lat: 40.7128, lon: -74.0060 },
+  'manhattan': { lat: 40.7831, lon: -73.9712 },
+  'brooklyn': { lat: 40.6782, lon: -73.9442 },
+  'jersey city': { lat: 40.7178, lon: -74.0431 },
+  'hoboken': { lat: 40.7440, lon: -74.0324 },
+  'newark': { lat: 40.7357, lon: -74.1724 },
+
+  // Greater Boston & Northeast
+  'boston': { lat: 42.3601, lon: -71.0589 },
+  'cambridge': { lat: 42.3736, lon: -71.1097 },
+  'waltham': { lat: 42.3765, lon: -71.2356 },
   'philadelphia': { lat: 39.9526, lon: -75.1652 },
   'philly': { lat: 39.9526, lon: -75.1652 },
-  'san diego': { lat: 32.7157, lon: -117.1611 },
-  'minneapolis': { lat: 44.9778, lon: -93.2650 },
-  'portland': { lat: 45.5152, lon: -122.6784 },
-  'detroit': { lat: 42.3314, lon: -83.0458 },
+  'pittsburgh': { lat: 40.4406, lon: -79.9959 },
+
+  // Mid-Atlantic & Southeast
+  'washington': { lat: 38.9072, lon: -77.0369 },
+  'dc': { lat: 38.9072, lon: -77.0369 },
+  'arlington': { lat: 38.8799, lon: -77.1068 },
+  'reston': { lat: 38.9586, lon: -77.3570 },
+  'mclean': { lat: 38.9339, lon: -77.1773 },
+  'herndon': { lat: 38.9696, lon: -77.3861 },
+  'tysons': { lat: 38.9187, lon: -77.2311 },
+  'baltimore': { lat: 39.2904, lon: -76.6122 },
+  'raleigh': { lat: 35.7796, lon: -78.6382 },
+  'durham': { lat: 35.9940, lon: -78.8986 },
+  'chapel hill': { lat: 35.9132, lon: -79.0558 },
+  'cary': { lat: 35.7915, lon: -78.7811 },
+  'morrisville': { lat: 35.8324, lon: -78.8256 },
   'charlotte': { lat: 35.2271, lon: -80.8431 },
-  'nashville': { lat: 36.1627, lon: -86.7816 },
-  'salt lake city': { lat: 40.7608, lon: -111.8910 },
-  'columbus': { lat: 39.9612, lon: -82.9988 },
+  'atlanta': { lat: 33.7490, lon: -84.3880 },
+  'alpharetta': { lat: 34.0754, lon: -84.2941 },
+  'miami': { lat: 25.7617, lon: -80.1918 },
   'tampa': { lat: 27.9506, lon: -82.4572 },
   'orlando': { lat: 28.5383, lon: -81.3792 },
-  'pittsburgh': { lat: 40.4406, lon: -79.9959 },
+
+  // Midwest & Mountain
+  'chicago': { lat: 41.8781, lon: -87.6298 },
+  'denver': { lat: 39.7392, lon: -104.9903 },
+  'boulder': { lat: 40.0150, lon: -105.2705 },
+  'salt lake city': { lat: 40.7608, lon: -111.8910 },
+  'minneapolis': { lat: 44.9778, lon: -93.2650 },
+  'detroit': { lat: 42.3314, lon: -83.0458 },
+  'columbus': { lat: 39.9612, lon: -82.9988 },
   'st. louis': { lat: 38.6270, lon: -90.1994 },
-  'baltimore': { lat: 39.2904, lon: -76.6122 },
+  'nashville': { lat: 36.1627, lon: -86.7816 },
+  'phoenix': { lat: 33.4484, lon: -112.0740 },
   'sacramento': { lat: 38.5816, lon: -121.4944 },
-  'san antonio': { lat: 29.4241, lon: -98.4936 },
   'las vegas': { lat: 36.1699, lon: -115.1398 },
+
+  // States
+  'california': { lat: 36.7783, lon: -119.4179 },
+  'texas': { lat: 31.9686, lon: -99.9018 },
+  'washington state': { lat: 47.7511, lon: -120.7401 },
+  'colorado': { lat: 39.5501, lon: -105.7821 },
+  'illinois': { lat: 40.6331, lon: -89.3985 },
+  'massachusetts': { lat: 42.4072, lon: -71.3824 },
+  'virginia': { lat: 37.4316, lon: -78.6569 },
+  'north carolina': { lat: 35.7596, lon: -79.0193 },
+  'florida': { lat: 27.6648, lon: -81.5158 },
+  'georgia': { lat: 32.1656, lon: -82.9001 },
+  'pennsylvania': { lat: 41.2033, lon: -77.1945 },
+  'ohio': { lat: 40.4173, lon: -82.9071 },
+  'michigan': { lat: 44.3148, lon: -85.6024 },
+  'utah': { lat: 39.3210, lon: -111.0937 },
+  'arizona': { lat: 34.0489, lon: -111.0937 },
+  'oregon': { lat: 43.8041, lon: -120.5542 },
+  'minnesota': { lat: 46.7296, lon: -94.6859 },
+  'tennessee': { lat: 35.5175, lon: -86.5804 },
+  'missouri': { lat: 37.9643, lon: -91.8318 },
+  'maryland': { lat: 39.0458, lon: -76.6413 },
+  'new jersey': { lat: 40.0583, lon: -74.4057 },
+
+  // International Tech Metros
   'tokyo': { lat: 35.6762, lon: 139.6503 },
   'london': { lat: 51.5074, lon: -0.1278 },
   'toronto': { lat: 43.6532, lon: -79.3832 },
   'vancouver': { lat: 49.2827, lon: -123.1207 }
 };
+
+const US_STATE_CENTROIDS = {
+  'AL': { lat: 32.806671, lon: -86.791130 },
+  'AK': { lat: 61.370716, lon: -152.404419 },
+  'AZ': { lat: 33.729759, lon: -111.431221 },
+  'AR': { lat: 34.969704, lon: -92.373123 },
+  'CA': { lat: 36.116203, lon: -119.681564 },
+  'CO': { lat: 39.059811, lon: -105.311104 },
+  'CT': { lat: 41.597782, lon: -72.755371 },
+  'DE': { lat: 39.318523, lon: -75.507141 },
+  'DC': { lat: 38.897438, lon: -77.026817 },
+  'FL': { lat: 27.766279, lon: -81.686783 },
+  'GA': { lat: 33.040619, lon: -83.643074 },
+  'HI': { lat: 21.094318, lon: -157.498337 },
+  'ID': { lat: 44.240459, lon: -114.478828 },
+  'IL': { lat: 40.349457, lon: -88.986137 },
+  'IN': { lat: 39.849426, lon: -86.258278 },
+  'IA': { lat: 42.011539, lon: -93.210526 },
+  'KS': { lat: 38.526600, lon: -96.726486 },
+  'KY': { lat: 37.668140, lon: -84.670067 },
+  'LA': { lat: 31.169546, lon: -91.867805 },
+  'ME': { lat: 44.693947, lon: -69.381927 },
+  'MD': { lat: 39.063946, lon: -76.802101 },
+  'MA': { lat: 42.230171, lon: -71.530106 },
+  'MI': { lat: 43.326618, lon: -84.536095 },
+  'MN': { lat: 45.694454, lon: -93.900192 },
+  'MS': { lat: 32.741646, lon: -89.678696 },
+  'MO': { lat: 38.456085, lon: -92.288368 },
+  'MT': { lat: 46.921925, lon: -110.454353 },
+  'NE': { lat: 41.125370, lon: -98.268082 },
+  'NV': { lat: 38.313515, lon: -117.055374 },
+  'NH': { lat: 43.452492, lon: -71.563896 },
+  'NJ': { lat: 40.298904, lon: -74.521011 },
+  'NM': { lat: 34.840515, lon: -106.248482 },
+  'NY': { lat: 42.165726, lon: -74.948051 },
+  'NC': { lat: 35.630066, lon: -79.806419 },
+  'ND': { lat: 47.528912, lon: -99.784012 },
+  'OH': { lat: 40.388783, lon: -82.764915 },
+  'OK': { lat: 35.565342, lon: -96.928917 },
+  'OR': { lat: 44.572021, lon: -122.070938 },
+  'PA': { lat: 40.590752, lon: -77.209755 },
+  'RI': { lat: 41.680893, lon: -71.511780 },
+  'SC': { lat: 33.856892, lon: -80.945007 },
+  'SD': { lat: 44.299782, lon: -99.438828 },
+  'TN': { lat: 35.747845, lon: -86.692345 },
+  'TX': { lat: 31.054487, lon: -97.563461 },
+  'UT': { lat: 40.150032, lon: -111.862434 },
+  'VT': { lat: 44.045876, lon: -72.710686 },
+  'VA': { lat: 37.769337, lon: -78.169968 },
+  'WA': { lat: 47.400902, lon: -121.490494 },
+  'WV': { lat: 38.491226, lon: -80.954453 },
+  'WI': { lat: 44.268543, lon: -89.616508 },
+  'WY': { lat: 42.755966, lon: -107.302490 }
+};
+
+const SORTED_CITY_COORDS = Object.entries(US_CITY_COORDS).sort((a, b) => b[0].length - a[0].length);
 
 const zipGeocodeCache = {};
 const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -115,11 +255,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // Setup Event Listeners for Filters
   const zipInput = document.getElementById('zipInput');
   if (zipInput) {
+    zipInput.addEventListener('input', handleZipInput);
+    zipInput.addEventListener('change', handleZipInput);
     zipInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         filterJobs();
       }
+    });
+  }
+
+  const radiusSelect = document.getElementById('radiusSelect');
+  if (radiusSelect) {
+    radiusSelect.addEventListener('change', () => {
+      filterJobs();
     });
   }
 
@@ -738,12 +887,28 @@ async function geocodeZipCode(zip) {
 function getJobCoords(job) {
   if (job.lat && job.lon) return { lat: job.lat, lon: job.lon };
 
-  const loc = (job.location || '').toLowerCase();
-  for (const [city, coords] of Object.entries(US_CITY_COORDS)) {
+  const rawLoc = job.location || '';
+  const loc = rawLoc.toLowerCase();
+
+  // 1. Check embedded 5-digit zip code if already cached
+  const zipMatch = rawLoc.match(/\b(\d{5})\b/);
+  if (zipMatch && zipGeocodeCache[zipMatch[1]]) {
+    return zipGeocodeCache[zipMatch[1]];
+  }
+
+  // 2. Check prioritized city dictionary (longest match first)
+  for (const [city, coords] of SORTED_CITY_COORDS) {
     if (loc.includes(city)) {
       return coords;
     }
   }
+
+  // 3. Check for standard 2-letter US State abbreviation (e.g., "CA", "San Jose, CA", "Austin, TX")
+  const stateMatch = rawLoc.match(/(?:,\s*|\b)([A-Z]{2})\b/);
+  if (stateMatch && US_STATE_CENTROIDS[stateMatch[1]]) {
+    return US_STATE_CENTROIDS[stateMatch[1]];
+  }
+
   return null;
 }
 
@@ -790,6 +955,23 @@ function parseSalaryMin(salaryStr) {
     return num;
   }
   return 0;
+}
+
+let zipInputDebounceTimer = null;
+function handleZipInput() {
+  clearTimeout(zipInputDebounceTimer);
+  zipInputDebounceTimer = setTimeout(() => {
+    const zipVal = document.getElementById('zipInput')?.value.trim() || '';
+    if (zipVal.length === 5 && /^\d{5}$/.test(zipVal)) {
+      const sortSelect = document.getElementById('sortSelect');
+      if (sortSelect) sortSelect.value = 'distance';
+      filterJobs();
+    } else if (zipVal.length === 0) {
+      const sortSelect = document.getElementById('sortSelect');
+      if (sortSelect && sortSelect.value === 'distance') sortSelect.value = 'time';
+      filterJobs();
+    }
+  }, 250);
 }
 
 async function filterJobs() {
@@ -878,9 +1060,9 @@ async function filterJobs() {
     if (userCoords && jobCoords) {
       job.distanceMiles = getDistanceMiles(userCoords.lat, userCoords.lon, jobCoords.lat, jobCoords.lon);
     } else if (isRemote) {
-      job.distanceMiles = 99999;
+      job.distanceMiles = 99990;
     } else {
-      job.distanceMiles = 9999;
+      job.distanceMiles = 99999;
     }
   });
 
@@ -894,15 +1076,23 @@ async function filterJobs() {
       const isRemote = rawWt.includes('remote') || locLower.includes('remote') || titleLower.includes('remote');
 
       if (isRemote) return true; // Keep remote roles
-      return job.distanceMiles <= maxMiles;
+      return job.distanceMiles !== undefined && job.distanceMiles <= maxMiles;
     });
   }
 
   // Multi-Sort (Time Posted, Salary, Distance)
   if (sortMode === 'salary') {
     filtered.sort((a, b) => parseSalaryMin(formatSalary(b)) - parseSalaryMin(formatSalary(a)));
-  } else if (sortMode === 'distance' || (userCoords && sortMode !== 'time')) {
-    filtered.sort((a, b) => a.distanceMiles - b.distanceMiles);
+  } else if (sortMode === 'distance' || userCoords) {
+    // Sort closest to furthest away from the user's inputted zip code
+    filtered.sort((a, b) => {
+      const distA = a.distanceMiles !== undefined ? a.distanceMiles : 99999;
+      const distB = b.distanceMiles !== undefined ? b.distanceMiles : 99999;
+      if (distA !== distB) {
+        return distA - distB;
+      }
+      return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+    });
   } else {
     // Default: Time Posted (Newest First)
     filtered.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
@@ -962,7 +1152,7 @@ function renderJobs(jobs) {
             <span class="job-company">${escapeHtml(job.company)}</span>
             <span class="job-location-top"><i data-lucide="map-pin"></i> ${escapeHtml(job.location || 'Remote')}</span>
             <span class="work-type-badge ${workTypeClass}">${workTypeLabel}</span>
-            ${job.distanceMiles && job.distanceMiles < 9000 ? `<span class="badge-distance"><i data-lucide="navigation"></i> ${Math.round(job.distanceMiles)} mi away</span>` : ''}
+            ${job.distanceMiles !== undefined && job.distanceMiles < 9000 ? `<span class="badge-distance"><i data-lucide="navigation"></i> ${Math.round(job.distanceMiles) <= 0 ? '&lt; 1' : Math.round(job.distanceMiles)} mi away</span>` : ''}
           </div>
           
           <h3 class="job-title">${escapeHtml(job.title)}</h3>
