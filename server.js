@@ -26,8 +26,21 @@ function readConfig() {
       'devops', 'webops', 'web development', 'infrastructure',
       'cloud', 'terraform', 'kubernetes', 'change control', 'it management'
     ],
-    greenhouseCompanies: ['stripe', 'gitlab', 'github', 'cloudflare', 'datadog', 'hashicorp', 'vercel'],
-    leverCompanies: ['netflix', 'spotify', 'palantir', 'figma', 'postman'],
+    greenhouseCompanies: [
+      'webflow', 'squarespace', 'contentful', 'fastly', 'klaviyo', 'braze', 'circleci',
+      'grafanalabs', 'pagerduty', 'launchdarkly', 'cockroachlabs', 'elastic', 'mongodb',
+      'twilio', 'canonical', 'gusto', 'checkr', 'carta', 'samsara', 'lattice', 'airtable',
+      'bitwarden', 'toast', 'remote', 'coursera', 'scaleai', 'anthropic', 'ripple',
+      'cloudflare', 'datadog', 'vercel', 'gitlab', 'stripe', 'figma', 'pinterest',
+      'reddit', 'discord', 'instacart', 'affirm', 'brex', 'robinhood'
+    ],
+    leverCompanies: [
+      'palantir', 'spotify', 'wealthfront', 'coupa', 'outreach', 'jumpcloud',
+      'secureframe', 'everbridge', 'sophos', 'sysdig', 'scaleway', 'siteground',
+      'kinsta', 'neon', 'metabase', 'activecampaign', 'brevo', 'mindtickle',
+      'walkme', 'zilliz', 'zerotier', 'twingate', 'omnisend', 'netomi', 'brilliant',
+      'clari', 'highspot', 'kraken', 'mistral', 'veeva'
+    ],
     serpApiKey: ''
   };
 

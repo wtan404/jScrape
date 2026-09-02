@@ -1,8 +1,21 @@
 const axios = require('axios');
 const { classifyWorkType } = require('./geo_helper');
 
-const DEFAULT_GREENHOUSE_COMPANIES = ['stripe', 'gitlab', 'cloudflare', 'datadog', 'vercel', 'figma', 'pinterest', 'reddit', 'discord', 'instacart', 'affirm', 'brex', 'robinhood'];
-const DEFAULT_LEVER_COMPANIES = ['palantir', 'spotify'];
+const DEFAULT_GREENHOUSE_COMPANIES = [
+  'webflow', 'squarespace', 'contentful', 'fastly', 'klaviyo', 'braze', 'circleci',
+  'grafanalabs', 'pagerduty', 'launchdarkly', 'cockroachlabs', 'elastic', 'mongodb',
+  'twilio', 'canonical', 'gusto', 'checkr', 'carta', 'samsara', 'lattice', 'airtable',
+  'bitwarden', 'toast', 'remote', 'coursera', 'scaleai', 'anthropic', 'ripple',
+  'cloudflare', 'datadog', 'vercel', 'gitlab', 'stripe', 'figma', 'pinterest',
+  'reddit', 'discord', 'instacart', 'affirm', 'brex', 'robinhood'
+];
+const DEFAULT_LEVER_COMPANIES = [
+  'palantir', 'spotify', 'wealthfront', 'coupa', 'outreach', 'jumpcloud',
+  'secureframe', 'everbridge', 'sophos', 'sysdig', 'scaleway', 'siteground',
+  'kinsta', 'neon', 'metabase', 'activecampaign', 'brevo', 'mindtickle',
+  'walkme', 'zilliz', 'zerotier', 'twingate', 'omnisend', 'netomi', 'brilliant',
+  'clari', 'highspot', 'kraken', 'mistral', 'veeva'
+];
 
 const BROWSER_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',

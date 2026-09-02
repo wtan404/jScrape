@@ -22,8 +22,21 @@ let userConfig = {
     'devops', 'webops', 'web development', 'infrastructure',
     'cloud', 'terraform', 'kubernetes', 'change control', 'it management'
   ],
-  greenhouseCompanies: ['stripe', 'gitlab', 'cloudflare', 'datadog', 'vercel', 'figma', 'pinterest', 'reddit', 'discord', 'instacart', 'affirm', 'brex', 'robinhood'],
-  leverCompanies: ['palantir', 'spotify']
+  greenhouseCompanies: [
+    'webflow', 'squarespace', 'contentful', 'fastly', 'klaviyo', 'braze', 'circleci',
+    'grafanalabs', 'pagerduty', 'launchdarkly', 'cockroachlabs', 'elastic', 'mongodb',
+    'twilio', 'canonical', 'gusto', 'checkr', 'carta', 'samsara', 'lattice', 'airtable',
+    'bitwarden', 'toast', 'remote', 'coursera', 'scaleai', 'anthropic', 'ripple',
+    'cloudflare', 'datadog', 'vercel', 'gitlab', 'stripe', 'figma', 'pinterest',
+    'reddit', 'discord', 'instacart', 'affirm', 'brex', 'robinhood'
+  ],
+  leverCompanies: [
+    'palantir', 'spotify', 'wealthfront', 'coupa', 'outreach', 'jumpcloud',
+    'secureframe', 'everbridge', 'sophos', 'sysdig', 'scaleway', 'siteground',
+    'kinsta', 'neon', 'metabase', 'activecampaign', 'brevo', 'mindtickle',
+    'walkme', 'zilliz', 'zerotier', 'twingate', 'omnisend', 'netomi', 'brilliant',
+    'clari', 'highspot', 'kraken', 'mistral', 'veeva'
+  ]
 };
 
 // High-Speed US Metropolitan Area Geocode Dictionary
@@ -532,9 +545,20 @@ function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
 // Client-Side Scraper Engine (Direct Browser Calls to Public ATS APIs)
 async function runClientSideScraper() {
   const ghCompanies = userConfig.greenhouseCompanies || [
-    'stripe', 'gitlab', 'cloudflare', 'datadog', 'vercel', 'figma', 'pinterest', 'reddit', 'discord', 'instacart', 'affirm', 'brex', 'robinhood'
+    'webflow', 'squarespace', 'contentful', 'fastly', 'klaviyo', 'braze', 'circleci',
+    'grafanalabs', 'pagerduty', 'launchdarkly', 'cockroachlabs', 'elastic', 'mongodb',
+    'twilio', 'canonical', 'gusto', 'checkr', 'carta', 'samsara', 'lattice', 'airtable',
+    'bitwarden', 'toast', 'remote', 'coursera', 'scaleai', 'anthropic', 'ripple',
+    'cloudflare', 'datadog', 'vercel', 'gitlab', 'stripe', 'figma', 'pinterest',
+    'reddit', 'discord', 'instacart', 'affirm', 'brex', 'robinhood'
   ];
-  const leverCompanies = userConfig.leverCompanies || ['palantir', 'spotify'];
+  const leverCompanies = userConfig.leverCompanies || [
+    'palantir', 'spotify', 'wealthfront', 'coupa', 'outreach', 'jumpcloud',
+    'secureframe', 'everbridge', 'sophos', 'sysdig', 'scaleway', 'siteground',
+    'kinsta', 'neon', 'metabase', 'activecampaign', 'brevo', 'mindtickle',
+    'walkme', 'zilliz', 'zerotier', 'twingate', 'omnisend', 'netomi', 'brilliant',
+    'clari', 'highspot', 'kraken', 'mistral', 'veeva'
+  ];
   const searchTerms = [...(userConfig.targetTitles || []), ...(userConfig.keywords || [])]
     .map(t => t.toLowerCase().trim())
     .filter(Boolean);
