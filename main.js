@@ -378,7 +378,10 @@ async function fetchJobsDatabase() {
     // 2. Try static jobs_data.json fallback
     if (!loaded) {
       try {
-        const res = await fetch(`./jobs_data.json?t=${Date.now()}`);
+        const res = await fetch(`./jobs_data.json?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' }
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.jobs && data.jobs.length > 0) {
@@ -426,7 +429,7 @@ function updateElapsedBadge() {
   }
 }
 
-// Manual or Auto Trigger: Re-Scan Pipeline
+// Manual or Auto Trigger: Re-Scan & Sync Pipeline
 async function triggerScrapeNow() {
   if (isScrapingActive) return;
   isScrapingActive = true;
@@ -434,14 +437,36 @@ async function triggerScrapeNow() {
   const btn = document.getElementById('btnScrape');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Re-Scanning...</span>`;
+    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i><span>Syncing...</span>`;
     if (window.lucide) lucide.createIcons();
   }
 
   try {
-    let backendSuccess = false;
+    let freshDataLoaded = false;
 
-    // 1. Try Backend API Trigger (/api/scrape-now)
+    // 1. Fetch latest server database with cache busting
+    try {
+      const serverRes = await fetch(`./jobs_data.json?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      if (serverRes.ok) {
+        const serverData = await serverRes.json();
+        if (serverData.jobs && serverData.jobs.length > 0) {
+          allJobsData = serverData.jobs;
+          if (serverData.lastScraped) {
+            lastScrapedTimestamp = new Date(serverData.lastScraped).getTime();
+            localStorage.setItem('scrapedeez_last_scraped', serverData.lastScraped);
+          }
+          localStorage.setItem('scrapedeez_jobs', JSON.stringify(allJobsData));
+          freshDataLoaded = true;
+        }
+      }
+    } catch (e) {
+      console.warn('Server JSON fetch notice:', e);
+    }
+
+    // 2. Try Backend API Trigger (/api/scrape-now) if available
     try {
       const res = await fetch('./api/scrape-now', {
         method: 'POST',
@@ -459,23 +484,29 @@ async function triggerScrapeNow() {
           lastScrapedTimestamp = data.scrapedAt ? new Date(data.scrapedAt).getTime() : Date.now();
           localStorage.setItem('scrapedeez_last_scraped', new Date(lastScrapedTimestamp).toISOString());
           localStorage.setItem('scrapedeez_jobs', JSON.stringify(allJobsData));
-          backendSuccess = true;
+          freshDataLoaded = true;
         }
       }
     } catch (e) {
-      console.warn('Backend scrape endpoint not reached, activating live client fallback...');
+      // Backend not running on static hosting
     }
 
-    // 2. Client-Side Live Scraper Fallback (Direct public Greenhouse / Lever / Feeds)
-    if (!backendSuccess) {
-      console.log('[Scrapedeez] Executing live client-side scrape fallback...');
+    // 3. Client-Side Live Scraper (Direct public Greenhouse / Lever / Feeds)
+    try {
       const clientJobs = await runClientSideScraper();
       if (clientJobs && clientJobs.length > 0) {
         allJobsData = clientJobs;
         lastScrapedTimestamp = Date.now();
         localStorage.setItem('scrapedeez_last_scraped', new Date(lastScrapedTimestamp).toISOString());
         localStorage.setItem('scrapedeez_jobs', JSON.stringify(allJobsData));
+        freshDataLoaded = true;
       }
+    } catch (e) {
+      console.warn('Client scrape notice:', e);
+    }
+
+    if (freshDataLoaded && !lastScrapedTimestamp) {
+      lastScrapedTimestamp = Date.now();
     }
   } catch (err) {
     console.error('Trigger scrape error:', err);

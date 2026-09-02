@@ -192,8 +192,11 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
     console.error('[Scrapedeez] Error writing jobs_data.json:', err.message);
   }
 
-  console.log(`[Scrapedeez] Rescan Complete. ${mergedJobs.length} active verified jobs (< 30 days old) stored.`);
-  return mergedJobs;
+if (require.main === module) {
+  runScraperJob().catch(err => {
+    console.error('[Scrapedeez] Scraper execution error:', err);
+    process.exit(1);
+  });
 }
 
 module.exports = { runScraperJob, PREDEFINED_ROLES, PREDEFINED_KEYWORDS };

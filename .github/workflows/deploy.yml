@@ -1,17 +1,32 @@
-name: Deploy to Live Server
+name: Scheduled 12-Hour Scrape & Deploy
 
 on:
+  schedule:
+    # Run every 12 hours (at 00:00 and 12:00 UTC)
+    - cron: '0 0,12 * * *'
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  web-deploy:
-    name: Sync to GreenGeeks Live Site
+  scrape-and-deploy:
+    name: Scrape Fresh Jobs & Sync to Live Site
     runs-on: ubuntu-latest
     steps:
       - name: 🚚 Get latest code
         uses: actions/checkout@v4
+
+      - name: ⚙️ Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🔍 Run Job Scraper & Link Verifier
+        run: node scraper.js
 
       - name: 📂 Sync files via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
