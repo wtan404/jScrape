@@ -12,8 +12,23 @@ PassengerNodejs "/opt/alt/alt-nodejs18/root/usr/bin/node"
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Block direct public URL access to /dev and /stage directories (403 Forbidden)
-    RewriteRule ^(dev|stage)(/.*)?$ - [F,L]
+    # If accessed via dev subdomain, route internally to dev/
+    RewriteCond %{HTTP_HOST} ^dev\.j\.synopsdigital\.com$ [NC]
+    RewriteCond %{REQUEST_URI} !^/dev/
+    RewriteRule ^(.*)$ dev/$1 [L]
+
+    # If accessed via stage subdomain, route internally to stage/
+    RewriteCond %{HTTP_HOST} ^stage\.j\.synopsdigital\.com$ [NC]
+    RewriteCond %{REQUEST_URI} !^/stage/
+    RewriteRule ^(.*)$ stage/$1 [L]
+
+    # Block direct path access to /dev unless accessing via dev subdomain (403 Forbidden)
+    RewriteCond %{HTTP_HOST} !^dev\.j\.synopsdigital\.com$ [NC]
+    RewriteRule ^dev(/.*)?$ - [F,L]
+
+    # Block direct path access to /stage unless accessing via stage subdomain (403 Forbidden)
+    RewriteCond %{HTTP_HOST} !^stage\.j\.synopsdigital\.com$ [NC]
+    RewriteRule ^stage(/.*)?$ - [F,L]
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
