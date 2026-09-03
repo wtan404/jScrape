@@ -15,4 +15,3 @@ deployment:
     - /bin/cp -R geo_helper.js $DEPLOYPATH
     - /bin/cp -R google_jobs_scraper.js $DEPLOYPATH
     - /bin/cp -R package.json $DEPLOYPATH
-    - /bin/cp -R .htaccess $DEPLOYPATH
