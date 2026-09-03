@@ -8,9 +8,12 @@ PassengerAppType node
 # Passenger Nodejs Path
 PassengerNodejs "/opt/alt/alt-nodejs18/root/usr/bin/node"
 
-# Enable Rewrite Engine for Passenger Proxy
+# Enable Rewrite Engine for Passenger Proxy & Access Control
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Block direct public URL access to /dev and /stage directories (403 Forbidden)
+    RewriteRule ^(dev|stage)(/.*)?$ - [F,L]
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

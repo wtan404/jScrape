@@ -7,6 +7,8 @@ on:
   push:
     branches:
       - main
+      - stage
+      - dev
   workflow_dispatch:
 
 jobs:
@@ -28,16 +30,31 @@ jobs:
       - name: 🔍 Run Job Scraper & Link Verifier
         run: node scraper.js
 
+      - name: 🎯 Determine target directory
+        id: set-target
+        run: |
+          BASE_DIR="${{ secrets.FTP_SERVER_DIR || './' }}"
+          [[ "$BASE_DIR" != */ ]] && BASE_DIR="${BASE_DIR}/"
+          if [ "${{ github.ref_name }}" = "dev" ]; then
+            echo "dir=${BASE_DIR}dev/" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_name }}" = "stage" ]; then
+            echo "dir=${BASE_DIR}stage/" >> $GITHUB_OUTPUT
+          else
+            echo "dir=${BASE_DIR}" >> $GITHUB_OUTPUT
+          fi
+
       - name: 📂 Sync files via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ${{ secrets.FTP_SERVER_DIR || './' }}
+          server-dir: ${{ steps.set-target.outputs.dir }}
           exclude: |
             **/.git*
             **/.git*/**
             **/node_modules/**
             .env*
             README.md
+            dev/**
+            stage/**
