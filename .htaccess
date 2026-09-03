@@ -1,6 +1,6 @@
 # DO NOT REMOVE OR EDIT. PASSENGER CONFIGURATION OPTION
 # Passenger App Root
-PassengerAppRoot "/home/synopsdi/public_html/list"
+PassengerAppRoot "/home/synopsdi/public_html/list/dev"
 # Passenger Startup File
 PassengerStartupFile server.js
 # Passenger App Type
