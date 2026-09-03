@@ -12,8 +12,11 @@ PassengerNodejs "/opt/alt/alt-nodejs18/root/usr/bin/node"
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Block direct public URL access to /dev and /stage directories (403 Forbidden)
-    RewriteRule ^(dev|stage)(/.*)?$ - [F,L]
+    # Only allow access via dev subdomain (or local development)
+    RewriteCond %{HTTP_HOST} !^dev\.j\.synopsdigital\.com$ [NC]
+    RewriteCond %{HTTP_HOST} !^localhost [NC]
+    RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
+    RewriteRule ^ - [F,L]
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
