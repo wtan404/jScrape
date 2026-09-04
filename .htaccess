@@ -13,7 +13,9 @@ PassengerNodejs "/opt/alt/alt-nodejs18/root/usr/bin/node"
     RewriteEngine On
 
     # 1. Enforce Subdomain-Only Access: Block direct /list access and require authorized subdomains
-    RewriteCond %{HTTP_HOST} !^(j|dev\.j|stage\.j)\.synopsdigital\.com$ [NC]
+    RewriteCond %{HTTP_HOST} !^j\.synopsdigital\.com$ [NC]
+    RewriteCond %{HTTP_HOST} !^dev\.j\.synopsdigital\.com$ [NC]
+    RewriteCond %{HTTP_HOST} !^stage\.j\.synopsdigital\.com$ [NC]
     RewriteCond %{HTTP_HOST} !^localhost [NC]
     RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
     RewriteRule .* - [F,L]
