@@ -7,6 +7,13 @@
   <meta name="description" content="Automated hourly job scraper & link verifier for IT Management, WebOps & DevOps roles.">
   <meta name="theme-color" content="#090d16">
 
+  <!-- Subdomain Enforcement -->
+  <script>
+    if (window.location.hostname === 'synopsdigital.com' || window.location.hostname === 'www.synopsdigital.com') {
+      window.location.replace('https://stage.j.synopsdigital.com/');
+    }
+  </script>
+
   <!-- Cache Control Headers -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
