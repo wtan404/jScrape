@@ -58,3 +58,5 @@ jobs:
             README.md
             dev/**
             stage/**
+            .htaccess
+            **/.htaccess
