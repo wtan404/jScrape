@@ -512,6 +512,36 @@ body {
   color: var(--accent-cyan);
 }
 
+.geo-feedback-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 9999px;
+  padding: 0.08rem 0.45rem;
+  margin-left: auto;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.geo-feedback-pill.error {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .geo-group input, .geo-group select {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-color);
