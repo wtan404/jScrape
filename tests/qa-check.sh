@@ -104,6 +104,7 @@ if [ "${MODE}" = "smoke" ]; then
   check_endpoint "/" "200" "SCRAPEDEEZ"
   check_endpoint "/styles.css" "200" ""
   check_endpoint "/jobs_data.json" "200" ""
+  check_endpoint "/health" "200" "healthy"
   echo ""
   echo "------------------------------------------------------"
   echo "Smoke Results: ${PASSED} Passed, ${FAILED} Failed"
@@ -115,6 +116,7 @@ fi
 echo ""
 echo "--- 1. Core Route & Feed Integrity Verification ---"
 check_endpoint "/" "200" "SCRAPEDEEZ"
+check_endpoint "/health" "200" "healthy"
 check_endpoint "/jobs_data.json" "200" "title"
 
 echo ""

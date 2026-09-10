@@ -31,6 +31,19 @@ jobs:
       - name: 🔍 Run Job Scraper & Link Verifier
         run: node scraper.js
 
+      - name: 📊 Generate Health Telemetry
+        run: |
+          cat <<EOF > health.json
+          {
+            "status": "healthy",
+            "service": "scrapedeez",
+            "updatedAt": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "jobsCount": $(node -e "try { console.log(JSON.parse(require('fs').readFileSync('jobs_data.json','utf8')).totalMatches || 0) } catch(e) { console.log(0) }"),
+            "lastScraped": "$(node -e "try { console.log(JSON.parse(require('fs').readFileSync('jobs_data.json','utf8')).lastScraped || '') } catch(e) { console.log('') }")"
+          }
+          EOF
+          cp health.json health
+
       - name: 🎯 Determine target directory & URL
         id: set-target
         run: |
@@ -49,6 +62,12 @@ jobs:
             echo "dir=${BASE_DIR}" >> $GITHUB_OUTPUT
             echo "url=https://j.synopsdigital.com" >> $GITHUB_OUTPUT
           fi
+
+      - name: 🔄 Signal Passenger restart
+        run: |
+          mkdir -p tmp
+          touch tmp/restart.txt
+          chmod +x scripts/*.sh tests/*.sh 2>/dev/null || true
 
       - name: 📂 Sync files via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
