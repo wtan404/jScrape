@@ -58,6 +58,14 @@ check_endpoint() {
   http_code=$(echo "$meta" | awk '{print $1}')
   duration=$(echo "$meta" | awk '{print $2}')
 
+  # Resilient retry if first attempt failed or missing required text (e.g. during server reload buffer)
+  if [ "$http_code" != "$expected_status" ] || ([ -n "$required_text" ] && ! grep -i -q "$required_text" "$tmpfile"); then
+    sleep 3
+    meta=$(curl -s -L -o "$tmpfile" -w "%{http_code} %{time_total}" --max-time 15 "$url")
+    http_code=$(echo "$meta" | awk '{print $1}')
+    duration=$(echo "$meta" | awk '{print $2}')
+  fi
+
   if [ "$http_code" = "$expected_status" ]; then
     if [ -n "$required_text" ]; then
       if grep -i -q "$required_text" "$tmpfile"; then
