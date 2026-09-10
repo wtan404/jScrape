@@ -1,6 +1,6 @@
 # DO NOT REMOVE OR EDIT. PASSENGER CONFIGURATION OPTION
 # Passenger App Root
-PassengerAppRoot "/home/synopsdi/public_html/list/stage"
+PassengerAppRoot "/home/synopsdi/public_html/list"
 # Passenger Startup File
 PassengerStartupFile server.js
 # Passenger App Type
@@ -8,9 +8,9 @@ PassengerAppType node
 # Passenger Nodejs Path
 PassengerNodejs "/opt/alt/alt-nodejs18/root/usr/bin/node"
 
-# Enforce Subdomain-Only Access: Block any request that does not use stage.j subdomain (403 Forbidden)
+# Enforce Subdomain-Only Access: Block any request that does not use authorized j subdomains (403 Forbidden)
 <IfModule mod_authz_core.c>
-    <If "%{HTTP_HOST} !~ /^stage\.j\.synopsdigital\.com$/ && %{HTTP_HOST} !~ /^(localhost|127\.0\.0\.1)/">
+    <If "%{HTTP_HOST} !~ /^(j|dev\.j|stage\.j|qa\.j)\.synopsdigital\.com$/ && %{HTTP_HOST} !~ /^(localhost|127\.0\.0\.1)/">
         Require all denied
     </If>
 </IfModule>
@@ -19,11 +19,41 @@ PassengerNodejs "/opt/alt/alt-nodejs18/root/usr/bin/node"
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Only allow access via stage subdomain (or local development)
+    # 1. Enforce Subdomain-Only Access: Block direct /list access and require authorized subdomains
+    RewriteCond %{HTTP_HOST} !^j\.synopsdigital\.com$ [NC]
+    RewriteCond %{HTTP_HOST} !^dev\.j\.synopsdigital\.com$ [NC]
+    RewriteCond %{HTTP_HOST} !^qa\.j\.synopsdigital\.com$ [NC]
     RewriteCond %{HTTP_HOST} !^stage\.j\.synopsdigital\.com$ [NC]
     RewriteCond %{HTTP_HOST} !^localhost [NC]
     RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
     RewriteRule .* - [F,L]
+
+    # If accessed via dev subdomain, route internally to dev/
+    RewriteCond %{HTTP_HOST} ^dev\.j\.synopsdigital\.com$ [NC]
+    RewriteCond %{REQUEST_URI} !^/dev/
+    RewriteRule ^(.*)$ dev/$1 [L]
+
+    # If accessed via qa subdomain, route internally to qa/
+    RewriteCond %{HTTP_HOST} ^qa\.j\.synopsdigital\.com$ [NC]
+    RewriteCond %{REQUEST_URI} !^/qa/
+    RewriteRule ^(.*)$ qa/$1 [L]
+
+    # If accessed via stage subdomain, route internally to stage/
+    RewriteCond %{HTTP_HOST} ^stage\.j\.synopsdigital\.com$ [NC]
+    RewriteCond %{REQUEST_URI} !^/stage/
+    RewriteRule ^(.*)$ stage/$1 [L]
+
+    # Block direct path access to /dev unless accessing via dev subdomain (403 Forbidden)
+    RewriteCond %{HTTP_HOST} !^dev\.j\.synopsdigital\.com$ [NC]
+    RewriteRule ^dev(/.*)?$ - [F,L]
+
+    # Block direct path access to /qa unless accessing via qa subdomain (403 Forbidden)
+    RewriteCond %{HTTP_HOST} !^qa\.j\.synopsdigital\.com$ [NC]
+    RewriteRule ^qa(/.*)?$ - [F,L]
+
+    # Block direct path access to /stage unless accessing via stage subdomain (403 Forbidden)
+    RewriteCond %{HTTP_HOST} !^stage\.j\.synopsdigital\.com$ [NC]
+    RewriteRule ^stage(/.*)?$ - [F,L]
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

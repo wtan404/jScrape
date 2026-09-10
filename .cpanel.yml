@@ -1,7 +1,7 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/synopsdi/public_html/list/stage/
+    - export DEPLOYPATH=/home/synopsdi/public_html/list/
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/cp -R index.html $DEPLOYPATH
     - /bin/cp -R main.js $DEPLOYPATH
