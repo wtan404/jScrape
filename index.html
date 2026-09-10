@@ -5,7 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Scrapedeez — Automated Job Scraper & Link Verifier</title>
   <meta name="description" content="Automated hourly job scraper & link verifier for IT Management, WebOps & DevOps roles.">
-  <meta name="theme-color" content="#090d16">
+  <meta name="theme-color" content="#0c0a17" id="metaThemeColor">
+
+  <!-- Instant Anti-FOUC Theme Initialization -->
+  <script>
+    (function() {
+      try {
+        var savedTheme = localStorage.getItem('scrapedeez_theme');
+        var theme = savedTheme ? savedTheme : 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+        var meta = document.getElementById('metaThemeColor');
+        if (meta) meta.setAttribute('content', theme === 'light' ? '#f6f5fb' : '#0c0a17');
+      } catch (e) {}
+    })();
+  </script>
 
   <!-- Subdomain Enforcement -->
   <script>
@@ -27,7 +40,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="styles.css?v=8.0">
+  <link rel="stylesheet" href="styles.css?v=8.1">
 </head>
 <body>
 
@@ -40,6 +53,10 @@
       </div>
 
       <div class="header-actions">
+        <button class="btn btn-secondary btn-sm theme-toggle-btn" onclick="toggleTheme()" id="btnThemeToggle" aria-label="Toggle theme (Dark / Light)" title="Toggle Dark/Light Mode">
+          <i data-lucide="sun" id="themeIconSun"></i>
+          <i data-lucide="moon" id="themeIconMoon" style="display: none;"></i>
+        </button>
         <button class="btn btn-primary btn-sm" onclick="triggerScrapeNow()" id="btnScrape">
           <i data-lucide="refresh-cw"></i>
           <span>Re-Scan</span>
@@ -212,6 +229,6 @@
   </footer>
 
   <script src="zip3_centroids.js?v=1.0"></script>
-  <script src="main.js?v=9.2"></script>
+  <script src="main.js?v=9.3"></script>
 </body>
 </html>

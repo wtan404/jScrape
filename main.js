@@ -237,6 +237,8 @@ const zipGeocodeCache = {};
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
+
   if (window.lucide) {
     lucide.createIcons();
   }
@@ -418,7 +420,7 @@ function renderKeywordsSection() {
     if (inputBar) inputBar.style.display = 'flex';
 
     if (editingTagsList.length === 0) {
-      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No keywords set. Type a keyword below and press Enter to add.</span>`;
+      kwListEl.innerHTML = `<span class="kw-tag" style="background:var(--pill-bg); color:var(--text-muted); border-color:var(--border-color);">No keywords set. Type a keyword below and press Enter to add.</span>`;
     } else {
       kwListEl.innerHTML = editingTagsList.map((term, index) => `
         <span class="kw-tag editable">
@@ -433,7 +435,7 @@ function renderKeywordsSection() {
 
     const allTerms = [...(userConfig.targetTitles || []), ...(userConfig.keywords || [])];
     if (allTerms.length === 0) {
-      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No keywords defined. Click Edit Keywords to add terms.</span>`;
+      kwListEl.innerHTML = `<span class="kw-tag" style="background:var(--pill-bg); color:var(--text-muted); border-color:var(--border-color);">No keywords defined. Click Edit Keywords to add terms.</span>`;
     } else {
       kwListEl.innerHTML = allTerms.map(term => `<span class="kw-tag">${escapeHtml(term)}</span>`).join('');
     }
@@ -1282,5 +1284,58 @@ function formatDate(isoStr) {
 
 function escapeHtml(text) {
   return text ? String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
+}
+
+// ==========================================================================
+// Theme Mode Management (Dark / Light Mode)
+// ==========================================================================
+
+function getPreferredTheme() {
+  const saved = localStorage.getItem('scrapedeez_theme');
+  if (saved === 'dark' || saved === 'light') return saved;
+  return 'dark'; // Default to dark with amethyst palette
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const meta = document.getElementById('metaThemeColor');
+  if (meta) {
+    meta.setAttribute('content', theme === 'light' ? '#f6f5fb' : '#0c0a17');
+  }
+
+  const btn = document.getElementById('btnThemeToggle');
+  const sunIcon = document.getElementById('themeIconSun');
+  const moonIcon = document.getElementById('themeIconMoon');
+
+  if (btn) {
+    btn.setAttribute('aria-label', theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+    btn.setAttribute('title', theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+  }
+
+  if (sunIcon && moonIcon) {
+    if (theme === 'dark') {
+      sunIcon.style.display = 'inline-block';
+      moonIcon.style.display = 'none';
+    } else {
+      sunIcon.style.display = 'none';
+      moonIcon.style.display = 'inline-block';
+    }
+  }
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('scrapedeez_theme', next);
+  applyTheme(next);
+}
+
+function initTheme() {
+  const theme = getPreferredTheme();
+  applyTheme(theme);
 }
 
