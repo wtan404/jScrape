@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /dev/
+Disallow: /qa/
+Disallow: /stage/
+
+Sitemap: https://j.synopsdigital.com/sitemap.xml

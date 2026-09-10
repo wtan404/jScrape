@@ -64,10 +64,12 @@ const US_CITY_COORDS = {
 
   // Pacific Northwest
   'seattle': { lat: 47.6062, lon: -122.3321 },
+  'sea': { lat: 47.6062, lon: -122.3321 },
   'bellevue': { lat: 47.6101, lon: -122.2015 },
   'kirkland': { lat: 47.6769, lon: -122.2060 },
   'redmond': { lat: 47.6740, lon: -122.1215 },
   'portland': { lat: 45.5152, lon: -122.6784 },
+  'pdx': { lat: 45.5152, lon: -122.6784 },
 
   // Southern California
   'los angeles': { lat: 34.0522, lon: -118.2437 },
@@ -80,6 +82,7 @@ const US_CITY_COORDS = {
 
   // Texas
   'austin': { lat: 30.2672, lon: -97.7431 },
+  'atx': { lat: 30.2672, lon: -97.7431 },
   'dallas': { lat: 32.7767, lon: -96.7970 },
   'plano': { lat: 33.0198, lon: -96.6989 },
   'frisco': { lat: 33.1507, lon: -96.8236 },
@@ -99,6 +102,7 @@ const US_CITY_COORDS = {
 
   // Greater Boston & Northeast
   'boston': { lat: 42.3601, lon: -71.0589 },
+  'bos': { lat: 42.3601, lon: -71.0589 },
   'cambridge': { lat: 42.3736, lon: -71.1097 },
   'waltham': { lat: 42.3765, lon: -71.2356 },
   'philadelphia': { lat: 39.9526, lon: -75.1652 },
@@ -121,6 +125,7 @@ const US_CITY_COORDS = {
   'morrisville': { lat: 35.8324, lon: -78.8256 },
   'charlotte': { lat: 35.2271, lon: -80.8431 },
   'atlanta': { lat: 33.7490, lon: -84.3880 },
+  'atl': { lat: 33.7490, lon: -84.3880 },
   'alpharetta': { lat: 34.0754, lon: -84.2941 },
   'miami': { lat: 25.7617, lon: -80.1918 },
   'tampa': { lat: 27.9506, lon: -82.4572 },
@@ -128,7 +133,9 @@ const US_CITY_COORDS = {
 
   // Midwest & Mountain
   'chicago': { lat: 41.8781, lon: -87.6298 },
+  'chi': { lat: 41.8781, lon: -87.6298 },
   'denver': { lat: 39.7392, lon: -104.9903 },
+  'den': { lat: 39.7392, lon: -104.9903 },
   'boulder': { lat: 40.0150, lon: -105.2705 },
   'salt lake city': { lat: 40.7608, lon: -111.8910 },
   'minneapolis': { lat: 44.9778, lon: -93.2650 },
@@ -230,6 +237,8 @@ const zipGeocodeCache = {};
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
+
   if (window.lucide) {
     lucide.createIcons();
   }
@@ -411,7 +420,7 @@ function renderKeywordsSection() {
     if (inputBar) inputBar.style.display = 'flex';
 
     if (editingTagsList.length === 0) {
-      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No keywords set. Type a keyword below and press Enter to add.</span>`;
+      kwListEl.innerHTML = `<span class="kw-tag" style="background:var(--pill-bg); color:var(--text-muted); border-color:var(--border-color);">No keywords set. Type a keyword below and press Enter to add.</span>`;
     } else {
       kwListEl.innerHTML = editingTagsList.map((term, index) => `
         <span class="kw-tag editable">
@@ -426,7 +435,7 @@ function renderKeywordsSection() {
 
     const allTerms = [...(userConfig.targetTitles || []), ...(userConfig.keywords || [])];
     if (allTerms.length === 0) {
-      kwListEl.innerHTML = `<span class="kw-tag" style="background:rgba(255,255,255,0.05); color:#94a3b8;">No keywords defined. Click Edit Keywords to add terms.</span>`;
+      kwListEl.innerHTML = `<span class="kw-tag" style="background:var(--pill-bg); color:var(--text-muted); border-color:var(--border-color);">No keywords defined. Click Edit Keywords to add terms.</span>`;
     } else {
       kwListEl.innerHTML = allTerms.map(term => `<span class="kw-tag">${escapeHtml(term)}</span>`).join('');
     }
@@ -862,54 +871,114 @@ async function geocodeZipCode(zip) {
     return zipGeocodeCache[cleanZip];
   }
 
+  // 1. Instant offline 3-digit SCF lookup (0ms latency, zero third-party failure)
+  const prefix = cleanZip.slice(0, 3);
+  if (typeof window !== 'undefined' && window.ZIP3_CENTROIDS && window.ZIP3_CENTROIDS[prefix]) {
+    const [lat, lon, city, state] = window.ZIP3_CENTROIDS[prefix];
+    const coords = { lat, lon, city, state };
+    zipGeocodeCache[cleanZip] = coords;
+
+    // Background asynchronous refinement from zippopotam if reachable
+    try {
+      fetch(`https://api.zippopotam.us/us/${cleanZip}`).then(res => {
+        if (res.ok) return res.json();
+      }).then(data => {
+        if (data && data.places && data.places[0]) {
+          zipGeocodeCache[cleanZip] = {
+            lat: parseFloat(data.places[0].latitude),
+            lon: parseFloat(data.places[0].longitude),
+            city: data.places[0]['place name'],
+            state: data.places[0]['state abbreviation']
+          };
+        }
+      }).catch(() => {});
+    } catch (e) {}
+
+    return coords;
+  }
+
+  // 2. Direct online fallback
   try {
     const res = await fetch(`https://api.zippopotam.us/us/${cleanZip}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-
-    if (data.places && data.places[0]) {
-      const place = data.places[0];
-      const coords = {
-        lat: parseFloat(place.latitude),
-        lon: parseFloat(place.longitude),
-        city: place['place name'],
-        state: place['state abbreviation']
-      };
-      zipGeocodeCache[cleanZip] = coords;
-      return coords;
+    if (res.ok) {
+      const data = await res.json();
+      if (data.places && data.places[0]) {
+        const place = data.places[0];
+        const coords = {
+          lat: parseFloat(place.latitude),
+          lon: parseFloat(place.longitude),
+          city: place['place name'],
+          state: place['state abbreviation']
+        };
+        zipGeocodeCache[cleanZip] = coords;
+        return coords;
+      }
     }
-  } catch (e) {
-    return null;
-  }
+  } catch (e) {}
+
   return null;
 }
 
-function getJobCoords(job) {
-  if (job.lat && job.lon) return { lat: job.lat, lon: job.lon };
+function getAllJobCoords(job) {
+  if (job.lat && job.lon) return [{ lat: job.lat, lon: job.lon }];
 
   const rawLoc = job.location || '';
   const loc = rawLoc.toLowerCase();
+  const matchedCoords = [];
 
   // 1. Check embedded 5-digit zip code if already cached
-  const zipMatch = rawLoc.match(/\b(\d{5})\b/);
-  if (zipMatch && zipGeocodeCache[zipMatch[1]]) {
-    return zipGeocodeCache[zipMatch[1]];
-  }
-
-  // 2. Check prioritized city dictionary (longest match first)
-  for (const [city, coords] of SORTED_CITY_COORDS) {
-    if (loc.includes(city)) {
-      return coords;
+  const zipMatches = rawLoc.match(/\b(\d{5})\b/g);
+  if (zipMatches) {
+    for (const z of zipMatches) {
+      if (zipGeocodeCache[z]) {
+        matchedCoords.push(zipGeocodeCache[z]);
+      } else if (typeof window !== 'undefined' && window.ZIP3_CENTROIDS && window.ZIP3_CENTROIDS[z.slice(0, 3)]) {
+        const [lat, lon, city, state] = window.ZIP3_CENTROIDS[z.slice(0, 3)];
+        matchedCoords.push({ lat, lon, city, state });
+      }
     }
   }
 
-  // 3. Check for standard 2-letter US State abbreviation (e.g., "CA", "San Jose, CA", "Austin, TX")
-  const stateMatch = rawLoc.match(/(?:,\s*|\b)([A-Z]{2})\b/);
-  if (stateMatch && US_STATE_CENTROIDS[stateMatch[1]]) {
-    return US_STATE_CENTROIDS[stateMatch[1]];
+  // 2. Check prioritized city dictionary (longest match first with word boundaries on short codes)
+  for (const [city, coords] of SORTED_CITY_COORDS) {
+    let matched = false;
+    if (city.length <= 3) {
+      const re = new RegExp(`\\b${city}\\b`, 'i');
+      matched = re.test(loc);
+    } else {
+      matched = loc.includes(city);
+    }
+    if (matched) {
+      matchedCoords.push(coords);
+    }
   }
 
-  return null;
+  // 3. Check for standard 2-letter US State abbreviation (e.g. "San Jose, CA", "Austin, TX")
+  const stateMatches = rawLoc.match(/(?:,\s*|\b)([A-Z]{2})\b/g);
+  if (stateMatches) {
+    for (const sm of stateMatches) {
+      const st = sm.replace(/[^A-Z]/g, '');
+      if (US_STATE_CENTROIDS[st]) {
+        matchedCoords.push(US_STATE_CENTROIDS[st]);
+      }
+    }
+  }
+
+  return matchedCoords;
+}
+
+function getMinJobDistance(userCoords, job) {
+  const coordsList = getAllJobCoords(job);
+  if (!coordsList || coordsList.length === 0) return null;
+
+  let minDistance = Infinity;
+  for (const c of coordsList) {
+    const d = getDistanceMiles(userCoords.lat, userCoords.lon, c.lat, c.lon);
+    if (d < minDistance) {
+      minDistance = d;
+    }
+  }
+  return minDistance === Infinity ? null : minDistance;
 }
 
 function getDistanceMiles(lat1, lon1, lat2, lon2) {
@@ -960,18 +1029,36 @@ function parseSalaryMin(salaryStr) {
 let zipInputDebounceTimer = null;
 function handleZipInput() {
   clearTimeout(zipInputDebounceTimer);
-  zipInputDebounceTimer = setTimeout(() => {
+  zipInputDebounceTimer = setTimeout(async () => {
     const zipVal = document.getElementById('zipInput')?.value.trim() || '';
+    const pill = document.getElementById('geoFeedbackPill');
+
     if (zipVal.length === 5 && /^\d{5}$/.test(zipVal)) {
+      const coords = await geocodeZipCode(zipVal);
+      if (coords && coords.city) {
+        if (pill) {
+          pill.textContent = `📍 ${coords.city}, ${coords.state || ''}`;
+          pill.className = 'geo-feedback-pill';
+        }
+      } else if (pill) {
+        pill.textContent = '⚠️ Invalid Zip';
+        pill.className = 'geo-feedback-pill error';
+      }
       const sortSelect = document.getElementById('sortSelect');
       if (sortSelect) sortSelect.value = 'distance';
       filterJobs();
     } else if (zipVal.length === 0) {
+      if (pill) {
+        pill.textContent = '';
+        pill.className = 'geo-feedback-pill';
+      }
       const sortSelect = document.getElementById('sortSelect');
       if (sortSelect && sortSelect.value === 'distance') sortSelect.value = 'time';
       filterJobs();
+    } else if (zipVal.length > 0 && pill) {
+      pill.textContent = '';
     }
-  }, 250);
+  }, 150);
 }
 
 async function filterJobs() {
@@ -996,8 +1083,15 @@ async function filterJobs() {
   const minProfileSalary = userConfig.minSalary || 0;
 
   let userCoords = null;
+  const pill = document.getElementById('geoFeedbackPill');
   if (/^\d{5}$/.test(zipVal)) {
     userCoords = await geocodeZipCode(zipVal);
+    if (userCoords && pill && !pill.textContent) {
+      pill.textContent = `📍 ${userCoords.city}, ${userCoords.state || ''}`;
+      pill.className = 'geo-feedback-pill';
+    }
+  } else if (pill && zipVal.length === 0) {
+    pill.textContent = '';
   }
 
   let filtered = allJobsData.filter(job => {
@@ -1048,21 +1142,24 @@ async function filterJobs() {
     return matchWorkType;
   });
 
-  // Calculate distance using US Metropolitan Geocode Lookup Table
+  // Calculate distance for all matching jobs
   filtered.forEach(job => {
     const rawWt = (job.workType || '').toLowerCase();
     const locLower = (job.location || '').toLowerCase();
     const titleLower = (job.title || '').toLowerCase();
     const isRemote = rawWt.includes('remote') || locLower.includes('remote') || titleLower.includes('remote');
 
-    const jobCoords = getJobCoords(job);
-
-    if (userCoords && jobCoords) {
-      job.distanceMiles = getDistanceMiles(userCoords.lat, userCoords.lon, jobCoords.lat, jobCoords.lon);
-    } else if (isRemote) {
-      job.distanceMiles = 99990;
+    if (userCoords) {
+      const d = getMinJobDistance(userCoords, job);
+      if (d !== null) {
+        job.distanceMiles = d;
+      } else if (isRemote) {
+        job.distanceMiles = 99990;
+      } else {
+        job.distanceMiles = 99999;
+      }
     } else {
-      job.distanceMiles = 99999;
+      job.distanceMiles = undefined;
     }
   });
 
@@ -1075,7 +1172,7 @@ async function filterJobs() {
       const titleLower = (job.title || '').toLowerCase();
       const isRemote = rawWt.includes('remote') || locLower.includes('remote') || titleLower.includes('remote');
 
-      if (isRemote) return true; // Keep remote roles
+      if (isRemote && enableRemote) return true; // Keep remote roles if remote checkbox enabled
       return job.distanceMiles !== undefined && job.distanceMiles <= maxMiles;
     });
   }
@@ -1083,7 +1180,7 @@ async function filterJobs() {
   // Multi-Sort (Time Posted, Salary, Distance)
   if (sortMode === 'salary') {
     filtered.sort((a, b) => parseSalaryMin(formatSalary(b)) - parseSalaryMin(formatSalary(a)));
-  } else if (sortMode === 'distance' || userCoords) {
+  } else if (sortMode === 'distance' || (userCoords && sortMode !== 'time')) {
     // Sort closest to furthest away from the user's inputted zip code
     filtered.sort((a, b) => {
       const distA = a.distanceMiles !== undefined ? a.distanceMiles : 99999;
@@ -1187,5 +1284,58 @@ function formatDate(isoStr) {
 
 function escapeHtml(text) {
   return text ? String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
+}
+
+// ==========================================================================
+// Theme Mode Management (Dark / Light Mode)
+// ==========================================================================
+
+function getPreferredTheme() {
+  const saved = localStorage.getItem('scrapedeez_theme');
+  if (saved === 'dark' || saved === 'light') return saved;
+  return 'dark'; // Default to dark with amethyst palette
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const meta = document.getElementById('metaThemeColor');
+  if (meta) {
+    meta.setAttribute('content', theme === 'light' ? '#f6f5fb' : '#0c0a17');
+  }
+
+  const btn = document.getElementById('btnThemeToggle');
+  const sunIcon = document.getElementById('themeIconSun');
+  const moonIcon = document.getElementById('themeIconMoon');
+
+  if (btn) {
+    btn.setAttribute('aria-label', theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+    btn.setAttribute('title', theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+  }
+
+  if (sunIcon && moonIcon) {
+    if (theme === 'dark') {
+      sunIcon.style.display = 'inline-block';
+      moonIcon.style.display = 'none';
+    } else {
+      sunIcon.style.display = 'none';
+      moonIcon.style.display = 'inline-block';
+    }
+  }
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('scrapedeez_theme', next);
+  applyTheme(next);
+}
+
+function initTheme() {
+  const theme = getPreferredTheme();
+  applyTheme(theme);
 }
 

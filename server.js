@@ -98,6 +98,45 @@ app.get('/api/jobs', (req, res) => {
   }
 });
 
+// GET /health & /api/health (Service Telemetry & Uptime Probes)
+app.get(['/health', '/api/health'], (req, res) => {
+  try {
+    let jobsCount = 0;
+    let lastScraped = null;
+    let dataAgeMinutes = null;
+
+    if (fs.existsSync(DATA_FILE)) {
+      const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+      jobsCount = data.totalMatches || (data.jobs ? data.jobs.length : 0);
+      lastScraped = data.lastScraped || null;
+      if (lastScraped) {
+        const diffMs = Date.now() - new Date(lastScraped).getTime();
+        dataAgeMinutes = Math.max(0, Math.round(diffMs / 60000));
+      }
+    }
+
+    // Mark degraded if data is older than 24 hours (1440 min)
+    const isStale = dataAgeMinutes !== null && dataAgeMinutes > 1440;
+
+    res.json({
+      status: isStale ? 'degraded' : 'healthy',
+      service: 'scrapedeez',
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: Math.round(process.uptime()),
+      jobsCount,
+      lastScraped,
+      dataAgeMinutes,
+      memoryRssMb: Math.round(process.memoryUsage().rss / (1024 * 1024))
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'unhealthy',
+      error: err.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // POST /api/scrape-now (Manual rescan trigger)
 app.post('/api/scrape-now', async (req, res) => {
   console.log(`[Scrapedeez] Manual scan requested: ${new Date().toISOString()}`);

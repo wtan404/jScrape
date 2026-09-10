@@ -8,6 +8,7 @@ on:
     branches:
       - main
       - stage
+      - qa
       - dev
   workflow_dispatch:
 
@@ -30,18 +31,43 @@ jobs:
       - name: 🔍 Run Job Scraper & Link Verifier
         run: node scraper.js
 
-      - name: 🎯 Determine target directory
+      - name: 📊 Generate Health Telemetry
+        run: |
+          cat <<EOF > health.json
+          {
+            "status": "healthy",
+            "service": "scrapedeez",
+            "updatedAt": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "jobsCount": $(node -e "try { console.log(JSON.parse(require('fs').readFileSync('jobs_data.json','utf8')).totalMatches || 0) } catch(e) { console.log(0) }"),
+            "lastScraped": "$(node -e "try { console.log(JSON.parse(require('fs').readFileSync('jobs_data.json','utf8')).lastScraped || '') } catch(e) { console.log('') }")"
+          }
+          EOF
+          cp health.json health
+
+      - name: 🎯 Determine target directory & URL
         id: set-target
         run: |
           BASE_DIR="${{ secrets.FTP_SERVER_DIR || './' }}"
           [[ "$BASE_DIR" != */ ]] && BASE_DIR="${BASE_DIR}/"
           if [ "${{ github.ref_name }}" = "dev" ]; then
             echo "dir=${BASE_DIR}dev/" >> $GITHUB_OUTPUT
+            echo "url=https://dev.j.synopsdigital.com" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_name }}" = "qa" ]; then
+            echo "dir=${BASE_DIR}qa/" >> $GITHUB_OUTPUT
+            echo "url=https://qa.j.synopsdigital.com" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref_name }}" = "stage" ]; then
             echo "dir=${BASE_DIR}stage/" >> $GITHUB_OUTPUT
+            echo "url=https://stage.j.synopsdigital.com" >> $GITHUB_OUTPUT
           else
             echo "dir=${BASE_DIR}" >> $GITHUB_OUTPUT
+            echo "url=https://j.synopsdigital.com" >> $GITHUB_OUTPUT
           fi
+
+      - name: 🔄 Signal Passenger restart
+        run: |
+          mkdir -p tmp
+          touch tmp/restart.txt
+          chmod +x scripts/*.sh tests/*.sh 2>/dev/null || true
 
       - name: 📂 Sync files via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -57,6 +83,19 @@ jobs:
             .env*
             README.md
             dev/**
+            qa/**
             stage/**
             .htaccess
             **/.htaccess
+
+      - name: 🧪 Run Automated Post-Deploy Verification
+        run: |
+          chmod +x tests/qa-check.sh
+          sleep 5
+          if [ "${{ github.ref_name }}" = "dev" ]; then
+            ./tests/qa-check.sh "${{ steps.set-target.outputs.url }}" --mode=smoke
+          elif [ "${{ github.ref_name }}" = "qa" ]; then
+            ./tests/qa-check.sh "${{ steps.set-target.outputs.url }}" --mode=full
+          else
+            ./tests/qa-check.sh "${{ steps.set-target.outputs.url }}" --mode=audit
+          fi

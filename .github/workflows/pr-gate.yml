@@ -1,0 +1,49 @@
+name: Pre-Merge Quality Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+      - stage
+      - qa
+      - dev
+
+jobs:
+  validate:
+    name: Code Quality & Feed Syntax Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚚 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 📦 Install Dependencies
+        run: npm install
+
+      - name: 🔍 Validate JavaScript Syntax
+        run: |
+          echo "Validating syntax across all Node.js scrapers and server..."
+          node -c server.js
+          node -c scraper.js
+          node -c ats_scraper.js
+          node -c google_jobs_scraper.js
+          node -c geo_helper.js
+          node -c verifier.js
+          echo "✅ All JavaScript files passed syntax verification."
+
+      - name: 📊 Validate Configuration & Data Feeds
+        run: |
+          echo "Verifying config.json and jobs_data.json formatting..."
+          node -e 'JSON.parse(require("fs").readFileSync("config.json")); console.log("✅ config.json valid");'
+          node -e 'JSON.parse(require("fs").readFileSync("jobs_data.json")); console.log("✅ jobs_data.json valid");'
+
+      - name: 🧪 Pre-Merge Manifest & Structure Check
+        run: |
+          chmod +x tests/qa-check.sh
+          echo "Checking manifest structure..."
+          test -f sitemap.xml && echo "✅ sitemap.xml exists"
+          test -f robots.txt && echo "✅ robots.txt exists"

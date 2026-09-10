@@ -1,0 +1,94 @@
+name: Scheduled Uptime & Synthetic Health Monitor
+
+on:
+  schedule:
+    # Run every 30 minutes
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  uptime-check:
+    name: ⏱️ Synthetic Route & Health Probe
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚚 Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: 🧪 Execute Synthetic Probes
+        id: probe
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          chmod +x tests/qa-check.sh
+          TARGET="https://dev.j.synopsdigital.com"
+
+          echo "=========================================="
+          echo "🔍 Probing ${TARGET}..."
+          echo "=========================================="
+
+          # Fast smoke verification including /health
+          if ! ./tests/qa-check.sh "${TARGET}" --mode=smoke; then
+            echo "FAILED_TARGET=${TARGET}" >> $GITHUB_ENV
+            exit 1
+          fi
+
+          # Telemetry validation on /health
+          HEALTH_JSON=$(curl -s -L --max-time 10 "${TARGET}/health")
+          echo "Telemetry Payload: ${HEALTH_JSON}"
+          
+          STATUS=$(echo "${HEALTH_JSON}" | jq -r '.status // "unknown"' 2>/dev/null || echo "parse_error")
+          echo "Reported Status: ${STATUS}"
+
+          if [ "${STATUS}" = "unhealthy" ]; then
+            echo "❌ Service reported UNHEALTHY status."
+            echo "FAILED_TARGET=${TARGET}/health" >> $GITHUB_ENV
+            exit 1
+          fi
+
+          echo "✅ All uptime probes and health telemetry verified successfully."
+
+      - name: 🚨 Dispatch Slack Incident Notification
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%SZ")
+
+          PAYLOAD=$(cat <<EOF
+          {
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "🚨 jScrape Uptime Alert: Degradation Detected",
+                  "emoji": true
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Target:*\n\`${FAILED_TARGET:-https://dev.j.synopsdigital.com}\`"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Timestamp:*\n${TIMESTAMP}"
+                  }
+                ]
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Incident Details:*\nOne or more automated health checks or route assertions failed on \`dev.j.synopsdigital.com\`.\n<${RUN_URL}|View Workflow Incident Logs>"
+                }
+              }
+            ]
+          }
+          EOF
+          )
+
+          curl -s -X POST -H 'Content-type: application/json' --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
