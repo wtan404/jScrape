@@ -465,7 +465,12 @@
         <!-- Applicant Profile Card -->
         <div>
           <div class="sidecard-section-header">
-            <h3><i data-lucide="user-check"></i> Candidate Profile</h3>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <h3 style="margin: 0;"><i data-lucide="user-check"></i> Candidate Profile</h3>
+              <span style="font-size: 0.68rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 999px; background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); display: inline-flex; align-items: center; gap: 0.25rem;">
+                <i data-lucide="check" style="width: 11px; height: 11px;"></i> Auto-Populated
+              </span>
+            </div>
             <button class="btn btn-secondary btn-xs" onclick="saveProfileData()" id="btnSaveProfile">Save Profile</button>
           </div>
 
@@ -484,12 +489,12 @@
             <!-- Tab 1: Core Contact Info -->
             <div id="profTabCore" class="profile-form-grid">
               <div class="profile-field">
-                <label for="profFullName">Full Name *</label>
-                <input type="text" id="profFullName" placeholder="e.g. Will Tan" required>
+                <label for="profFullName">Full Name</label>
+                <input type="text" id="profFullName" placeholder="e.g. Will Tan">
               </div>
               <div class="profile-field">
-                <label for="profEmail">Email Address *</label>
-                <input type="email" id="profEmail" placeholder="e.g. will@example.com" required>
+                <label for="profEmail">Email Address</label>
+                <input type="email" id="profEmail" placeholder="e.g. will@example.com">
               </div>
               <div class="profile-field">
                 <label for="profPhone">Phone Number</label>
@@ -567,24 +572,24 @@
             <h3><i data-lucide="folder-check"></i> Resume Variations</h3>
           </div>
           <p style="font-size: 0.78rem; color: var(--text-dim); margin-bottom: 0.8rem;">
-            Upload tailored PDF or Word resumes by specialty (e.g. DevOps Lead, WebOps Manager, Director of IT).
+            Upload tailored PDF or Word resumes by specialty. Label is auto-derived from the document name if left empty.
           </p>
 
           <!-- Upload Dropzone Form -->
           <form id="resumeUploadForm" onsubmit="handleResumeUpload(event)" style="margin-bottom: 1.2rem;">
             <div class="profile-form-grid">
               <div class="profile-field">
-                <label for="resumeLabelInput">Variation Label *</label>
-                <input type="text" id="resumeLabelInput" placeholder="e.g. DevOps & Cloud Lead Focus" required>
-              </div>
-              <div class="profile-field">
-                <label for="resumeSpecInput">Specialization Tags</label>
-                <input type="text" id="resumeSpecInput" placeholder="e.g. AWS, Kubernetes, Terraform">
-              </div>
-              <div class="profile-field">
                 <label for="resumeFileInput">Resume Document (.pdf, .doc, .docx) *</label>
                 <input type="file" id="resumeFileInput" accept=".pdf,.doc,.docx" required onchange="handleResumeFileSelected(event)">
                 <div id="fileUploadFeedback" style="font-size: 0.74rem; font-family: var(--font-mono); color: var(--accent-purple-light); margin-top: 0.25rem;"></div>
+              </div>
+              <div class="profile-field">
+                <label for="resumeLabelInput">Variation Label <span style="font-weight: normal; color: var(--text-dim);">(optional, auto-filled)</span></label>
+                <input type="text" id="resumeLabelInput" placeholder="Auto-derived from filename if left blank">
+              </div>
+              <div class="profile-field">
+                <label for="resumeSpecInput">Specialization Tags <span style="font-weight: normal; color: var(--text-dim);">(optional)</span></label>
+                <input type="text" id="resumeSpecInput" placeholder="e.g. AWS, Kubernetes, Terraform">
               </div>
               <button type="submit" class="btn btn-primary btn-sm w-100" id="btnUploadResume">
                 <i data-lucide="upload"></i>

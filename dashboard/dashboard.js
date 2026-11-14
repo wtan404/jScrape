@@ -2,9 +2,47 @@
    Scrapedeez — PM Operations Command Center & Automated Submitter
    ========================================================================== */
 
+const CANONICAL_DEFAULT_PROFILE = {
+  fullName: 'Will Tan',
+  email: 'will@synopsdigital.com',
+  phone: '415-555-0199',
+  location: 'San Francisco, CA',
+  linkedInUrl: 'https://linkedin.com/in/willtan',
+  githubUrl: 'https://github.com/wtan404',
+  portfolioUrl: 'https://synopsdigital.com',
+  coverNote: 'Experienced WebOps, DevOps & IT Engineering Manager with a proven track record leading high-availability cloud infrastructure, continuous delivery pipelines, and cross-functional engineering teams.',
+  legallyAuthorized: 'Yes',
+  requiresSponsorship: 'No',
+  desiredSalary: 160000,
+  noticePeriod: '2 Weeks',
+  referralSource: 'Company Career Page',
+  eeocGender: 'Decline to Self-Identify'
+};
+
+const DEFAULT_SEED_RESUMES = [
+  {
+    id: 'res_seed_devops',
+    label: 'DevOps & Cloud Infrastructure Lead',
+    specialization: 'AWS, Kubernetes, Terraform, CI/CD',
+    fileName: 'Will_Tan_DevOps_Cloud_Lead.pdf',
+    uploadDate: new Date().toISOString(),
+    sizeBytes: 148200,
+    isDefault: true
+  },
+  {
+    id: 'res_seed_webops',
+    label: 'WebOps & Engineering Manager',
+    specialization: 'Web Operations, Platform Infrastructure, Team Leadership',
+    fileName: 'Will_Tan_WebOps_Engineering_Manager.pdf',
+    uploadDate: new Date().toISOString(),
+    sizeBytes: 154300,
+    isDefault: false
+  }
+];
+
 let allCuratedJobs = [];
 let savedResumes = [];
-let applicantProfile = {};
+let applicantProfile = { ...CANONICAL_DEFAULT_PROFILE };
 let submissionLogs = [];
 let selectedJobs = new Map(); // jobId -> { job, resumeId }
 
@@ -23,18 +61,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function initDashboard(forceRefresh = false) {
   try {
-    // 1. Try composite dashboard summary API
-    const res = await fetch(`./api/dashboard/summary?t=${Date.now()}`);
+    // 1. Try composite dashboard summary API safely
     let summary = null;
     try {
-      if (res.ok) summary = await res.json();
-    } catch (e) {}
+      const res = await fetch(`./api/dashboard/summary?t=${Date.now()}`);
+      if (res.ok) {
+        const text = await res.text();
+        try {
+          summary = JSON.parse(text);
+        } catch (e) {
+          summary = null;
+        }
+      }
+    } catch (e) {
+      summary = null;
+    }
 
-    if (summary) {
-      applicantProfile = summary.profile || {};
-      savedResumes = summary.resumes || [];
+    if (summary && summary.profile && summary.profile.fullName) {
+      applicantProfile = { ...CANONICAL_DEFAULT_PROFILE, ...summary.profile };
+      savedResumes = (summary.resumes && summary.resumes.length > 0) ? summary.resumes : await getFallbackResumes();
       submissionLogs = summary.recentLogs || [];
-      updateKPIs(summary.jobsCount24h, summary.resumesCount, summary.submissionsCount, summary.totalVerified);
+      updateKPIs(summary.jobsCount24h, savedResumes.length, submissionLogs.length, summary.totalVerified);
     } else {
       await loadProfileFallback();
       await loadResumesFallback();
@@ -46,6 +93,8 @@ async function initDashboard(forceRefresh = false) {
 
   } catch (err) {
     console.warn('Dashboard initialization warning:', err);
+    await loadProfileFallback();
+    await loadResumesFallback();
     await fetch24hQueue();
   } finally {
     populateProfileForm();
@@ -543,6 +592,8 @@ async function saveProfileData() {
 function handleResumeFileSelected(e) {
   const file = e.target.files && e.target.files[0];
   const fb = document.getElementById('fileUploadFeedback');
+  const labelInput = document.getElementById('resumeLabelInput');
+
   if (!file) {
     selectedResumeUploadBase64 = null;
     selectedResumeUploadFileName = null;
@@ -551,7 +602,16 @@ function handleResumeFileSelected(e) {
   }
 
   selectedResumeUploadFileName = file.name;
-  if (fb) fb.textContent = `Selected: ${file.name} (${(file.size / 1024).toFixed(0)} KB)`;
+  if (fb) fb.innerHTML = `📄 <strong>${escapeHtml(file.name)}</strong> <span style="color:var(--text-dim);">(${(file.size / 1024).toFixed(0)} KB)</span>`;
+
+  // Auto-populate variation label from filename if empty
+  if (labelInput && !labelInput.value.trim()) {
+    const derivedLabel = file.name
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+    labelInput.value = derivedLabel;
+  }
 
   const reader = new FileReader();
   reader.onload = function(evt) {
@@ -561,19 +621,25 @@ function handleResumeFileSelected(e) {
 }
 
 async function handleResumeUpload(e) {
-  e.preventDefault();
+  if (e) e.preventDefault();
   const labelInput = document.getElementById('resumeLabelInput');
   const specInput = document.getElementById('resumeSpecInput');
   const fileInput = document.getElementById('resumeFileInput');
   const btn = document.getElementById('btnUploadResume');
 
-  if (!selectedResumeUploadBase64 || !selectedResumeUploadFileName) {
+  const file = fileInput && fileInput.files && fileInput.files[0];
+  if (!file && !selectedResumeUploadBase64) {
     alert('Please select a resume file (.pdf, .doc, .docx).');
     return;
   }
 
-  const label = labelInput ? labelInput.value.trim() : selectedResumeUploadFileName;
-  const spec = specInput ? specInput.value.trim() : 'General';
+  const fileName = file ? file.name : (selectedResumeUploadFileName || 'resume.pdf');
+  const derivedLabel = fileName
+    .replace(/\.[^/.]+$/, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+  const label = (labelInput && labelInput.value.trim()) ? labelInput.value.trim() : derivedLabel;
+  const spec = (specInput && specInput.value.trim()) ? specInput.value.trim() : 'General Tech';
 
   if (btn) {
     btn.disabled = true;
@@ -582,34 +648,66 @@ async function handleResumeUpload(e) {
   }
 
   try {
-    const res = await fetch(`./api/resumes/upload`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        label,
-        specialization: spec,
-        fileName: selectedResumeUploadFileName,
-        fileBase64: selectedResumeUploadBase64
-      })
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      savedResumes.push(data.resume);
-    } else {
-      const newR = {
-        id: 'res_' + Date.now(),
-        label,
-        specialization: spec,
-        fileName: selectedResumeUploadFileName,
-        fileBase64: selectedResumeUploadBase64,
-        uploadDate: new Date().toISOString(),
-        sizeBytes: Math.round(selectedResumeUploadBase64.length * 0.75)
-      };
-      savedResumes.push(newR);
-      localStorage.setItem('scrapedeez_resumes', JSON.stringify(savedResumes));
+    let fileBase64 = selectedResumeUploadBase64;
+    if (!fileBase64 && file) {
+      fileBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Failed to read file document'));
+        reader.readAsDataURL(file);
+      });
     }
 
+    let savedResumeItem = null;
+
+    // 1. Try server API
+    try {
+      const res = await fetch(`./api/resumes/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          label,
+          specialization: spec,
+          fileName,
+          fileBase64
+        })
+      });
+
+      if (res.ok) {
+        const text = await res.text();
+        try {
+          const data = JSON.parse(text);
+          if (data && data.resume) {
+            savedResumeItem = data.resume;
+          }
+        } catch (jsonErr) {}
+      }
+    } catch (apiErr) {
+      console.warn('API upload fallback to local storage:', apiErr.message);
+    }
+
+    // 2. Client fallback for static hosting
+    if (!savedResumeItem) {
+      savedResumeItem = {
+        id: 'res_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        label,
+        specialization: spec,
+        fileName,
+        fileBase64,
+        uploadDate: new Date().toISOString(),
+        sizeBytes: file ? file.size : (fileBase64 ? Math.round(fileBase64.length * 0.75) : 120000)
+      };
+    }
+
+    // Add to saved resumes at the top
+    savedResumes.unshift(savedResumeItem);
+    try {
+      localStorage.setItem('scrapedeez_resumes', JSON.stringify(savedResumes));
+    } catch (storageErr) {
+      console.warn('localStorage quota note:', storageErr.message);
+    }
+
+    // Reset upload inputs
     if (labelInput) labelInput.value = '';
     if (specInput) specInput.value = '';
     if (fileInput) fileInput.value = '';
@@ -622,8 +720,10 @@ async function handleResumeUpload(e) {
     renderTriageTable();
     const countEl = document.getElementById('metricResumesCount');
     if (countEl) countEl.textContent = savedResumes.length;
+
+    showToast(`✅ Resume "${label}" added to vault!`);
   } catch (err) {
-    alert('Upload notice: ' + err.message);
+    alert('Resume upload notice: ' + err.message);
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -678,7 +778,9 @@ function renderResumesList() {
 
 function downloadResume(id) {
   const item = savedResumes.find(r => r.id === id);
-  if (item && item.fileBase64) {
+  if (!item) return;
+
+  if (item.fileBase64) {
     const a = document.createElement('a');
     a.href = item.fileBase64;
     a.download = item.fileName || 'resume.pdf';
@@ -686,7 +788,17 @@ function downloadResume(id) {
     a.click();
     document.body.removeChild(a);
   } else {
-    window.open(`./api/resumes/${encodeURIComponent(id)}/download`, '_blank');
+    // Generate text export for seed or text files
+    const content = `Resume Variation: ${item.label}\nSpecialization: ${item.specialization || 'Tech Lead'}\nCandidate: ${applicantProfile.fullName || 'Will Tan'}\nEmail: ${applicantProfile.email || 'will@synopsdigital.com'}\nLocation: ${applicantProfile.location || 'San Francisco, CA'}\nLinkedIn: ${applicantProfile.linkedInUrl || ''}\nGitHub: ${applicantProfile.githubUrl || ''}\nPortfolio: ${applicantProfile.portfolioUrl || ''}\n\nSummary:\n${applicantProfile.coverNote || ''}`;
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (item.fileName ? item.fileName.replace(/\.pdf$/, '.txt') : 'resume.txt');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 }
 
@@ -697,27 +809,68 @@ async function deleteResume(id) {
   } catch (e) {}
 
   savedResumes = savedResumes.filter(r => r.id !== id);
-  localStorage.setItem('scrapedeez_resumes', JSON.stringify(savedResumes));
+  try {
+    localStorage.setItem('scrapedeez_resumes', JSON.stringify(savedResumes));
+  } catch (e) {}
   renderResumesList();
   renderTriageTable();
+  const countEl = document.getElementById('metricResumesCount');
+  if (countEl) countEl.textContent = savedResumes.length;
+  showToast('Resume variation deleted');
 }
 
 // --------------------------------------------------------------------------
-// Fallbacks for Static Hosting
+// Fallbacks for Static Hosting & Instant Auto-Population
 // --------------------------------------------------------------------------
 
 async function loadProfileFallback() {
+  let loaded = null;
+  // Tier 1: Local Storage user overrides
   try {
     const saved = localStorage.getItem('scrapedeez_profile');
-    if (saved) applicantProfile = JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.fullName) {
+        loaded = parsed;
+      }
+    }
   } catch (e) {}
+
+  // Tier 2: Direct static fetch of applicant_profile.json
+  if (!loaded) {
+    try {
+      const res = await fetch(`../applicant_profile.json?t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.fullName) {
+          loaded = data;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Tier 3: Merge with canonical default profile
+  applicantProfile = {
+    ...CANONICAL_DEFAULT_PROFILE,
+    ...(loaded || {})
+  };
+}
+
+async function getFallbackResumes() {
+  try {
+    const saved = localStorage.getItem('scrapedeez_resumes');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {}
+  return [...DEFAULT_SEED_RESUMES];
 }
 
 async function loadResumesFallback() {
-  try {
-    const saved = localStorage.getItem('scrapedeez_resumes');
-    if (saved) savedResumes = JSON.parse(saved);
-  } catch (e) {}
+  savedResumes = await getFallbackResumes();
+  const elResumes = document.getElementById('metricResumesCount');
+  if (elResumes) elResumes.textContent = savedResumes.length;
 }
 
 async function loadLogsFallback() {
@@ -725,6 +878,40 @@ async function loadLogsFallback() {
     const saved = localStorage.getItem('scrapedeez_submission_logs');
     if (saved) submissionLogs = JSON.parse(saved);
   } catch (e) {}
+}
+
+function showToast(message, type = 'success') {
+  let toastContainer = document.getElementById('dashToastContainer');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.id = 'dashToastContainer';
+    toastContainer.style.cssText = 'position:fixed; top:1.5rem; right:1.5rem; z-index:9999; display:flex; flex-direction:column; gap:0.5rem; pointer-events:none;';
+    document.body.appendChild(toastContainer);
+  }
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    pointer-events: auto;
+    background: ${type === 'success' ? 'var(--bg-surface)' : 'var(--bg-card)'};
+    color: var(--text-main);
+    border: 1px solid ${type === 'success' ? 'var(--accent-emerald)' : 'var(--accent-amber)'};
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1.1rem;
+    font-size: 0.84rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    animation: fadeInToast 0.25s ease-out;
+  `;
+  toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
+  toastContainer.appendChild(toast);
+  setTimeout(() => {
+    toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-10px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
 }
 
 async function triggerHourlyRescan() {

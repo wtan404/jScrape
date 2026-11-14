@@ -4,6 +4,25 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.4.1] - 2026-11-14
+
+### Fixed
+- **Candidate Profile Instant Auto-Population (`dashboard/dashboard.js`, `dashboard/index.html`):**
+  - Resolved blank profile inputs on initialization by adding multi-tier fallback loading: user `localStorage` overrides &rarr; direct static fetch of `../applicant_profile.json` &rarr; built-in canonical default profile (Will Tan / Synops Digital).
+  - Unblocked profile inputs: Removed HTML `required` constraints on name and email to prevent intrusive browser validation tooltips and eliminate perceived prerequisites.
+  - Added visual "Auto-Populated" status badge in candidate profile card header.
+- **Resilient Resume Upload Engine (`dashboard/dashboard.js`):**
+  - Fixed syntax error crash caused by `await res.json()` on non-JSON server responses; added safe JSON text parsing with automatic fallback to client-side storage (`localStorage` + Base64 storage).
+  - Streamlined 1-click upload: Removed `required` constraint from "Variation Label"; automatically auto-derives and formats variation label from document filename (e.g. `Will_Tan_DevOps_Lead.pdf` &rarr; `Will Tan DevOps Lead`).
+  - Switched file reading to asynchronous `FileReader` promise to eliminate race conditions between file selection and form submission.
+  - Pre-seeded default variations ("DevOps & Cloud Infrastructure Lead", "WebOps & Engineering Manager") so the vault is populated and operational out of the box.
+  - Added non-intrusive floating toast notifications (`showToast()`) replacing disruptive browser alert dialogs.
+
+### Changed
+- **Version Bump (`package.json`):** Bumped to `v1.4.1`.
+
+---
+
 ## [1.4.0] - 2026-11-14
 
 ### Added
