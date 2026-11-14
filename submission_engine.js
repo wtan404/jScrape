@@ -7,7 +7,7 @@ const LOGS_FILE = path.join(__dirname, 'submissions_log.json');
 const RESUMES_DIR = path.join(__dirname, 'uploads', 'resumes');
 const RESUMES_META = path.join(RESUMES_DIR, 'metadata.json');
 
-// Default Profile Template
+// Extended Canonical Profile Knowledge Base (Handles Divergent Form Fields)
 const DEFAULT_PROFILE = {
   fullName: 'Will Tan',
   email: 'will@synopsdigital.com',
@@ -16,7 +16,19 @@ const DEFAULT_PROFILE = {
   linkedInUrl: 'https://linkedin.com/in/willtan',
   githubUrl: 'https://github.com/wtan404',
   portfolioUrl: 'https://synopsdigital.com',
-  coverNote: 'Experienced WebOps, DevOps & IT Engineering Manager with a proven track record leading high-availability cloud infrastructure, continuous delivery pipelines, and cross-functional engineering teams.'
+  coverNote: 'Experienced WebOps, DevOps & IT Engineering Manager with a proven track record leading high-availability cloud infrastructure, continuous delivery pipelines, and cross-functional engineering teams.',
+  
+  // Extended Resolution Fields for Divergent Questions
+  legallyAuthorized: 'Yes',
+  requiresSponsorship: 'No',
+  desiredSalary: 160000,
+  minimumSalary: 140000,
+  noticePeriod: '2 Weeks',
+  referralSource: 'Company Career Page',
+  eeocGender: 'Decline to Self-Identify',
+  eeocRace: 'Decline to Self-Identify',
+  eeocVeteran: 'I am not a protected veteran',
+  eeocDisability: 'No, I do not have a disability'
 };
 
 function readProfile() {
@@ -71,12 +83,99 @@ function getResumeFile(resumeId) {
   return null;
 }
 
+// --------------------------------------------------------------------------
+// Fuzzy Field Resolution Engine
+// --------------------------------------------------------------------------
+
+function resolveFieldAnswer(label = '', type = 'text', options = [], profile = DEFAULT_PROFILE) {
+  const cleanLabel = (label || '').toLowerCase();
+
+  // 1. Visa Sponsorship Questions
+  if (cleanLabel.includes('sponsor') || cleanLabel.includes('visa') || cleanLabel.includes('work permit')) {
+    const ans = profile.requiresSponsorship || 'No';
+    return matchOptionValue(ans, options) || ans;
+  }
+
+  // 2. Legal Work Authorization Questions
+  if (cleanLabel.includes('authoriz') || cleanLabel.includes('eligible') || cleanLabel.includes('legal') || cleanLabel.includes('right to work')) {
+    const ans = profile.legallyAuthorized || 'Yes';
+    return matchOptionValue(ans, options) || ans;
+  }
+
+  // 3. Salary & Compensation
+  if (cleanLabel.includes('salary') || cleanLabel.includes('compensation') || cleanLabel.includes('desired pay') || cleanLabel.includes('expectation')) {
+    if (type === 'number') {
+      return profile.desiredSalary || 160000;
+    }
+    const val = profile.desiredSalary ? `$${Math.round(profile.desiredSalary / 1000)}k` : '$160,000';
+    return matchOptionValue(val, options) || val;
+  }
+
+  // 4. Availability & Notice Period
+  if (cleanLabel.includes('notice') || cleanLabel.includes('start date') || cleanLabel.includes('available') || cleanLabel.includes('how soon')) {
+    const ans = profile.noticePeriod || '2 Weeks';
+    return matchOptionValue(ans, options) || ans;
+  }
+
+  // 5. Source / Referral Attribution
+  if (cleanLabel.includes('hear about') || cleanLabel.includes('source') || cleanLabel.includes('referral') || cleanLabel.includes('how did you')) {
+    const ans = profile.referralSource || 'Company Career Page';
+    return matchOptionValue(ans, options) || ans;
+  }
+
+  // 6. EEOC Demographics (Gender, Race, Veteran, Disability)
+  if (cleanLabel.includes('gender') || cleanLabel.includes('sex')) {
+    return matchOptionValue(profile.eeocGender || 'Decline', options) || 'Decline to Self-Identify';
+  }
+  if (cleanLabel.includes('race') || cleanLabel.includes('ethnicity')) {
+    return matchOptionValue(profile.eeocRace || 'Decline', options) || 'Decline to Self-Identify';
+  }
+  if (cleanLabel.includes('veteran')) {
+    return matchOptionValue(profile.eeocVeteran || 'not a protected', options) || 'I am not a protected veteran';
+  }
+  if (cleanLabel.includes('disability')) {
+    return matchOptionValue(profile.eeocDisability || 'No', options) || 'No, I do not have a disability';
+  }
+
+  // 7. General open-ended or summary prompts
+  if (cleanLabel.includes('why') || cleanLabel.includes('tell us') || cleanLabel.includes('cover') || cleanLabel.includes('interest')) {
+    return profile.coverNote || '';
+  }
+
+  // Fallback for options
+  if (options && options.length > 0) {
+    return options[0];
+  }
+
+  return '';
+}
+
+function matchOptionValue(targetVal, options = []) {
+  if (!options || !Array.isArray(options) || options.length === 0) return null;
+  const targetLower = String(targetVal).toLowerCase();
+
+  for (const opt of options) {
+    const optLabel = typeof opt === 'object' ? (opt.label || opt.name || opt.value || '') : String(opt);
+    const optLower = optLabel.toLowerCase();
+
+    if (optLower === targetLower) return opt;
+    if (optLower.includes(targetLower) || targetLower.includes(optLower)) return opt;
+    if (targetLower.startsWith('no') && (optLower === 'no' || optLower.includes('no') || optLower === 'false')) return opt;
+    if (targetLower.startsWith('yes') && (optLower === 'yes' || optLower.includes('yes') || optLower === 'true')) return opt;
+    if (targetLower.includes('decline') && optLower.includes('decline')) return opt;
+  }
+  return null;
+}
+
+// --------------------------------------------------------------------------
+// Schema Introspection & Resolution
+// --------------------------------------------------------------------------
+
 // Extract company slug & job id from Greenhouse URLs or IDs
 function parseGreenhouseInfo(job) {
   const url = job.url || '';
   const idStr = job.id || '';
 
-  // gh-company-12345
   if (idStr.startsWith('gh-')) {
     const parts = idStr.split('-');
     if (parts.length >= 3) {
@@ -84,17 +183,11 @@ function parseGreenhouseInfo(job) {
     }
   }
 
-  // https://boards.greenhouse.io/{company}/jobs/{jobId}
   const match = url.match(/greenhouse\.io\/(?:v1\/boards\/)?([^/]+)\/jobs\/(\d+)/i);
-  if (match) {
-    return { company: match[1], jobId: match[2] };
-  }
+  if (match) return { company: match[1], jobId: match[2] };
 
-  // https://job-boards.greenhouse.io/{company}/jobs/{jobId}
   const match2 = url.match(/job-boards\.greenhouse\.io\/([^/]+)\/jobs\/(\d+)/i);
-  if (match2) {
-    return { company: match2[1], jobId: match2[2] };
-  }
+  if (match2) return { company: match2[1], jobId: match2[2] };
 
   return null;
 }
@@ -111,21 +204,60 @@ function parseLeverInfo(job) {
     }
   }
 
-  // https://jobs.lever.co/{company}/{jobId}
   const match = url.match(/lever\.co\/([^/]+)\/([a-f0-9-]+)/i);
-  if (match) {
-    return { company: match[1], jobId: match[2] };
-  }
+  if (match) return { company: match[1], jobId: match[2] };
 
   return null;
 }
 
-// Submit via Greenhouse Board API
+// Fetch Greenhouse Schema Pre-Flight
+async function fetchGreenhouseSchema(company, jobId) {
+  try {
+    const url = `https://boards-api.greenhouse.io/v1/boards/${company}/jobs/${jobId}?questions=true`;
+    const res = await axios.get(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+      timeout: 6000
+    });
+    return res.data ? (res.data.questions || []) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// Fetch Lever Schema Pre-Flight
+async function fetchLeverSchema(company, jobId) {
+  try {
+    const url = `https://api.lever.co/v0/postings/${company}/${jobId}`;
+    const res = await axios.get(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+      timeout: 6000
+    });
+    return res.data ? (res.data.customQuestions || []) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// Submit via Greenhouse Board API with Field Resolution
 async function submitGreenhouseApplication(company, jobId, profile, resume) {
   try {
-    const url = `https://boards-api.greenhouse.io/v1/boards/${company}/jobs/${jobId}`;
-    
-    // Split full name into first and last
+    // 1. Pre-flight schema introspection
+    const questions = await fetchGreenhouseSchema(company, jobId);
+    const resolvedAnswers = [];
+
+    for (const q of questions) {
+      const label = q.label || q.name || '';
+      const type = q.type || 'text';
+      const options = (q.values || []).map(v => (typeof v === 'object' ? v.label || v.value : v));
+      const answerVal = resolveFieldAnswer(label, type, options, profile);
+
+      resolvedAnswers.push({
+        question_id: q.id || q.name,
+        question_label: label,
+        value: answerVal
+      });
+    }
+
     const nameParts = (profile.fullName || 'Candidate').trim().split(/\s+/);
     const firstName = nameParts[0] || 'Candidate';
     const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Applicant';
@@ -140,7 +272,8 @@ async function submitGreenhouseApplication(company, jobId, profile, resume) {
         { type: 'LinkedIn', value: profile.linkedInUrl },
         { type: 'Portfolio', value: profile.portfolioUrl },
         { type: 'GitHub', value: profile.githubUrl }
-      ].filter(u => Boolean(u.value))
+      ].filter(u => Boolean(u.value)),
+      answers: resolvedAnswers.map(a => ({ question_id: a.question_id, value: a.value }))
     };
 
     if (resume && resume.buffer) {
@@ -148,7 +281,8 @@ async function submitGreenhouseApplication(company, jobId, profile, resume) {
       payload.resume_content_filename = resume.item.fileName || 'resume.pdf';
     }
 
-    const res = await axios.post(url, payload, {
+    const submitUrl = `https://boards-api.greenhouse.io/v1/boards/${company}/jobs/${jobId}`;
+    const res = await axios.post(submitUrl, payload, {
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
@@ -159,14 +293,16 @@ async function submitGreenhouseApplication(company, jobId, profile, resume) {
     if (res.status >= 200 && res.status < 300) {
       return {
         status: 'submitted_api',
-        message: 'Direct submission successfully received by Greenhouse API (HTTP ' + res.status + ')',
+        message: `Direct API submission successful (${resolvedAnswers.length} fields auto-resolved). HTTP ${res.status}`,
+        resolvedAnswers,
         details: res.data || {}
       };
     }
 
     return {
       status: 'assisted_ready',
-      message: 'Greenhouse returned HTTP ' + res.status + '; queued for assisted 1-click launch.',
+      message: `Greenhouse returned HTTP ${res.status}; pre-packaged with ${resolvedAnswers.length} auto-resolved fields.`,
+      resolvedAnswers,
       details: res.data
     };
   } catch (err) {
@@ -174,16 +310,26 @@ async function submitGreenhouseApplication(company, jobId, profile, resume) {
     const errData = err.response ? err.response.data : err.message;
     return {
       status: 'assisted_ready',
-      message: `Greenhouse form requires custom questions or verification (${status || 'Network'}); pre-packaged for assisted 1-click dispatch.`,
+      message: `Greenhouse API pre-packaged for 1-click dispatch (Status: ${status || 'Network'}).`,
       details: errData
     };
   }
 }
 
-// Submit via Lever Postings API
+// Submit via Lever Postings API with Field Resolution
 async function submitLeverApplication(company, jobId, profile, resume) {
   try {
-    const url = `https://api.lever.co/v0/postings/${company}/${jobId}`;
+    const customQuestions = await fetchLeverSchema(company, jobId);
+    const resolvedCustom = {};
+
+    for (const q of customQuestions) {
+      const label = q.text || q.label || '';
+      const type = q.type || 'text';
+      const options = q.options || [];
+      const answerVal = resolveFieldAnswer(label, type, options, profile);
+      resolvedCustom[q.id || label] = answerVal;
+    }
+
     const payload = {
       name: profile.fullName,
       email: profile.email,
@@ -193,10 +339,12 @@ async function submitLeverApplication(company, jobId, profile, resume) {
         LinkedIn: profile.linkedInUrl,
         Portfolio: profile.portfolioUrl,
         GitHub: profile.githubUrl
-      }
+      },
+      customQuestions: resolvedCustom
     };
 
-    const res = await axios.post(url, payload, {
+    const submitUrl = `https://api.lever.co/v0/postings/${company}/${jobId}`;
+    const res = await axios.post(submitUrl, payload, {
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
@@ -207,14 +355,14 @@ async function submitLeverApplication(company, jobId, profile, resume) {
     if (res.status >= 200 && res.status < 300) {
       return {
         status: 'submitted_api',
-        message: 'Direct submission successfully received by Lever API (HTTP ' + res.status + ')',
+        message: `Direct API submission successful. HTTP ${res.status}`,
         details: res.data || {}
       };
     }
 
     return {
       status: 'assisted_ready',
-      message: 'Lever returned HTTP ' + res.status + '; queued for assisted 1-click launch.',
+      message: `Lever returned HTTP ${res.status}; pre-packaged with auto-resolved fields.`,
       details: res.data
     };
   } catch (err) {
@@ -222,7 +370,7 @@ async function submitLeverApplication(company, jobId, profile, resume) {
     const errData = err.response ? err.response.data : err.message;
     return {
       status: 'assisted_ready',
-      message: `Lever posting requires custom screening responses (${status || 'Network'}); pre-packaged for assisted 1-click dispatch.`,
+      message: `Lever posting pre-packaged for 1-click dispatch (Status: ${status || 'Network'}).`,
       details: errData
     };
   }
@@ -256,7 +404,8 @@ async function processJobSubmission(job, profile, resumeId) {
       ...baseRecord,
       status: ghRes.status,
       message: ghRes.message,
-      apiDetails: ghRes.details
+      apiDetails: ghRes.details,
+      resolvedAnswers: ghRes.resolvedAnswers || []
     };
   }
 
@@ -276,7 +425,7 @@ async function processJobSubmission(job, profile, resumeId) {
   return {
     ...baseRecord,
     status: 'assisted_ready',
-    message: `Pre-packaged with ${resumeLabel} & profile clipboard helper; ready for instant 1-click review and submission.`,
+    message: `Pre-packaged with ${resumeLabel} & auto-mapped profile fields; ready for instant 1-click dispatch.`,
     apiDetails: { mode: 'assisted_dispatch' }
   };
 }
@@ -308,7 +457,6 @@ async function processBatchSubmissions(jobsList = [], customProfile = null) {
     }
   }
 
-  // Keep latest 500 receipts
   const trimmed = currentLogs.slice(0, 500);
   saveSubmissionsLog(trimmed);
 
@@ -325,5 +473,8 @@ module.exports = {
   readSubmissionsLog,
   saveSubmissionsLog,
   processBatchSubmissions,
-  processJobSubmission
+  processJobSubmission,
+  resolveFieldAnswer,
+  matchOptionValue,
+  DEFAULT_PROFILE
 };

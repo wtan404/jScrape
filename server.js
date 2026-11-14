@@ -18,6 +18,20 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(__dirname));
 
+// Route Alias: transparently forward /dashboard/api/* to /api/*
+app.use((req, res, next) => {
+  if (req.url.startsWith('/dashboard/api/')) {
+    req.url = req.url.replace('/dashboard/api/', '/api/');
+  }
+  next();
+});
+
+// Dedicated /dashboard path handlers
+app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
+app.get(['/dashboard', '/dashboard/'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard', 'index.html'));
+});
+
 const DATA_FILE = path.join(__dirname, 'jobs_data.json');
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 const APPLICATIONS_FILE = path.join(__dirname, 'job_applications.json');

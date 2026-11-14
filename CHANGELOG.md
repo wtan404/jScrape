@@ -4,6 +4,28 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.4.0] - 2026-11-14
+
+### Added
+- **Dynamic Field Resolution Engine (`submission_engine.js`):**
+  - **Extended Candidate Profile Knowledge Base**: Extended `applicant_profile.json` with canonical defaults for legally authorized work status (`legallyAuthorized`), visa sponsorship (`requiresSponsorship`), desired compensation (`desiredSalary`), availability/notice period (`noticePeriod`), referral source (`referralSource`), and EEOC demographic defaults.
+  - **Fuzzy Question Mapping Heuristics**: Added `resolveFieldAnswer()` matching divergent form fields across greenhouse, lever, and custom schemas using keyword and semantic rules.
+  - **Pre-Flight Schema Introspection**: Engine fetches question schemas via Greenhouse and Lever public endpoints before dispatching payloads, auto-mapping matching values into structured POST payloads.
+- **Dedicated `/dashboard` Directory & Path Architecture (`dashboard/`):**
+  - Moved PM Operations Command Center to dedicated directory: `dashboard/index.html` and `dashboard/dashboard.js`.
+  - Added native Express route handlers for `/dashboard` and `/dashboard/`.
+  - Configured transparent middleware forwarding `/dashboard/api/*` requests to `/api/*` for zero-configuration client-server communication.
+  - Added root `dashboard.html` fallback redirect to `dashboard/`.
+  - Updated `.cpanel.yml` to automatically create and deploy `$DEPLOYPATH/dashboard/`.
+- **Dashboard Field Resolution Tab (`dashboard/index.html`):**
+  - Added dual-tab profile editor with "Contact Info" and "Field Resolution (Auto-Fill)" enabling the PM to customize auto-resolved answers on the fly.
+
+### Changed
+- **Public Navigation Link (`index.html`):** Updated PM Dashboard button to navigate directly to `dashboard/`.
+- **Version Bump (`package.json`):** Bumped to `v1.4.0`.
+
+---
+
 ## [1.3.0] - 2026-11-14
 
 ### Added

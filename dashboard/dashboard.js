@@ -36,7 +36,6 @@ async function initDashboard(forceRefresh = false) {
       submissionLogs = summary.recentLogs || [];
       updateKPIs(summary.jobsCount24h, summary.resumesCount, summary.submissionsCount, summary.totalVerified);
     } else {
-      // Fallback: Read profile & resumes from local storage / API
       await loadProfileFallback();
       await loadResumesFallback();
       await loadLogsFallback();
@@ -70,6 +69,29 @@ function updateKPIs(count24h, resumesCount, subsCount, totalVerified) {
 }
 
 // --------------------------------------------------------------------------
+// Profile Tabs & Field Resolution Toggles
+// --------------------------------------------------------------------------
+
+function switchProfileTab(tabName) {
+  const btnCore = document.getElementById('profTabBtnCore');
+  const btnRes = document.getElementById('profTabBtnResolution');
+  const tabCore = document.getElementById('profTabCore');
+  const tabRes = document.getElementById('profTabResolution');
+
+  if (tabName === 'core') {
+    if (btnCore) btnCore.classList.add('active');
+    if (btnRes) btnRes.classList.remove('active');
+    if (tabCore) tabCore.style.display = 'flex';
+    if (tabRes) tabRes.style.display = 'none';
+  } else {
+    if (btnCore) btnCore.classList.remove('active');
+    if (btnRes) btnRes.classList.add('active');
+    if (tabCore) tabCore.style.display = 'none';
+    if (tabRes) tabRes.style.display = 'flex';
+  }
+}
+
+// --------------------------------------------------------------------------
 // 24-Hour Hotlist Triage Queue
 // --------------------------------------------------------------------------
 
@@ -78,7 +100,6 @@ async function fetch24hQueue() {
   const now = Date.now();
 
   try {
-    // Try /api/jobs/curated-24h
     const res = await fetch(`./api/jobs/curated-24h?t=${Date.now()}`);
     let data = null;
     try {
@@ -88,8 +109,7 @@ async function fetch24hQueue() {
     if (data && Array.isArray(data.jobs)) {
       allCuratedJobs = data.jobs;
     } else {
-      // Static fallback: Read jobs_data.json
-      const statRes = await fetch(`./jobs_data.json?t=${Date.now()}`);
+      const statRes = await fetch(`../jobs_data.json?t=${Date.now()}`);
       if (statRes.ok) {
         const fullData = await statRes.json();
         const rawJobs = fullData.jobs || [];
@@ -337,7 +357,7 @@ async function submitBatchPayload(itemsList) {
   const profile = getProfileFormData();
 
   try {
-    const res = await fetch('./api/submissions/queue', {
+    const res = await fetch(`./api/submissions/queue`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -359,7 +379,6 @@ async function submitBatchPayload(itemsList) {
 
       alert(`✅ Success: Dispatched ${result.processedCount} application(s). Review receipts below!`);
     } else {
-      // Client-side fallback logging
       const receipts = itemsList.map(item => ({
         receiptId: 'sub_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
         title: item.job.title,
@@ -367,7 +386,7 @@ async function submitBatchPayload(itemsList) {
         url: item.job.url,
         resumeLabel: getResumeLabel(item.resumeId),
         status: 'assisted_ready',
-        message: 'Pre-packaged application with resume and profile helper ready for dispatch.',
+        message: 'Pre-packaged application with auto-resolved fields and resume ready for dispatch.',
         submittedAt: new Date().toISOString()
       }));
 
@@ -451,6 +470,26 @@ function populateProfileForm() {
   document.getElementById('profGitHub').value = applicantProfile.githubUrl || '';
   document.getElementById('profPortfolio').value = applicantProfile.portfolioUrl || '';
   document.getElementById('profCoverNote').value = applicantProfile.coverNote || '';
+
+  // Extended Field Resolution Knowledge Base
+  if (document.getElementById('profWorkAuth')) {
+    document.getElementById('profWorkAuth').value = applicantProfile.legallyAuthorized || 'Yes';
+  }
+  if (document.getElementById('profSponsorship')) {
+    document.getElementById('profSponsorship').value = applicantProfile.requiresSponsorship || 'No';
+  }
+  if (document.getElementById('profDesiredSalary')) {
+    document.getElementById('profDesiredSalary').value = applicantProfile.desiredSalary || 160000;
+  }
+  if (document.getElementById('profNoticePeriod')) {
+    document.getElementById('profNoticePeriod').value = applicantProfile.noticePeriod || '2 Weeks';
+  }
+  if (document.getElementById('profReferralSource')) {
+    document.getElementById('profReferralSource').value = applicantProfile.referralSource || 'Company Career Page';
+  }
+  if (document.getElementById('profEEOC')) {
+    document.getElementById('profEEOC').value = applicantProfile.eeocGender ? 'Standard' : 'Decline';
+  }
 }
 
 function getProfileFormData() {
@@ -462,7 +501,18 @@ function getProfileFormData() {
     linkedInUrl: document.getElementById('profLinkedIn')?.value.trim() || '',
     githubUrl: document.getElementById('profGitHub')?.value.trim() || '',
     portfolioUrl: document.getElementById('profPortfolio')?.value.trim() || '',
-    coverNote: document.getElementById('profCoverNote')?.value.trim() || ''
+    coverNote: document.getElementById('profCoverNote')?.value.trim() || '',
+
+    // Extended Resolution Fields
+    legallyAuthorized: document.getElementById('profWorkAuth')?.value || 'Yes',
+    requiresSponsorship: document.getElementById('profSponsorship')?.value || 'No',
+    desiredSalary: parseInt(document.getElementById('profDesiredSalary')?.value, 10) || 160000,
+    noticePeriod: document.getElementById('profNoticePeriod')?.value || '2 Weeks',
+    referralSource: document.getElementById('profReferralSource')?.value || 'Company Career Page',
+    eeocGender: document.getElementById('profEEOC')?.value === 'Decline' ? 'Decline to Self-Identify' : 'Male',
+    eeocRace: 'Decline to Self-Identify',
+    eeocVeteran: 'I am not a protected veteran',
+    eeocDisability: 'No, I do not have a disability'
   };
 }
 
@@ -472,7 +522,7 @@ async function saveProfileData() {
   if (btn) btn.textContent = 'Saving...';
 
   try {
-    const res = await fetch('./api/profile', {
+    const res = await fetch(`./api/profile`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(profile)
@@ -532,7 +582,7 @@ async function handleResumeUpload(e) {
   }
 
   try {
-    const res = await fetch('./api/resumes/upload', {
+    const res = await fetch(`./api/resumes/upload`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -547,7 +597,6 @@ async function handleResumeUpload(e) {
       const data = await res.json();
       savedResumes.push(data.resume);
     } else {
-      // Local fallback
       const newR = {
         id: 'res_' + Date.now(),
         label,
@@ -589,7 +638,6 @@ function renderResumesList() {
   const bulkSelect = document.getElementById('bulkResumeSelect');
   if (!container) return;
 
-  // Update bulk selector options
   if (bulkSelect) {
     bulkSelect.innerHTML = `
       <option value="">Apply Default Resume to All Selected</option>
@@ -688,7 +736,7 @@ async function triggerHourlyRescan() {
   }
 
   try {
-    await fetch('./api/scrape-now', { method: 'POST' });
+    await fetch(`./api/scrape-now`, { method: 'POST' });
     await fetch24hQueue();
     renderTriageTable();
     alert('✅ Rescan complete! Fresh postings loaded.');
