@@ -53,6 +53,15 @@
       </div>
 
       <div class="header-actions">
+        <button class="btn btn-review-hub btn-sm" onclick="openReviewHubModal('hotlist')" id="btnOpenReviewHub" title="Open 24-Hour Review & Application Hub">
+          <i data-lucide="flame"></i>
+          <span>24h Review Hub</span>
+          <span class="hub-badge-count" id="header24hBadge">0</span>
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="openReviewHubModal('resumes')" id="btnOpenResumeVault" title="Manage Resume Variations">
+          <i data-lucide="file-text"></i>
+          <span>Resume Vault</span>
+        </button>
         <button class="btn btn-secondary btn-sm theme-toggle-btn" onclick="toggleTheme()" id="btnThemeToggle" aria-label="Toggle theme (Dark / Light)" title="Toggle Dark/Light Mode">
           <i data-lucide="sun" id="themeIconSun"></i>
           <i data-lucide="moon" id="themeIconMoon" style="display: none;"></i>
@@ -203,10 +212,10 @@
         </select>
 
         <select id="sourceSelect" class="select-control" onchange="filterJobs()">
-          <option value="all">All Sources (ATS + Google + Feeds)</option>
+          <option value="all">All Sources (ATS + Google + Tech Feeds)</option>
           <option value="new">Newly Identified Only</option>
-          <option value="ats">ATS Boards (Greenhouse/Lever)</option>
-          <option value="feeds">RemoteOK & WWR</option>
+          <option value="ats">ATS Boards (Greenhouse / Lever / Ashby / SR)</option>
+          <option value="feeds">Tech Feeds (RemoteOK, WWR, Remotive, Jobicy)</option>
         </select>
       </div>
     </section>
@@ -222,6 +231,139 @@
     </section>
   </main>
 
+  <!-- 24-Hour Review Hub & Resume Vault Modal -->
+  <div class="review-hub-overlay" id="reviewHubOverlay" onclick="handleModalOverlayClick(event)" style="display: none;">
+    <div class="review-hub-modal" role="dialog" aria-modal="true" aria-labelledby="modalHubTitle">
+      <!-- Modal Header -->
+      <div class="modal-hub-header">
+        <div class="modal-hub-title-wrap">
+          <div class="hub-pill-tag">
+            <i data-lucide="zap"></i>
+            <span>EXPEDITED REVIEW PIPELINE</span>
+          </div>
+          <h2 id="modalHubTitle">24-Hour Application Launchpad & Resume Vault</h2>
+          <p class="modal-hub-subtitle">Review fresh roles posted within the last 24 hours, select tailored resume variations, and launch direct applications with one click.</p>
+        </div>
+        <button class="btn-modal-close" onclick="closeReviewHubModal()" aria-label="Close dialog">&times;</button>
+      </div>
+
+      <!-- Modal Tabs Navigation -->
+      <div class="hub-nav-tabs">
+        <button class="hub-tab-btn active" id="tabBtnHotlist" onclick="switchHubTab('hotlist')">
+          <i data-lucide="flame"></i>
+          <span>24h Hotlist</span>
+          <span class="tab-count-badge" id="tabHotlistCount">0</span>
+        </button>
+        <button class="hub-tab-btn" id="tabBtnResumes" onclick="switchHubTab('resumes')">
+          <i data-lucide="file-text"></i>
+          <span>Resume Variations</span>
+          <span class="tab-count-badge" id="tabResumesCount">0</span>
+        </button>
+        <button class="hub-tab-btn" id="tabBtnTracking" onclick="switchHubTab('tracking')">
+          <i data-lucide="check-circle-2"></i>
+          <span>Application Tracker</span>
+          <span class="tab-count-badge" id="tabTrackingCount">0</span>
+        </button>
+      </div>
+
+      <!-- Modal Tab Panels -->
+      <div class="modal-hub-body">
+
+        <!-- TAB 1: 24h Hotlist Feed -->
+        <div class="hub-tab-panel active" id="panelHotlist">
+          <div class="hotlist-toolbar">
+            <div class="hotlist-summary-text" id="hotlistSummaryText">
+              Loading fresh postings under 24 hours old...
+            </div>
+            <div class="hotlist-filter-actions">
+              <button class="btn btn-secondary btn-xs" onclick="fetchCurated24hJobs()">
+                <i data-lucide="refresh-cw"></i>
+                <span>Refresh 24h Feed</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="hotlist-cards-container" id="hotlistCardsContainer">
+            <div class="loading-state">
+              <i data-lucide="loader-2" class="spin"></i>
+              <p>Scanning 24-hour postings...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: Resume Variations Manager -->
+        <div class="hub-tab-panel" id="panelResumes" style="display: none;">
+          <div class="resume-manager-grid">
+            <!-- Left Column: Upload New Variation -->
+            <div class="resume-upload-card">
+              <div class="card-section-title">
+                <i data-lucide="upload-cloud"></i>
+                <h3>Add Resume Variation</h3>
+              </div>
+              <p class="section-desc">Upload tailored PDF or Word resumes (e.g. DevOps Focus, WebOps Focus, Director/IT Management Focus).</p>
+
+              <form id="resumeUploadForm" onsubmit="handleResumeUpload(event)">
+                <div class="form-group mb-3">
+                  <label for="resumeLabelInput">Variation Title / Label *</label>
+                  <input type="text" id="resumeLabelInput" placeholder="e.g. Senior DevOps & Cloud Lead" required>
+                </div>
+
+                <div class="form-group mb-3">
+                  <label for="resumeSpecInput">Specialization Tags</label>
+                  <input type="text" id="resumeSpecInput" placeholder="e.g. AWS, Kubernetes, Terraform, CI/CD">
+                </div>
+
+                <div class="form-group mb-3">
+                  <label for="resumeFileInput">Resume File (.pdf, .doc, .docx) *</label>
+                  <input type="file" id="resumeFileInput" accept=".pdf,.doc,.docx" required onchange="handleResumeFileSelected(event)">
+                  <div class="file-chosen-feedback" id="fileChosenFeedback"></div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100" id="btnUploadResume">
+                  <i data-lucide="plus-circle"></i>
+                  <span>Save Resume Variation</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- Right Column: Stored Variations List -->
+            <div class="resume-vault-list-col">
+              <div class="card-section-title">
+                <i data-lucide="folder-check"></i>
+                <h3>Saved Variations Vault</h3>
+              </div>
+              <div class="resumes-list-grid" id="resumesVaultList">
+                <div class="loading-state">
+                  <i data-lucide="loader-2" class="spin"></i>
+                  <p>Loading resume variations...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: Application Status Tracking -->
+        <div class="hub-tab-panel" id="panelTracking" style="display: none;">
+          <div class="tracking-toolbar">
+            <div class="tracking-stats" id="trackingStatsOverview">
+              <!-- Rendered tracking totals -->
+            </div>
+            <div class="tracking-filter-btn-group">
+              <button class="btn btn-secondary btn-xs active" onclick="filterTrackingList('all')">All</button>
+              <button class="btn btn-secondary btn-xs" onclick="filterTrackingList('applied')">Applied</button>
+              <button class="btn btn-secondary btn-xs" onclick="filterTrackingList('saved')">Saved</button>
+            </div>
+          </div>
+
+          <div class="tracking-items-list" id="trackingItemsList">
+            <!-- Rendered tracked applications -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <footer class="app-footer">
     <div class="container footer-wrap">
       <p>&copy; <span id="year">2026</span> Scrapedeez Hourly Job Engine. Auto-Pruning Link Verification & IT Management Tracker.</p>
@@ -229,6 +371,6 @@
   </footer>
 
   <script src="zip3_centroids.js?v=1.0"></script>
-  <script src="main.js?v=9.3"></script>
+  <script src="main.js?v=10.0"></script>
 </body>
 </html>

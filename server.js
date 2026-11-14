@@ -7,11 +7,43 @@ const { runScraperJob } = require('./scraper');
 const app = express();
 const PORT = process.env.PORT || 8090;
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(__dirname));
 
 const DATA_FILE = path.join(__dirname, 'jobs_data.json');
 const CONFIG_FILE = path.join(__dirname, 'config.json');
+const APPLICATIONS_FILE = path.join(__dirname, 'job_applications.json');
+const RESUMES_DIR = path.join(__dirname, 'uploads', 'resumes');
+const RESUMES_META = path.join(RESUMES_DIR, 'metadata.json');
+
+// Ensure resumes directory exists
+if (!fs.existsSync(RESUMES_DIR)) {
+  fs.mkdirSync(RESUMES_DIR, { recursive: true });
+}
+
+// Helpers for Resumes & Applications
+function readResumesMeta() {
+  if (fs.existsSync(RESUMES_META)) {
+    try { return JSON.parse(fs.readFileSync(RESUMES_META, 'utf8')); } catch (e) { return []; }
+  }
+  return [];
+}
+
+function saveResumesMeta(list) {
+  fs.writeFileSync(RESUMES_META, JSON.stringify(list, null, 2));
+}
+
+function readApplications() {
+  if (fs.existsSync(APPLICATIONS_FILE)) {
+    try { return JSON.parse(fs.readFileSync(APPLICATIONS_FILE, 'utf8')); } catch (e) { return {}; }
+  }
+  return {};
+}
+
+function saveApplications(apps) {
+  fs.writeFileSync(APPLICATIONS_FILE, JSON.stringify(apps, null, 2));
+}
 
 // Helper to read config
 function readConfig() {
@@ -40,6 +72,13 @@ function readConfig() {
       'kinsta', 'neon', 'metabase', 'activecampaign', 'brevo', 'mindtickle',
       'walkme', 'zilliz', 'zerotier', 'twingate', 'omnisend', 'netomi', 'brilliant',
       'clari', 'highspot', 'kraken', 'mistral', 'veeva'
+    ],
+    ashbyCompanies: [
+      'linear', 'ramp', 'openai', 'perplexity', 'cursor', 'notion', 'sentry',
+      'temporal', 'replit', 'modal', 'warp', 'supabase', 'pinecone'
+    ],
+    smartRecruitersCompanies: [
+      'smartrecruiters'
     ],
     serpApiKey: ''
   };
@@ -98,6 +137,170 @@ app.get('/api/jobs', (req, res) => {
   }
 });
 
+// GET /api/jobs/curated-24h (Curated 24-Hour Hotlist)
+app.get('/api/jobs/curated-24h', (req, res) => {
+  try {
+    if (!fs.existsSync(DATA_FILE)) {
+      return res.json({ count: 0, lastScraped: null, jobs: [] });
+    }
+
+    const raw = fs.readFileSync(DATA_FILE, 'utf8');
+    const data = JSON.parse(raw);
+    const jobs = data.jobs || [];
+    const applications = readApplications();
+    const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+
+    const curated = jobs.filter(job => {
+      if (!job || !job.date) return false;
+      const jobTime = new Date(job.date).getTime();
+      if (isNaN(jobTime)) return false;
+      return (now - jobTime) <= TWENTY_FOUR_HOURS_MS;
+    }).map(job => {
+      const key = job.id || job.url;
+      const appRecord = applications[key] || { status: 'unreviewed', resumeId: null, updatedAt: null, notes: '' };
+      return {
+        ...job,
+        applicationRecord: appRecord
+      };
+    });
+
+    curated.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    res.json({
+      count: curated.length,
+      lastScraped: data.lastScraped || null,
+      jobs: curated
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch curated 24-hour postings.', message: err.message });
+  }
+});
+
+// GET /api/jobs/applications (Application Tracking Status Map)
+app.get('/api/jobs/applications', (req, res) => {
+  try {
+    const apps = readApplications();
+    res.json(apps);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch applications tracking data.' });
+  }
+});
+
+// POST /api/jobs/application-status (Update status: applied, saved, skipped)
+app.post('/api/jobs/application-status', (req, res) => {
+  try {
+    const { jobId, status, resumeId, notes } = req.body;
+    if (!jobId) {
+      return res.status(400).json({ error: 'Missing jobId parameter.' });
+    }
+
+    const apps = readApplications();
+    apps[jobId] = {
+      status: status || 'unreviewed',
+      resumeId: resumeId || null,
+      notes: notes || '',
+      updatedAt: new Date().toISOString()
+    };
+    saveApplications(apps);
+
+    res.json({ status: 'success', application: apps[jobId] });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save application status.', message: err.message });
+  }
+});
+
+// GET /api/resumes (List Resume Variations)
+app.get('/api/resumes', (req, res) => {
+  try {
+    const list = readResumesMeta();
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to read resumes metadata.' });
+  }
+});
+
+// POST /api/resumes/upload (Upload Resume Variation via Base64 JSON)
+app.post('/api/resumes/upload', (req, res) => {
+  try {
+    const { label, specialization, fileName, fileBase64 } = req.body;
+    if (!fileName || !fileBase64) {
+      return res.status(400).json({ error: 'Missing fileName or fileBase64 payload.' });
+    }
+
+    const cleanBase64 = fileBase64.replace(/^data:[^;]+;base64,/, '');
+    const buffer = Buffer.from(cleanBase64, 'base64');
+    const safeName = path.basename(fileName).replace(/[^a-zA-Z0-9._-]/g, '_');
+    const id = 'res_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+    const storedFile = `${id}_${safeName}`;
+    const filePath = path.join(RESUMES_DIR, storedFile);
+
+    fs.writeFileSync(filePath, buffer);
+
+    const resumes = readResumesMeta();
+    const newResume = {
+      id,
+      label: label || safeName,
+      specialization: specialization || 'General Tech',
+      fileName: safeName,
+      storedFile,
+      uploadDate: new Date().toISOString(),
+      sizeBytes: buffer.length
+    };
+
+    resumes.push(newResume);
+    saveResumesMeta(resumes);
+
+    res.json({ status: 'success', resume: newResume });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to upload resume variation.', message: err.message });
+  }
+});
+
+// DELETE /api/resumes/:id (Remove Resume Variation)
+app.delete('/api/resumes/:id', (req, res) => {
+  try {
+    const id = req.params.id;
+    let resumes = readResumesMeta();
+    const target = resumes.find(r => r.id === id);
+
+    if (target) {
+      const filePath = path.join(RESUMES_DIR, target.storedFile);
+      if (fs.existsSync(filePath)) {
+        try { fs.unlinkSync(filePath); } catch (e) {}
+      }
+      resumes = resumes.filter(r => r.id !== id);
+      saveResumesMeta(resumes);
+    }
+
+    res.json({ status: 'success' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete resume variation.', message: err.message });
+  }
+});
+
+// GET /api/resumes/:id/download (Download Specific Resume Variation)
+app.get('/api/resumes/:id/download', (req, res) => {
+  try {
+    const id = req.params.id;
+    const resumes = readResumesMeta();
+    const target = resumes.find(r => r.id === id);
+
+    if (!target) {
+      return res.status(404).send('Resume not found.');
+    }
+
+    const filePath = path.join(RESUMES_DIR, target.storedFile);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send('Resume file missing on disk.');
+    }
+
+    res.download(filePath, target.fileName);
+  } catch (err) {
+    res.status(500).send('Error downloading resume.');
+  }
+});
+
 // GET /health & /api/health (Service Telemetry & Uptime Probes)
 app.get(['/health', '/api/health'], (req, res) => {
   try {
@@ -147,7 +350,9 @@ app.post('/api/scrape-now', async (req, res) => {
       config.leverCompanies || [],
       config.serpApiKey || process.env.SERPAPI_KEY,
       config.targetTitles || [],
-      config.keywords || []
+      config.keywords || [],
+      config.ashbyCompanies || [],
+      config.smartRecruitersCompanies || []
     );
 
     res.json({
@@ -172,7 +377,9 @@ cron.schedule('0 * * * *', async () => {
       config.leverCompanies || [],
       config.serpApiKey || process.env.SERPAPI_KEY,
       config.targetTitles || [],
-      config.keywords || []
+      config.keywords || [],
+      config.ashbyCompanies || [],
+      config.smartRecruitersCompanies || []
     );
     console.log('[Hourly Cron Scheduler] Hourly scan completed successfully.');
   } catch (err) {
