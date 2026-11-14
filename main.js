@@ -1421,24 +1421,30 @@ function formatTimeAgo(isoStr) {
 // 24-Hour Curated Hotlist
 // --------------------------------------------------------------------------
 
+function calculateCuratedFromAllJobs() {
+  const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  curated24hJobs = allJobsData.filter(j => {
+    if (!j || !j.date) return false;
+    const t = new Date(j.date).getTime();
+    return !isNaN(t) && (now - t) <= TWENTY_FOUR_HOURS_MS;
+  });
+}
+
 async function fetchCurated24hJobs() {
   try {
     const res = await fetch(`./api/jobs/curated-24h?t=${Date.now()}`);
-    if (res.ok) {
-      const data = await res.json();
-      curated24hJobs = data.jobs || [];
+    const text = await res.text();
+    let data = null;
+    try { data = JSON.parse(text); } catch (e) {}
+
+    if (data && Array.isArray(data.jobs)) {
+      curated24hJobs = data.jobs;
     } else {
-      // Client-side fallback if server endpoint offline
-      const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
-      const now = Date.now();
-      curated24hJobs = allJobsData.filter(j => {
-        if (!j || !j.date) return false;
-        const t = new Date(j.date).getTime();
-        return !isNaN(t) && (now - t) <= TWENTY_FOUR_HOURS_MS;
-      });
+      calculateCuratedFromAllJobs();
     }
   } catch (err) {
-    console.warn('Error fetching 24h curated jobs:', err);
+    calculateCuratedFromAllJobs();
   } finally {
     update24hCountBadges();
     renderHotlistCards();
@@ -1613,6 +1619,10 @@ async function setApplicationStatus(jobKey, status, resumeId = null, title = '',
 
 async function saveApplicationStatusToServer(jobKey, status, resumeId = null, extra = {}) {
   try {
+    localStorage.setItem('scrapedeez_applications', JSON.stringify(applicationsMap));
+  } catch (e) {}
+
+  try {
     await fetch('./api/jobs/application-status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1675,6 +1685,7 @@ async function handleResumeUpload(e) {
     if (window.lucide) lucide.createIcons();
   }
 
+  let uploadedToServer = false;
   try {
     const res = await fetch('./api/resumes/upload', {
       method: 'POST',
@@ -1686,46 +1697,76 @@ async function handleResumeUpload(e) {
         fileBase64: selectedUploadBase64
       })
     });
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      if (data && data.status === 'success') {
+        uploadedToServer = true;
+      }
+    } catch (e) {}
+  } catch (err) {}
 
-    if (res.ok) {
-      if (labelInput) labelInput.value = '';
-      if (specInput) specInput.value = '';
-      if (fileInput) fileInput.value = '';
-      const feedback = document.getElementById('fileChosenFeedback');
-      if (feedback) feedback.textContent = '';
-      selectedUploadBase64 = null;
-      selectedUploadFileName = null;
+  if (!uploadedToServer) {
+    // Client-side local persistence fallback
+    const id = 'res_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+    const newResume = {
+      id,
+      label,
+      specialization: spec,
+      fileName: selectedUploadFileName,
+      fileBase64: selectedUploadBase64,
+      uploadDate: new Date().toISOString(),
+      sizeBytes: Math.round(selectedUploadBase64.length * 0.75)
+    };
+    resumeVariationsList.push(newResume);
+    try {
+      localStorage.setItem('scrapedeez_resumes', JSON.stringify(resumeVariationsList));
+    } catch (e) {}
+  }
 
-      await fetchResumeVariations();
-      renderHotlistCards();
-    } else {
-      const err = await res.json();
-      alert('Upload failed: ' + (err.error || 'Server error'));
-    }
-  } catch (err) {
-    alert('Upload network error: ' + err.message);
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = `<i data-lucide="plus-circle"></i> Save Resume Variation`;
-      if (window.lucide) lucide.createIcons();
-    }
+  if (labelInput) labelInput.value = '';
+  if (specInput) specInput.value = '';
+  if (fileInput) fileInput.value = '';
+  const feedback = document.getElementById('fileChosenFeedback');
+  if (feedback) feedback.textContent = '';
+  selectedUploadBase64 = null;
+  selectedUploadFileName = null;
+
+  await fetchResumeVariations();
+  renderHotlistCards();
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = `<i data-lucide="plus-circle"></i> Save Resume Variation`;
+    if (window.lucide) lucide.createIcons();
   }
 }
 
 async function fetchResumeVariations() {
+  let loaded = false;
   try {
     const res = await fetch(`./api/resumes?t=${Date.now()}`);
-    if (res.ok) {
-      resumeVariationsList = await res.json();
-    }
-  } catch (err) {
-    console.warn('Error fetching resumes:', err);
-  } finally {
-    const badge = document.getElementById('tabResumesCount');
-    if (badge) badge.textContent = resumeVariationsList.length;
-    renderResumeVaultList();
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      if (Array.isArray(data)) {
+        resumeVariationsList = data;
+        localStorage.setItem('scrapedeez_resumes', JSON.stringify(resumeVariationsList));
+        loaded = true;
+      }
+    } catch (e) {}
+  } catch (err) {}
+
+  if (!loaded) {
+    try {
+      const saved = localStorage.getItem('scrapedeez_resumes');
+      if (saved) resumeVariationsList = JSON.parse(saved);
+    } catch (e) {}
   }
+
+  const badge = document.getElementById('tabResumesCount');
+  if (badge) badge.textContent = resumeVariationsList.length;
+  renderResumeVaultList();
 }
 
 function renderResumeVaultList() {
@@ -1767,20 +1808,30 @@ function renderResumeVaultList() {
 }
 
 function downloadResume(id) {
-  window.open(`./api/resumes/${encodeURIComponent(id)}/download`, '_blank');
+  const item = resumeVariationsList.find(r => r.id === id);
+  if (item && item.fileBase64) {
+    const a = document.createElement('a');
+    a.href = item.fileBase64;
+    a.download = item.fileName || 'resume.pdf';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } else {
+    window.open(`./api/resumes/${encodeURIComponent(id)}/download`, '_blank');
+  }
 }
 
 async function deleteResumeVariation(id) {
   if (!confirm('Are you sure you want to delete this resume variation?')) return;
   try {
-    const res = await fetch(`./api/resumes/${encodeURIComponent(id)}`, { method: 'DELETE' });
-    if (res.ok) {
-      await fetchResumeVariations();
-      renderHotlistCards();
-    }
-  } catch (err) {
-    alert('Delete error: ' + err.message);
-  }
+    await fetch(`./api/resumes/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  } catch (err) {}
+  resumeVariationsList = resumeVariationsList.filter(r => r.id !== id);
+  try {
+    localStorage.setItem('scrapedeez_resumes', JSON.stringify(resumeVariationsList));
+  } catch (e) {}
+  await fetchResumeVariations();
+  renderHotlistCards();
 }
 
 // --------------------------------------------------------------------------
@@ -1788,19 +1839,31 @@ async function deleteResumeVariation(id) {
 // --------------------------------------------------------------------------
 
 async function fetchApplicationTracking() {
+  let loaded = false;
   try {
     const res = await fetch(`./api/jobs/applications?t=${Date.now()}`);
-    if (res.ok) {
-      applicationsMap = await res.json();
-    }
-  } catch (err) {
-    console.warn('Error fetching application tracking:', err);
-  } finally {
-    const activeCount = Object.values(applicationsMap).filter(a => a.status === 'applied' || a.status === 'saved').length;
-    const badge = document.getElementById('tabTrackingCount');
-    if (badge) badge.textContent = activeCount;
-    renderTrackingList(currentTrackingFilter);
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      if (data && typeof data === 'object') {
+        applicationsMap = data;
+        localStorage.setItem('scrapedeez_applications', JSON.stringify(applicationsMap));
+        loaded = true;
+      }
+    } catch (e) {}
+  } catch (err) {}
+
+  if (!loaded) {
+    try {
+      const saved = localStorage.getItem('scrapedeez_applications');
+      if (saved) applicationsMap = JSON.parse(saved);
+    } catch (e) {}
   }
+
+  const activeCount = Object.values(applicationsMap).filter(a => a && (a.status === 'applied' || a.status === 'saved')).length;
+  const badge = document.getElementById('tabTrackingCount');
+  if (badge) badge.textContent = activeCount;
+  renderTrackingList(currentTrackingFilter);
 }
 
 function filterTrackingList(mode) {
