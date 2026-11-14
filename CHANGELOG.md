@@ -4,6 +4,31 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.3.0] - 2026-11-14
+
+### Added
+- **Dedicated Standalone PM Operations Command Center (`dashboard.html` / `dashboard.js`):**
+  - Built an executive, high-density operations dashboard completely decoupled from the public job board.
+  - **Candidate Profile & Resume Vault**: Form for applicant details (Full Name, Email, Phone, Location, LinkedIn, GitHub, Portfolio, Executive Note) and custom tailored resume storage.
+  - **24-Hour Review & Triage Table**: Tabular review interface with checkboxes, real-time search, work setup filters (Remote/Hybrid/Onsite), and per-role tailored resume assignment.
+  - **Sticky Batch Dispatch Bar**: Floating action bar showing selected count, bulk resume assigner, and 1-click **"🚀 Submit Selected Applications"** trigger.
+  - **Live Receipts & Audit Trail**: Real-time logging table tracking every dispatched application, timestamp, resume version, and status receipt.
+- **Automated Submission Engine (`submission_engine.js`):**
+  - **Greenhouse Board Application Submitter**: Direct API integration posting candidate metadata and base64 encoded resume file to `https://boards-api.greenhouse.io/v1/boards/{company}/jobs/{jobId}`.
+  - **Lever Postings Application Submitter**: Direct API integration posting candidate metadata and resume to `https://api.lever.co/v0/postings/{company}/{jobId}`.
+  - **Assisted Pre-Packaged Dispatch**: Pre-configures tailored resume attachments and pre-fills application payloads for Ashby, feeds, and custom career portals.
+  - **Backend Submission Endpoints**:
+    - `POST /api/submissions/queue`: Batch runner processing array of approved roles.
+    - `GET /api/submissions/logs`: Fetches audit receipts from `submissions_log.json`.
+    - `GET/POST /api/profile`: Saves and updates persistent candidate details in `applicant_profile.json`.
+    - `GET /api/dashboard/summary`: Single consolidated endpoint returning composite dashboard telemetry.
+
+### Changed
+- **Restored Public Job Board (`index.html`):** Removed modal overlays from the main homepage to keep it clean and focused, adding a direct header link to the PM Command Center (`dashboard.html`).
+- **Deployment Pipeline (`.cpanel.yml`):** Added `dashboard.html`, `dashboard.js`, and `submission_engine.js` to automated file synchronization tasks.
+
+---
+
 ## [1.2.0] - 2026-11-14
 
 ### Added

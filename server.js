@@ -3,6 +3,13 @@ const path = require('path');
 const fs = require('fs');
 const cron = require('node-cron');
 const { runScraperJob } = require('./scraper');
+const {
+  readProfile,
+  saveProfile,
+  readSubmissionsLog,
+  saveSubmissionsLog,
+  processBatchSubmissions
+} = require('./submission_engine');
 
 const app = express();
 const PORT = process.env.PORT || 8090;
@@ -384,6 +391,84 @@ cron.schedule('0 * * * *', async () => {
     console.log('[Hourly Cron Scheduler] Hourly scan completed successfully.');
   } catch (err) {
     console.error('[Hourly Cron Scheduler] Automated run error:', err.message);
+  }
+});
+
+// GET /api/profile
+app.get('/api/profile', (req, res) => {
+  try {
+    res.json(readProfile());
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to read applicant profile.' });
+  }
+});
+
+// POST /api/profile
+app.post('/api/profile', (req, res) => {
+  try {
+    const updated = saveProfile(req.body);
+    res.json({ status: 'success', profile: updated });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save applicant profile.' });
+  }
+});
+
+// GET /api/submissions/logs
+app.get('/api/submissions/logs', (req, res) => {
+  try {
+    res.json(readSubmissionsLog());
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to read submission receipts.' });
+  }
+});
+
+// POST /api/submissions/queue (Batch Auto-Submitter)
+app.post('/api/submissions/queue', async (req, res) => {
+  try {
+    const { jobs, profile } = req.body;
+    if (!jobs || !Array.isArray(jobs) || jobs.length === 0) {
+      return res.status(400).json({ error: 'Missing or empty jobs array to submit.' });
+    }
+
+    const result = await processBatchSubmissions(jobs, profile);
+    res.json(result);
+  } catch (err) {
+    console.error('[Submission Engine] Error processing queue:', err);
+    res.status(500).json({ error: 'Batch submission failed.', message: err.message });
+  }
+});
+
+// GET /api/dashboard/summary
+app.get('/api/dashboard/summary', (req, res) => {
+  try {
+    const profile = readProfile();
+    const resumes = readResumesMeta();
+    const logs = readSubmissionsLog();
+    const applications = readApplications();
+    let jobsCount24h = 0;
+    let totalVerified = 0;
+
+    if (fs.existsSync(DATA_FILE)) {
+      const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+      const jobs = data.jobs || [];
+      totalVerified = jobs.length;
+      const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      jobsCount24h = jobs.filter(j => j && j.date && (now - new Date(j.date).getTime()) <= TWENTY_FOUR_HOURS_MS).length;
+    }
+
+    res.json({
+      profile,
+      resumesCount: resumes.length,
+      resumes,
+      jobsCount24h,
+      totalVerified,
+      submissionsCount: logs.length,
+      recentLogs: logs.slice(0, 10),
+      applications
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to compile dashboard summary.' });
   }
 });
 
