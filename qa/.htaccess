@@ -1,0 +1,31 @@
+# DO NOT REMOVE OR EDIT. PASSENGER CONFIGURATION OPTION
+# Passenger App Root
+PassengerAppRoot "/home/synopsdi/public_html/list/qa"
+# Passenger Startup File
+PassengerStartupFile server.js
+# Passenger App Type
+PassengerAppType node
+# Passenger Nodejs Path
+PassengerNodejs "/opt/alt/alt-nodejs18/root/usr/bin/node"
+
+# Enforce Subdomain-Only Access: Block any request that does not use qa.j subdomain (403 Forbidden)
+<IfModule mod_authz_core.c>
+    <If "%{HTTP_HOST} !~ /^qa\.j\.synopsdigital\.com$/ && %{HTTP_HOST} !~ /^(localhost|127\.0\.0\.1)/">
+        Require all denied
+    </If>
+</IfModule>
+
+# Enable Rewrite Engine for Passenger Proxy & Access Control
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Only allow access via qa subdomain (or local development)
+    RewriteCond %{HTTP_HOST} !^qa\.j\.synopsdigital\.com$ [NC]
+    RewriteCond %{HTTP_HOST} !^localhost [NC]
+    RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
+    RewriteRule .* - [F,L]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ server.js [QSA,L]
+</IfModule>

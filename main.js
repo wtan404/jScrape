@@ -36,6 +36,13 @@ let userConfig = {
     'kinsta', 'neon', 'metabase', 'activecampaign', 'brevo', 'mindtickle',
     'walkme', 'zilliz', 'zerotier', 'twingate', 'omnisend', 'netomi', 'brilliant',
     'clari', 'highspot', 'kraken', 'mistral', 'veeva'
+  ],
+  ashbyCompanies: [
+    'linear', 'ramp', 'openai', 'perplexity', 'cursor', 'notion', 'sentry',
+    'temporal', 'replit', 'modal', 'warp', 'supabase', 'pinecone'
+  ],
+  smartRecruitersCompanies: [
+    'smartrecruiters'
   ]
 };
 
@@ -299,6 +306,9 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initApp() {
   await fetchConfig();
   await fetchJobsDatabase();
+  await fetchResumeVariations();
+  await fetchCurated24hJobs();
+  await fetchApplicationTracking();
 
   // If jobs are missing or older than 1 hour, auto-trigger a live scan immediately
   const now = Date.now();
@@ -1118,9 +1128,15 @@ async function filterJobs() {
     if (sourceFilter === 'new') {
       matchSource = job.isNew === true;
     } else if (sourceFilter === 'ats') {
-      matchSource = (job.source || '').includes('Greenhouse') || (job.source || '').includes('Lever');
+      matchSource = (job.source || '').includes('Greenhouse') || 
+                    (job.source || '').includes('Lever') || 
+                    (job.source || '').includes('Ashby') || 
+                    (job.source || '').includes('SmartRecruiters');
     } else if (sourceFilter === 'feeds') {
-      matchSource = (job.source || '').includes('RemoteOK') || (job.source || '').includes('WeWorkRemotely');
+      matchSource = (job.source || '').includes('RemoteOK') || 
+                    (job.source || '').includes('WeWorkRemotely') || 
+                    (job.source || '').includes('Remotive') || 
+                    (job.source || '').includes('Jobicy');
     }
 
     if (!matchSource) return false;
@@ -1337,5 +1353,586 @@ function toggleTheme() {
 function initTheme() {
   const theme = getPreferredTheme();
   applyTheme(theme);
+}
+
+// ==========================================================================
+// 24-Hour Review Hub, Resume Variation Vault & 1-Click Application Launcher
+// ==========================================================================
+
+let curated24hJobs = [];
+let resumeVariationsList = [];
+let applicationsMap = {};
+let selectedUploadBase64 = null;
+let selectedUploadFileName = null;
+let currentTrackingFilter = 'all';
+
+// Modal Toggles
+function openReviewHubModal(initialTab = 'hotlist') {
+  const overlay = document.getElementById('reviewHubOverlay');
+  if (overlay) overlay.style.display = 'flex';
+  switchHubTab(initialTab);
+  fetchCurated24hJobs();
+  fetchResumeVariations();
+  fetchApplicationTracking();
+}
+
+function closeReviewHubModal() {
+  const overlay = document.getElementById('reviewHubOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function handleModalOverlayClick(e) {
+  if (e.target && e.target.id === 'reviewHubOverlay') {
+    closeReviewHubModal();
+  }
+}
+
+function switchHubTab(tabName) {
+  const tabs = ['hotlist', 'resumes', 'tracking'];
+  tabs.forEach(t => {
+    const btn = document.getElementById(`tabBtn${capitalizeFirstLetter(t)}`);
+    const panel = document.getElementById(`panel${capitalizeFirstLetter(t)}`);
+    if (btn) btn.classList.toggle('active', t === tabName);
+    if (panel) panel.style.display = (t === tabName) ? 'block' : 'none';
+  });
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function capitalizeFirstLetter(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function formatTimeAgo(isoStr) {
+  if (!isoStr) return 'Recently';
+  const diffMs = Date.now() - new Date(isoStr).getTime();
+  if (isNaN(diffMs) || diffMs < 0) return 'Just now';
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+// --------------------------------------------------------------------------
+// 24-Hour Curated Hotlist
+// --------------------------------------------------------------------------
+
+function calculateCuratedFromAllJobs() {
+  const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  curated24hJobs = allJobsData.filter(j => {
+    if (!j || !j.date) return false;
+    const t = new Date(j.date).getTime();
+    return !isNaN(t) && (now - t) <= TWENTY_FOUR_HOURS_MS;
+  });
+}
+
+async function fetchCurated24hJobs() {
+  try {
+    const res = await fetch(`./api/jobs/curated-24h?t=${Date.now()}`);
+    const text = await res.text();
+    let data = null;
+    try { data = JSON.parse(text); } catch (e) {}
+
+    if (data && Array.isArray(data.jobs)) {
+      curated24hJobs = data.jobs;
+    } else {
+      calculateCuratedFromAllJobs();
+    }
+  } catch (err) {
+    calculateCuratedFromAllJobs();
+  } finally {
+    update24hCountBadges();
+    renderHotlistCards();
+  }
+}
+
+function update24hCountBadges() {
+  const count = curated24hJobs.length;
+  const headerBadge = document.getElementById('header24hBadge');
+  const tabBadge = document.getElementById('tabHotlistCount');
+  const summary = document.getElementById('hotlistSummaryText');
+
+  if (headerBadge) headerBadge.textContent = count;
+  if (tabBadge) tabBadge.textContent = count;
+  if (summary) {
+    summary.innerHTML = count === 0
+      ? `No postings detected in the past 24 hours. Showing full verified list below.`
+      : `Found <strong>${count}</strong> high-priority postings published in the last 24 hours.`;
+  }
+}
+
+function renderHotlistCards() {
+  const container = document.getElementById('hotlistCardsContainer');
+  if (!container) return;
+
+  if (curated24hJobs.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding: 2.5rem 1rem; text-align: center; color: var(--text-muted);">
+        <i data-lucide="check-circle" style="width: 38px; height: 38px; margin: 0 auto 0.8rem; color: var(--accent-emerald);"></i>
+        <h4 style="color: var(--text-main); margin-bottom: 0.4rem;">You're fully caught up!</h4>
+        <p>No new postings matching your criteria were published in the last 24 hours. Check back after the next hourly rescan or view the main feed.</p>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  container.innerHTML = curated24hJobs.map((job, idx) => {
+    const key = job.id || job.url;
+    const appRecord = applicationsMap[key] || job.applicationRecord || { status: 'unreviewed', resumeId: null };
+    const isApplied = appRecord.status === 'applied';
+    const isSaved = appRecord.status === 'saved';
+
+    const timeAgoStr = formatTimeAgo(job.date);
+    const workType = job.workType || 'Remote';
+    const salaryStr = formatSalary(job);
+
+    return `
+      <div class="hotlist-card" id="hotlist_card_${idx}">
+        <div class="hotlist-card-header">
+          <div class="hotlist-company-row">
+            <span class="hotlist-company">${escapeHtml(job.company)}</span>
+            <span class="hotlist-source-badge">${escapeHtml(job.source || 'ATS')}</span>
+          </div>
+          <div class="hotlist-age-pill">
+            <i data-lucide="clock"></i>
+            <span>${timeAgoStr}</span>
+          </div>
+        </div>
+
+        <div class="hotlist-card-title">${escapeHtml(job.title)}</div>
+
+        <div class="hotlist-tags-row">
+          <span class="hotlist-tag"><i data-lucide="map-pin"></i> ${escapeHtml(job.location || 'Remote')}</span>
+          <span class="hotlist-tag"><i data-lucide="briefcase"></i> ${escapeHtml(workType)}</span>
+          ${job.matchedKeyword ? `<span class="hotlist-tag match-tag"><i data-lucide="sparkles"></i> ${escapeHtml(job.matchedKeyword)}</span>` : ''}
+          ${salaryStr && salaryStr !== 'Not Disclosed' ? `<span class="hotlist-tag salary-tag"><i data-lucide="dollar-sign"></i> ${escapeHtml(salaryStr)}</span>` : ''}
+        </div>
+
+        <div class="hotlist-action-bar">
+          <div class="hotlist-resume-selector-wrap">
+            <label for="hotlist_resume_sel_${idx}">Resume:</label>
+            <select class="resume-select-quick" id="hotlist_resume_sel_${idx}" onchange="handleHotlistResumeChange('${escapeHtml(key)}', this.value)">
+              <option value="">Default / Select Resume...</option>
+              ${resumeVariationsList.map(r => `
+                <option value="${r.id}" ${appRecord.resumeId === r.id ? 'selected' : ''}>
+                  ${escapeHtml(r.label)} (${escapeHtml(r.specialization)})
+                </option>
+              `).join('')}
+            </select>
+          </div>
+
+          <div class="hotlist-btns-wrap">
+            <button type="button" class="btn-status-toggle ${isSaved ? 'applied-active' : ''}" 
+              onclick="toggleJobSaveStatus('${escapeHtml(key)}', '${escapeHtml(job.title)}', '${escapeHtml(job.company)}', '${escapeHtml(job.url)}')"
+              title="Bookmark for later">
+              <i data-lucide="bookmark"></i>
+              <span>${isSaved ? 'Saved' : 'Save'}</span>
+            </button>
+
+            <button type="button" class="btn-status-toggle ${isApplied ? 'applied-active' : ''}" 
+              onclick="toggleJobAppliedStatus('${escapeHtml(key)}', '${escapeHtml(job.title)}', '${escapeHtml(job.company)}', '${escapeHtml(job.url)}', '${idx}')"
+              title="Mark position as applied">
+              <i data-lucide="check"></i>
+              <span>${isApplied ? 'Applied' : 'Mark Applied'}</span>
+            </button>
+
+            <button type="button" class="btn-apply-launch" 
+              onclick="launchOneClickApply('${escapeHtml(key)}', '${escapeHtml(job.url)}', '${escapeHtml(job.title)}', '${escapeHtml(job.company)}', '${idx}')">
+              <i data-lucide="external-link"></i>
+              <span>Apply Now</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function handleHotlistResumeChange(jobKey, resumeId) {
+  if (!applicationsMap[jobKey]) {
+    applicationsMap[jobKey] = { status: 'unreviewed', resumeId: null };
+  }
+  applicationsMap[jobKey].resumeId = resumeId;
+  saveApplicationStatusToServer(jobKey, applicationsMap[jobKey].status, resumeId);
+}
+
+// --------------------------------------------------------------------------
+// 1-Click Application Launch & Dispatch Helper
+// --------------------------------------------------------------------------
+
+function launchOneClickApply(jobKey, jobUrl, title, company, cardIdx) {
+  const resumeSelect = document.getElementById(`hotlist_resume_sel_${cardIdx}`);
+  const resumeId = resumeSelect ? resumeSelect.value : null;
+
+  // 1. Open direct application URL in new tab
+  window.open(jobUrl, '_blank', 'noopener,noreferrer');
+
+  // 2. Download or trigger resume file if selected
+  if (resumeId) {
+    const resume = resumeVariationsList.find(r => r.id === resumeId);
+    if (resume) {
+      downloadResume(resumeId);
+    }
+  }
+
+  // 3. Automatically mark as applied
+  setApplicationStatus(jobKey, 'applied', resumeId, title, company, jobUrl);
+}
+
+function toggleJobSaveStatus(jobKey, title, company, url) {
+  const current = applicationsMap[jobKey]?.status;
+  const nextStatus = current === 'saved' ? 'unreviewed' : 'saved';
+  setApplicationStatus(jobKey, nextStatus, applicationsMap[jobKey]?.resumeId, title, company, url);
+}
+
+function toggleJobAppliedStatus(jobKey, title, company, url, cardIdx) {
+  const resumeSelect = document.getElementById(`hotlist_resume_sel_${cardIdx}`);
+  const resumeId = resumeSelect ? resumeSelect.value : (applicationsMap[jobKey]?.resumeId || null);
+  const current = applicationsMap[jobKey]?.status;
+  const nextStatus = current === 'applied' ? 'unreviewed' : 'applied';
+  setApplicationStatus(jobKey, nextStatus, resumeId, title, company, url);
+}
+
+async function setApplicationStatus(jobKey, status, resumeId = null, title = '', company = '', url = '') {
+  applicationsMap[jobKey] = {
+    jobId: jobKey,
+    status,
+    resumeId,
+    title: title || applicationsMap[jobKey]?.title || '',
+    company: company || applicationsMap[jobKey]?.company || '',
+    url: url || applicationsMap[jobKey]?.url || '',
+    updatedAt: new Date().toISOString()
+  };
+
+  await saveApplicationStatusToServer(jobKey, status, resumeId, applicationsMap[jobKey]);
+  renderHotlistCards();
+  renderTrackingList(currentTrackingFilter);
+}
+
+async function saveApplicationStatusToServer(jobKey, status, resumeId = null, extra = {}) {
+  try {
+    localStorage.setItem('scrapedeez_applications', JSON.stringify(applicationsMap));
+  } catch (e) {}
+
+  try {
+    await fetch('./api/jobs/application-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobId: jobKey,
+        status,
+        resumeId,
+        notes: extra.notes || ''
+      })
+    });
+  } catch (err) {
+    console.warn('Error saving application status:', err);
+  }
+}
+
+// --------------------------------------------------------------------------
+// Resume Variations Vault Management
+// --------------------------------------------------------------------------
+
+function handleResumeFileSelected(e) {
+  const file = e.target.files && e.target.files[0];
+  const feedback = document.getElementById('fileChosenFeedback');
+  if (!file) {
+    selectedUploadBase64 = null;
+    selectedUploadFileName = null;
+    if (feedback) feedback.textContent = '';
+    return;
+  }
+
+  selectedUploadFileName = file.name;
+  if (feedback) {
+    feedback.textContent = `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    selectedUploadBase64 = event.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function handleResumeUpload(e) {
+  e.preventDefault();
+  const labelInput = document.getElementById('resumeLabelInput');
+  const specInput = document.getElementById('resumeSpecInput');
+  const fileInput = document.getElementById('resumeFileInput');
+  const btn = document.getElementById('btnUploadResume');
+
+  if (!selectedUploadBase64 || !selectedUploadFileName) {
+    alert('Please select a resume file (.pdf, .doc, .docx) to upload.');
+    return;
+  }
+
+  const label = labelInput ? labelInput.value.trim() : selectedUploadFileName;
+  const spec = specInput ? specInput.value.trim() : 'General Tech';
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i> Uploading...`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  let uploadedToServer = false;
+  try {
+    const res = await fetch('./api/resumes/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        label,
+        specialization: spec,
+        fileName: selectedUploadFileName,
+        fileBase64: selectedUploadBase64
+      })
+    });
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      if (data && data.status === 'success') {
+        uploadedToServer = true;
+      }
+    } catch (e) {}
+  } catch (err) {}
+
+  if (!uploadedToServer) {
+    // Client-side local persistence fallback
+    const id = 'res_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+    const newResume = {
+      id,
+      label,
+      specialization: spec,
+      fileName: selectedUploadFileName,
+      fileBase64: selectedUploadBase64,
+      uploadDate: new Date().toISOString(),
+      sizeBytes: Math.round(selectedUploadBase64.length * 0.75)
+    };
+    resumeVariationsList.push(newResume);
+    try {
+      localStorage.setItem('scrapedeez_resumes', JSON.stringify(resumeVariationsList));
+    } catch (e) {}
+  }
+
+  if (labelInput) labelInput.value = '';
+  if (specInput) specInput.value = '';
+  if (fileInput) fileInput.value = '';
+  const feedback = document.getElementById('fileChosenFeedback');
+  if (feedback) feedback.textContent = '';
+  selectedUploadBase64 = null;
+  selectedUploadFileName = null;
+
+  await fetchResumeVariations();
+  renderHotlistCards();
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = `<i data-lucide="plus-circle"></i> Save Resume Variation`;
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+async function fetchResumeVariations() {
+  let loaded = false;
+  try {
+    const res = await fetch(`./api/resumes?t=${Date.now()}`);
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      if (Array.isArray(data)) {
+        resumeVariationsList = data;
+        localStorage.setItem('scrapedeez_resumes', JSON.stringify(resumeVariationsList));
+        loaded = true;
+      }
+    } catch (e) {}
+  } catch (err) {}
+
+  if (!loaded) {
+    try {
+      const saved = localStorage.getItem('scrapedeez_resumes');
+      if (saved) resumeVariationsList = JSON.parse(saved);
+    } catch (e) {}
+  }
+
+  const badge = document.getElementById('tabResumesCount');
+  if (badge) badge.textContent = resumeVariationsList.length;
+  renderResumeVaultList();
+}
+
+function renderResumeVaultList() {
+  const container = document.getElementById('resumesVaultList');
+  if (!container) return;
+
+  if (resumeVariationsList.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding: 2rem 1rem; text-align: center; color: var(--text-muted);">
+        <i data-lucide="file-question" style="width: 32px; height: 32px; margin: 0 auto 0.6rem; color: var(--text-dim);"></i>
+        <p>No resume variations saved yet. Upload your tailored resumes using the form on the left.</p>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  container.innerHTML = resumeVariationsList.map(item => `
+    <div class="resume-vault-item">
+      <div class="resume-item-info">
+        <h4>${escapeHtml(item.label)}</h4>
+        <div class="resume-item-spec"><i data-lucide="tag"></i> ${escapeHtml(item.specialization)}</div>
+        <div class="resume-item-meta">
+          📄 ${escapeHtml(item.fileName)} &bull; ${item.sizeBytes ? (item.sizeBytes / 1024).toFixed(0) + ' KB' : ''} &bull; ${formatDate(item.uploadDate)}
+        </div>
+      </div>
+      <div class="resume-item-actions">
+        <button type="button" class="btn btn-secondary btn-xs" onclick="downloadResume('${item.id}')" title="Download this variation">
+          <i data-lucide="download"></i>
+        </button>
+        <button type="button" class="btn btn-secondary btn-xs text-danger" onclick="deleteResumeVariation('${item.id}')" title="Delete variation">
+          <i data-lucide="trash-2"></i>
+        </button>
+      </div>
+    </div>
+  `).join('');
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function downloadResume(id) {
+  const item = resumeVariationsList.find(r => r.id === id);
+  if (item && item.fileBase64) {
+    const a = document.createElement('a');
+    a.href = item.fileBase64;
+    a.download = item.fileName || 'resume.pdf';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } else {
+    window.open(`./api/resumes/${encodeURIComponent(id)}/download`, '_blank');
+  }
+}
+
+async function deleteResumeVariation(id) {
+  if (!confirm('Are you sure you want to delete this resume variation?')) return;
+  try {
+    await fetch(`./api/resumes/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  } catch (err) {}
+  resumeVariationsList = resumeVariationsList.filter(r => r.id !== id);
+  try {
+    localStorage.setItem('scrapedeez_resumes', JSON.stringify(resumeVariationsList));
+  } catch (e) {}
+  await fetchResumeVariations();
+  renderHotlistCards();
+}
+
+// --------------------------------------------------------------------------
+// Application Tracker
+// --------------------------------------------------------------------------
+
+async function fetchApplicationTracking() {
+  let loaded = false;
+  try {
+    const res = await fetch(`./api/jobs/applications?t=${Date.now()}`);
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      if (data && typeof data === 'object') {
+        applicationsMap = data;
+        localStorage.setItem('scrapedeez_applications', JSON.stringify(applicationsMap));
+        loaded = true;
+      }
+    } catch (e) {}
+  } catch (err) {}
+
+  if (!loaded) {
+    try {
+      const saved = localStorage.getItem('scrapedeez_applications');
+      if (saved) applicationsMap = JSON.parse(saved);
+    } catch (e) {}
+  }
+
+  const activeCount = Object.values(applicationsMap).filter(a => a && (a.status === 'applied' || a.status === 'saved')).length;
+  const badge = document.getElementById('tabTrackingCount');
+  if (badge) badge.textContent = activeCount;
+  renderTrackingList(currentTrackingFilter);
+}
+
+function filterTrackingList(mode) {
+  currentTrackingFilter = mode;
+  const btns = document.querySelectorAll('.tracking-filter-btn-group .btn');
+  btns.forEach(b => {
+    b.classList.toggle('active', b.textContent.toLowerCase() === mode);
+  });
+  renderTrackingList(mode);
+}
+
+function renderTrackingList(filter = 'all') {
+  const container = document.getElementById('trackingItemsList');
+  const statsOverview = document.getElementById('trackingStatsOverview');
+  if (!container) return;
+
+  const entries = Object.entries(applicationsMap).filter(([k, v]) => v && (v.status === 'applied' || v.status === 'saved'));
+  const appliedCount = entries.filter(([k, v]) => v.status === 'applied').length;
+  const savedCount = entries.filter(([k, v]) => v.status === 'saved').length;
+
+  if (statsOverview) {
+    statsOverview.innerHTML = `Active Tracking: <strong>${appliedCount}</strong> Applied &bull; <strong>${savedCount}</strong> Saved`;
+  }
+
+  const filtered = entries.filter(([k, v]) => {
+    if (filter === 'applied') return v.status === 'applied';
+    if (filter === 'saved') return v.status === 'saved';
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding: 2.5rem 1rem; text-align: center; color: var(--text-muted);">
+        <i data-lucide="clipboard-list" style="width: 32px; height: 32px; margin: 0 auto 0.6rem; color: var(--text-dim);"></i>
+        <p>No tracked applications in this view. Use the 24h Hotlist or main feed to apply or save roles.</p>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  container.innerHTML = filtered.map(([key, item]) => {
+    const resume = resumeVariationsList.find(r => r.id === item.resumeId);
+    const resumeText = resume ? resume.label : 'Default Resume';
+
+    return `
+      <div class="tracking-card">
+        <div class="tracking-card-info">
+          <h4>${escapeHtml(item.title || 'Tech Role')} &bull; <span style="color:var(--text-muted);">${escapeHtml(item.company || '')}</span></h4>
+          <div class="tracking-card-meta">
+            <span><i data-lucide="file-text"></i> ${escapeHtml(resumeText)}</span>
+            <span><i data-lucide="calendar"></i> ${item.updatedAt ? formatDate(item.updatedAt) : 'Recently'}</span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <span class="tracking-status-badge status-${item.status}">${escapeHtml(item.status)}</span>
+          ${item.url ? `
+            <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-xs" title="Open Job Posting">
+              <i data-lucide="external-link"></i>
+            </a>
+          ` : ''}
+          <button type="button" class="btn btn-secondary btn-xs text-danger" onclick="setApplicationStatus('${escapeHtml(key)}', 'unreviewed')" title="Remove from tracking">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (window.lucide) lucide.createIcons();
 }
 

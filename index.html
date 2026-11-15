@@ -53,6 +53,11 @@
       </div>
 
       <div class="header-actions">
+        <a href="dashboard/" class="btn btn-review-hub btn-sm" title="Open PM Operations Dashboard & Auto-Submitter">
+          <i data-lucide="layout-dashboard"></i>
+          <span>PM Dashboard</span>
+          <span class="hub-badge-count" id="header24hBadge">0</span>
+        </a>
         <button class="btn btn-secondary btn-sm theme-toggle-btn" onclick="toggleTheme()" id="btnThemeToggle" aria-label="Toggle theme (Dark / Light)" title="Toggle Dark/Light Mode">
           <i data-lucide="sun" id="themeIconSun"></i>
           <i data-lucide="moon" id="themeIconMoon" style="display: none;"></i>
@@ -203,10 +208,10 @@
         </select>
 
         <select id="sourceSelect" class="select-control" onchange="filterJobs()">
-          <option value="all">All Sources (ATS + Google + Feeds)</option>
+          <option value="all">All Sources (ATS + Google + Tech Feeds)</option>
           <option value="new">Newly Identified Only</option>
-          <option value="ats">ATS Boards (Greenhouse/Lever)</option>
-          <option value="feeds">RemoteOK & WWR</option>
+          <option value="ats">ATS Boards (Greenhouse / Lever / Ashby / SR)</option>
+          <option value="feeds">Tech Feeds (RemoteOK, WWR, Remotive, Jobicy)</option>
         </select>
       </div>
     </section>
@@ -229,6 +234,6 @@
   </footer>
 
   <script src="zip3_centroids.js?v=1.0"></script>
-  <script src="main.js?v=9.3"></script>
+  <script src="main.js?v=10.0"></script>
 </body>
 </html>

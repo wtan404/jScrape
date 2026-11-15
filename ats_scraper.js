@@ -16,6 +16,13 @@ const DEFAULT_LEVER_COMPANIES = [
   'walkme', 'zilliz', 'zerotier', 'twingate', 'omnisend', 'netomi', 'brilliant',
   'clari', 'highspot', 'kraken', 'mistral', 'veeva'
 ];
+const DEFAULT_ASHBY_COMPANIES = [
+  'linear', 'ramp', 'openai', 'perplexity', 'cursor', 'notion', 'sentry',
+  'temporal', 'replit', 'modal', 'warp', 'supabase', 'pinecone'
+];
+const DEFAULT_SMARTRECRUITERS_COMPANIES = [
+  'smartrecruiters'
+];
 
 const BROWSER_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
@@ -107,16 +114,129 @@ async function scrapeLeverCompany(company, targetTitles = [], keywords = []) {
   }
 }
 
+// Scrape Ashby Board Safely
+async function scrapeAshbyCompany(company, targetTitles = [], keywords = []) {
+  try {
+    const url = `https://api.ashbyhq.com/posting-api/job-board/${company}`;
+    const response = await axios.get(url, { headers: BROWSER_HEADERS, timeout: 6000 });
+
+    if (response.status !== 200 || !response.data || !Array.isArray(response.data.jobs)) {
+      return [];
+    }
+
+    const jobs = response.data.jobs;
+    const searchTerms = [...targetTitles, ...keywords].map(t => t.toLowerCase().trim()).filter(Boolean);
+    const matches = [];
+
+    for (const job of jobs) {
+      if (!job || !job.isListed) continue;
+      const title = (job.title || '').toLowerCase();
+      const content = (job.descriptionPlain || job.descriptionHtml || '').toLowerCase();
+      const location = job.location || (job.address && job.address.postalAddress ? job.address.postalAddress.addressCountry : 'Remote');
+
+      const matchedTerm = searchTerms.find(term => title.includes(term) || content.includes(term));
+
+      if (matchedTerm || searchTerms.length === 0) {
+        let workType = 'Onsite';
+        if (job.workplaceType) {
+          const wt = job.workplaceType.toLowerCase();
+          if (wt.includes('remote') || job.isRemote) workType = 'Remote';
+          else if (wt.includes('hybrid')) workType = 'Hybrid';
+        } else {
+          workType = classifyWorkType(location, job.title);
+        }
+
+        matches.push({
+          id: `ashby-${company}-${job.id}`,
+          source: `Ashby (${company.toUpperCase()})`,
+          title: job.title,
+          company: company.charAt(0).toUpperCase() + company.slice(1),
+          location,
+          workType,
+          url: job.applyUrl || job.jobUrl,
+          matchedKeyword: matchedTerm ? matchedTerm.toUpperCase() : 'USER MATCH',
+          date: job.publishedAt || new Date().toISOString()
+        });
+      }
+    }
+    return matches;
+  } catch (err) {
+    return [];
+  }
+}
+
+// Scrape SmartRecruiters Board Safely
+async function scrapeSmartRecruitersCompany(company, targetTitles = [], keywords = []) {
+  try {
+    const url = `https://api.smartrecruiters.com/v1/companies/${company}/postings`;
+    const response = await axios.get(url, { headers: BROWSER_HEADERS, timeout: 6000 });
+
+    if (response.status !== 200 || !response.data || !Array.isArray(response.data.content)) {
+      return [];
+    }
+
+    const jobs = response.data.content;
+    const searchTerms = [...targetTitles, ...keywords].map(t => t.toLowerCase().trim()).filter(Boolean);
+    const matches = [];
+
+    for (const job of jobs) {
+      const title = (job.name || '').toLowerCase();
+      const dept = (job.department && job.department.label ? job.department.label : '').toLowerCase();
+      const location = job.location ? (job.location.fullLocation || job.location.city || 'Remote') : 'Remote';
+
+      const matchedTerm = searchTerms.find(term => title.includes(term) || dept.includes(term));
+
+      if (matchedTerm || searchTerms.length === 0) {
+        let workType = 'Onsite';
+        if (job.location && job.location.remote) workType = 'Remote';
+        else if (job.location && job.location.hybrid) workType = 'Hybrid';
+        else workType = classifyWorkType(location, job.name);
+
+        const postingUrl = `https://jobs.smartrecruiters.com/${company}/${job.id}`;
+
+        matches.push({
+          id: `sr-${company}-${job.id}`,
+          source: `SmartRecruiters (${company.toUpperCase()})`,
+          title: job.name,
+          company: (job.company && job.company.name) ? job.company.name : (company.charAt(0).toUpperCase() + company.slice(1)),
+          location,
+          workType,
+          url: postingUrl,
+          matchedKeyword: matchedTerm ? matchedTerm.toUpperCase() : 'USER MATCH',
+          date: job.releasedDate || new Date().toISOString()
+        });
+      }
+    }
+    return matches;
+  } catch (err) {
+    return [];
+  }
+}
+
 // Master ATS Engine
-async function scrapeAllATSCompanies(customGreenhouse = [], customLever = [], targetTitles = [], keywords = []) {
+async function scrapeAllATSCompanies(customGreenhouse = [], customLever = [], targetTitles = [], keywords = [], customAshby = [], customSmartRecruiters = []) {
   const ghList = customGreenhouse.length > 0 ? customGreenhouse : DEFAULT_GREENHOUSE_COMPANIES;
   const leverList = customLever.length > 0 ? customLever : DEFAULT_LEVER_COMPANIES;
+  const ashbyList = customAshby.length > 0 ? customAshby : DEFAULT_ASHBY_COMPANIES;
+  const srList = customSmartRecruiters.length > 0 ? customSmartRecruiters : DEFAULT_SMARTRECRUITERS_COMPANIES;
 
   const ghPromises = ghList.map(c => scrapeGreenhouseCompany(c, targetTitles, keywords));
   const leverPromises = leverList.map(c => scrapeLeverCompany(c, targetTitles, keywords));
+  const ashbyPromises = ashbyList.map(c => scrapeAshbyCompany(c, targetTitles, keywords));
+  const srPromises = srList.map(c => scrapeSmartRecruitersCompany(c, targetTitles, keywords));
 
-  const results = await Promise.all([...ghPromises, ...leverPromises]);
+  const results = await Promise.all([...ghPromises, ...leverPromises, ...ashbyPromises, ...srPromises]);
   return results.flat();
 }
 
-module.exports = { scrapeAllATSCompanies, DEFAULT_GREENHOUSE_COMPANIES, DEFAULT_LEVER_COMPANIES };
+module.exports = {
+  scrapeAllATSCompanies,
+  scrapeGreenhouseCompany,
+  scrapeLeverCompany,
+  scrapeAshbyCompany,
+  scrapeSmartRecruitersCompany,
+  DEFAULT_GREENHOUSE_COMPANIES,
+  DEFAULT_LEVER_COMPANIES,
+  DEFAULT_ASHBY_COMPANIES,
+  DEFAULT_SMARTRECRUITERS_COMPANIES
+};
