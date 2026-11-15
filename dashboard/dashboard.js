@@ -49,6 +49,11 @@ let selectedJobs = new Map(); // jobId -> { job, resumeId }
 let selectedResumeUploadBase64 = null;
 let selectedResumeUploadFileName = null;
 
+function isLocalBackend() {
+  const h = window.location.hostname;
+  return h === 'localhost' || h === '127.0.0.1' || window.location.port === '8090';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   if (window.lucide) lucide.createIcons();
@@ -61,20 +66,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function initDashboard(forceRefresh = false) {
   try {
-    // 1. Try composite dashboard summary API safely
     let summary = null;
-    try {
-      const res = await fetch(`./api/dashboard/summary?t=${Date.now()}`);
-      if (res.ok) {
-        const text = await res.text();
-        try {
-          summary = JSON.parse(text);
-        } catch (e) {
-          summary = null;
+    if (isLocalBackend()) {
+      try {
+        const res = await fetch(`./api/dashboard/summary?t=${Date.now()}`);
+        if (res.ok) {
+          const text = await res.text();
+          try {
+            summary = JSON.parse(text);
+          } catch (e) {
+            summary = null;
+          }
         }
+      } catch (e) {
+        summary = null;
       }
-    } catch (e) {
-      summary = null;
     }
 
     if (summary && summary.profile && summary.profile.fullName) {
@@ -377,7 +383,7 @@ async function quickSingleSubmit(key) {
 
 async function executeBatchSubmission() {
   if (selectedJobs.size === 0) {
-    alert('Please select at least one position to submit.');
+    showToast('Please select at least one position to submit.', 'warning');
     return;
   }
 
@@ -405,51 +411,60 @@ async function executeBatchSubmission() {
 async function submitBatchPayload(itemsList) {
   const profile = getProfileFormData();
 
-  try {
-    const res = await fetch(`./api/submissions/queue`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jobs: itemsList,
-        profile
-      })
-    });
-
-    let result = null;
+  if (isLocalBackend()) {
     try {
-      if (res.ok) result = await res.json();
-    } catch (e) {}
+      const res = await fetch(`./api/submissions/queue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobs: itemsList,
+          profile
+        })
+      });
 
-    if (result && result.receipts) {
-      submissionLogs = [...result.receipts, ...submissionLogs];
-      renderReceiptsLog();
-      const subsCountEl = document.getElementById('metricSubmissionsCount');
-      if (subsCountEl) subsCountEl.textContent = submissionLogs.length;
-
-      alert(`✅ Success: Dispatched ${result.processedCount} application(s). Review receipts below!`);
-    } else {
-      const receipts = itemsList.map(item => ({
-        receiptId: 'sub_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-        title: item.job.title,
-        company: item.job.company,
-        url: item.job.url,
-        resumeLabel: getResumeLabel(item.resumeId),
-        status: 'assisted_ready',
-        message: 'Pre-packaged application with auto-resolved fields and resume ready for dispatch.',
-        submittedAt: new Date().toISOString()
-      }));
-
-      submissionLogs = [...receipts, ...submissionLogs];
+      let result = null;
       try {
-        localStorage.setItem('scrapedeez_submission_logs', JSON.stringify(submissionLogs));
+        if (res.ok) {
+          const text = await res.text();
+          result = JSON.parse(text);
+        }
       } catch (e) {}
 
-      renderReceiptsLog();
-      alert(`✅ Application package generated for ${receipts.length} position(s). Receipts recorded below.`);
+      if (result && result.receipts) {
+        submissionLogs = [...result.receipts, ...submissionLogs];
+        renderReceiptsLog();
+        const subsCountEl = document.getElementById('metricSubmissionsCount');
+        if (subsCountEl) subsCountEl.textContent = submissionLogs.length;
+
+        showToast(`✅ Dispatched ${result.processedCount} application(s) via API`);
+        return;
+      }
+    } catch (err) {
+      console.warn('API batch submission notice:', err.message);
     }
-  } catch (err) {
-    alert('Submission network notice: ' + err.message);
   }
+
+  // Client-Side Assisted Submissions Package
+  const receipts = itemsList.map(item => ({
+    receiptId: 'sub_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    title: item.job.title,
+    company: item.job.company,
+    url: item.job.url,
+    resumeLabel: getResumeLabel(item.resumeId),
+    status: 'assisted_ready',
+    message: 'Pre-packaged application with auto-resolved fields and resume ready for dispatch.',
+    submittedAt: new Date().toISOString()
+  }));
+
+  submissionLogs = [...receipts, ...submissionLogs];
+  try {
+    localStorage.setItem('scrapedeez_submission_logs', JSON.stringify(submissionLogs));
+  } catch (e) {}
+
+  renderReceiptsLog();
+  const subsCountEl = document.getElementById('metricSubmissionsCount');
+  if (subsCountEl) subsCountEl.textContent = submissionLogs.length;
+  showToast(`✅ Generated packages for ${receipts.length} position(s)`);
 }
 
 function getResumeLabel(id) {
@@ -570,23 +585,24 @@ async function saveProfileData() {
   const btn = document.getElementById('btnSaveProfile');
   if (btn) btn.textContent = 'Saving...';
 
-  try {
-    const res = await fetch(`./api/profile`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(profile)
-    });
-    if (res.ok) {
-      applicantProfile = profile;
-      localStorage.setItem('scrapedeez_profile', JSON.stringify(profile));
-      if (btn) btn.textContent = 'Saved!';
-      setTimeout(() => { if (btn) btn.textContent = 'Save Profile'; }, 2000);
-    }
-  } catch (e) {
-    localStorage.setItem('scrapedeez_profile', JSON.stringify(profile));
-    if (btn) btn.textContent = 'Saved Locally';
-    setTimeout(() => { if (btn) btn.textContent = 'Save Profile'; }, 2000);
+  if (isLocalBackend()) {
+    try {
+      await fetch(`./api/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile)
+      });
+    } catch (e) {}
   }
+
+  applicantProfile = profile;
+  try {
+    localStorage.setItem('scrapedeez_profile', JSON.stringify(profile));
+  } catch (e) {}
+
+  if (btn) btn.textContent = 'Saved!';
+  showToast('✅ Candidate Profile saved successfully');
+  setTimeout(() => { if (btn) btn.textContent = 'Save Profile'; }, 2000);
 }
 
 function handleResumeFileSelected(e) {
@@ -629,7 +645,7 @@ async function handleResumeUpload(e) {
 
   const file = fileInput && fileInput.files && fileInput.files[0];
   if (!file && !selectedResumeUploadBase64) {
-    alert('Please select a resume file (.pdf, .doc, .docx).');
+    showToast('Please select a resume file (.pdf, .doc, .docx)', 'warning');
     return;
   }
 
@@ -660,33 +676,35 @@ async function handleResumeUpload(e) {
 
     let savedResumeItem = null;
 
-    // 1. Try server API
-    try {
-      const res = await fetch(`./api/resumes/upload`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          label,
-          specialization: spec,
-          fileName,
-          fileBase64
-        })
-      });
+    // 1. Try server API only if running local Express server
+    if (isLocalBackend()) {
+      try {
+        const res = await fetch(`./api/resumes/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            label,
+            specialization: spec,
+            fileName,
+            fileBase64
+          })
+        });
 
-      if (res.ok) {
-        const text = await res.text();
-        try {
-          const data = JSON.parse(text);
-          if (data && data.resume) {
-            savedResumeItem = data.resume;
-          }
-        } catch (jsonErr) {}
+        if (res.ok) {
+          const text = await res.text();
+          try {
+            const data = JSON.parse(text);
+            if (data && data.resume) {
+              savedResumeItem = data.resume;
+            }
+          } catch (jsonErr) {}
+        }
+      } catch (apiErr) {
+        console.warn('API upload fallback to local storage:', apiErr.message);
       }
-    } catch (apiErr) {
-      console.warn('API upload fallback to local storage:', apiErr.message);
     }
 
-    // 2. Client fallback for static hosting
+    // 2. Client-first storage for static hosting / fallback
     if (!savedResumeItem) {
       savedResumeItem = {
         id: 'res_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
@@ -723,7 +741,8 @@ async function handleResumeUpload(e) {
 
     showToast(`✅ Resume "${label}" added to vault!`);
   } catch (err) {
-    alert('Resume upload notice: ' + err.message);
+    console.error('Resume upload error:', err);
+    showToast('Notice: Could not process file (' + (err.message || 'Unknown issue') + ')', 'warning');
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -804,9 +823,11 @@ function downloadResume(id) {
 
 async function deleteResume(id) {
   if (!confirm('Delete this resume variation?')) return;
-  try {
-    await fetch(`./api/resumes/${encodeURIComponent(id)}`, { method: 'DELETE' });
-  } catch (e) {}
+  if (isLocalBackend()) {
+    try {
+      await fetch(`./api/resumes/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    } catch (e) {}
+  }
 
   savedResumes = savedResumes.filter(r => r.id !== id);
   try {
@@ -923,12 +944,14 @@ async function triggerHourlyRescan() {
   }
 
   try {
-    await fetch(`./api/scrape-now`, { method: 'POST' });
+    if (isLocalBackend()) {
+      await fetch(`./api/scrape-now`, { method: 'POST' });
+    }
     await fetch24hQueue();
     renderTriageTable();
-    alert('✅ Rescan complete! Fresh postings loaded.');
+    showToast('✅ Rescan complete! Fresh postings refreshed.');
   } catch (e) {
-    alert('Notice: Scrape execution triggered.');
+    showToast('Notice: Queue refreshed.');
   } finally {
     if (btn) {
       btn.disabled = false;

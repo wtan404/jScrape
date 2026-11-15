@@ -4,6 +4,22 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.4.2] - 2026-11-14
+
+### Fixed
+- **Zero-Network Client-First Resume Storage (`dashboard/dashboard.js`):**
+  - Added smart environment detector (`isLocalBackend()`). On live static hosting (`dev.j.synopsdigital.com`), bypasses unnecessary backend POST requests entirely, persisting uploaded resume variations directly into browser storage (`localStorage` + in-memory store) with 0ms latency.
+  - Eliminated the `Unexpected token 'c'` syntax error caused by Apache rewrite rules serving `server.js` plaintext on non-existent API routes.
+  - Replaced all remaining raw `alert()` popups with non-intrusive in-app toast feedback (`showToast()`).
+- **Strict Anti-Cache & Cache-Busting Headers (`dashboard/index.html`):**
+  - Updated asset version query parameter to `<script src="dashboard.js?v=1.4.2&t=20261114c"></script>` to force immediate cache revalidation in client browsers.
+  - Added anti-cache HTTP-equiv headers (`Cache-Control: no-cache, no-store, must-revalidate`, `Pragma: no-cache`, `Expires: 0`).
+
+### Changed
+- **Version Bump (`package.json`):** Bumped to `v1.4.2`.
+
+---
+
 ## [1.4.1] - 2026-11-14
 
 ### Fixed
