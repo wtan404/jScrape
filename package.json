@@ -1,6 +1,6 @@
 {
   "name": "scrapedeez",
-  "version": "1.1.0",
+  "version": "1.5.1",
   "description": "Automated Hourly Job Scraper & Verifier Engine for IT Management, WebOps & DevOps Roles",
   "main": "server.js",
   "scripts": {

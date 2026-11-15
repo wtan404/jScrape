@@ -121,8 +121,115 @@ async function scrapeWeWorkRemotely(targetTitles = PREDEFINED_ROLES, keywords = 
   }
 }
 
+// Scrape Remotive Feed (Filtered for < 30 days old)
+async function scrapeRemotive(targetTitles = PREDEFINED_ROLES, keywords = PREDEFINED_KEYWORDS) {
+  try {
+    const urls = [
+      'https://remotive.com/api/remote-jobs?category=devops-sysadmin',
+      'https://remotive.com/api/remote-jobs?category=software-dev'
+    ];
+    const searchRoles = targetTitles.length > 0 ? targetTitles : PREDEFINED_ROLES;
+    const searchKeywords = keywords.length > 0 ? keywords : PREDEFINED_KEYWORDS;
+    const matches = [];
+    const seen = new Set();
+
+    for (const url of urls) {
+      try {
+        const response = await axios.get(url, { headers: BROWSER_HEADERS, timeout: 8000 });
+        if (response.status !== 200 || !response.data || !Array.isArray(response.data.jobs)) continue;
+
+        for (const job of response.data.jobs) {
+          if (!job || seen.has(job.id)) continue;
+          seen.add(job.id);
+
+          const dateStr = job.publication_date ? new Date(job.publication_date).toISOString() : new Date().toISOString();
+          if (!isWithin30Days(dateStr)) continue;
+
+          const title = (job.title || '').toLowerCase();
+          const desc = (job.description || '').toLowerCase();
+          const matchedRole = searchRoles.find(r => title.includes(r.toLowerCase()));
+          const hasKeyword = searchKeywords.some(k => (title + ' ' + desc).includes(k.toLowerCase()));
+
+          if (matchedRole || hasKeyword) {
+            matches.push({
+              id: `remotive-${job.id}`,
+              source: 'Remotive Feed',
+              title: job.title || 'Remote Tech Position',
+              company: (job.company_name || 'Tech Company').trim(),
+              location: job.candidate_required_location || 'Remote',
+              workType: 'Remote',
+              url: job.url,
+              salary: job.salary || null,
+              matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'SEARCH MATCH',
+              date: dateStr
+            });
+          }
+        }
+      } catch (e) {}
+    }
+    return matches;
+  } catch (err) {
+    return [];
+  }
+}
+
+// Scrape Jobicy Feed (Filtered for < 30 days old)
+async function scrapeJobicy(targetTitles = PREDEFINED_ROLES, keywords = PREDEFINED_KEYWORDS) {
+  try {
+    const industries = ['engineering', 'management', 'cybersecurity'];
+    const searchRoles = targetTitles.length > 0 ? targetTitles : PREDEFINED_ROLES;
+    const searchKeywords = keywords.length > 0 ? keywords : PREDEFINED_KEYWORDS;
+    const matches = [];
+    const seen = new Set();
+
+    for (const ind of industries) {
+      try {
+        const url = `https://jobicy.com/api/v2/remote-jobs?count=50&industry=${ind}`;
+        const response = await axios.get(url, { headers: BROWSER_HEADERS, timeout: 8000 });
+        if (response.status !== 200 || !response.data || !Array.isArray(response.data.jobs)) continue;
+
+        for (const job of response.data.jobs) {
+          if (!job || seen.has(job.id)) continue;
+          seen.add(job.id);
+
+          const dateStr = job.pubDate ? new Date(job.pubDate).toISOString() : new Date().toISOString();
+          if (!isWithin30Days(dateStr)) continue;
+
+          const title = (job.jobTitle || '').toLowerCase();
+          const desc = (job.jobExcerpt || job.jobDescription || '').toLowerCase();
+          const matchedRole = searchRoles.find(r => title.includes(r.toLowerCase()));
+          const hasKeyword = searchKeywords.some(k => (title + ' ' + desc).includes(k.toLowerCase()));
+
+          if (matchedRole || hasKeyword) {
+            let salaryFormatted = null;
+            if (job.salaryMin && job.salaryMax) {
+              salaryFormatted = `$${Math.round(job.salaryMin/1000)}k - $${Math.round(job.salaryMax/1000)}k`;
+            }
+
+            matches.push({
+              id: `jobicy-${job.id}`,
+              source: 'Jobicy Feed',
+              title: job.jobTitle || 'Tech Position',
+              company: (job.companyName || 'Company').replace(/&#038;/g, '&').trim(),
+              location: job.jobGeo || 'Remote / US',
+              workType: classifyWorkType(job.jobGeo || 'Remote', job.jobTitle),
+              url: job.url,
+              salary: salaryFormatted,
+              matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'SEARCH MATCH',
+              date: dateStr
+            });
+          }
+        }
+      } catch (e) {}
+    }
+    return matches;
+  } catch (err) {
+    return [];
+  }
+}
+
 // Master Pipeline Run & Re-Verification
-async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey = process.env.SERPAPI_KEY, customTitles = [], customKeywords = []) {
+async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey = process.env.SERPAPI_KEY, customTitles = [], customKeywords = [], customAshby = [], customSmartRecruiters = []) {
   console.log('[Scrapedeez] Launching Pipeline for Active Criteria (< 30 days old)...');
 
   // Load config if available
@@ -134,6 +241,8 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
 
   const greenhouseCompanies = customGreenhouse.length > 0 ? customGreenhouse : (cfg.greenhouseCompanies || []);
   const leverCompanies = customLever.length > 0 ? customLever : (cfg.leverCompanies || []);
+  const ashbyCompanies = customAshby.length > 0 ? customAshby : (cfg.ashbyCompanies || []);
+  const smartRecruitersCompanies = customSmartRecruiters.length > 0 ? customSmartRecruiters : (cfg.smartRecruitersCompanies || []);
   const targetTitles = customTitles.length > 0 ? customTitles : (cfg.targetTitles || PREDEFINED_ROLES);
   const keywords = customKeywords.length > 0 ? customKeywords : (cfg.keywords || PREDEFINED_KEYWORDS);
   const apiKey = serpApiKey || cfg.serpApiKey || process.env.SERPAPI_KEY;
@@ -147,14 +256,16 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
   const verifiedExistingJobs = await verifyAndPruneJobs(existingStore.jobs || []);
   const existingIdSet = new Set(verifiedExistingJobs.map(j => j.id || j.url));
 
-  const [remoteOkJobs, wwrJobs, atsJobs, googleJobs] = await Promise.all([
+  const [remoteOkJobs, wwrJobs, remotiveJobs, jobicyJobs, atsJobs, googleJobs] = await Promise.all([
     scrapeRemoteOK(targetTitles, keywords).catch(() => []),
     scrapeWeWorkRemotely(targetTitles, keywords).catch(() => []),
-    scrapeAllATSCompanies(greenhouseCompanies, leverCompanies, targetTitles, keywords).catch(() => []),
+    scrapeRemotive(targetTitles, keywords).catch(() => []),
+    scrapeJobicy(targetTitles, keywords).catch(() => []),
+    scrapeAllATSCompanies(greenhouseCompanies, leverCompanies, targetTitles, keywords, ashbyCompanies, smartRecruitersCompanies).catch(() => []),
     scrapeGoogleJobs(apiKey, targetTitles).catch(() => [])
   ]);
 
-  const newlyScraped = [...atsJobs, ...googleJobs, ...remoteOkJobs, ...wwrJobs].filter(j => isWithin30Days(j.date));
+  const newlyScraped = [...atsJobs, ...googleJobs, ...remoteOkJobs, ...wwrJobs, ...remotiveJobs, ...jobicyJobs].filter(j => isWithin30Days(j.date));
 
   const mergedJobs = [];
   const seenUrls = new Set();
@@ -203,4 +314,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { runScraperJob, PREDEFINED_ROLES, PREDEFINED_KEYWORDS };
+module.exports = { runScraperJob, scrapeRemotive, scrapeJobicy, scrapeRemoteOK, scrapeWeWorkRemotely, PREDEFINED_ROLES, PREDEFINED_KEYWORDS };
