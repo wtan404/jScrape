@@ -50,21 +50,29 @@ check_endpoint() {
   local tmpfile
   tmpfile=$(mktemp)
 
-  # Fetch response body and capture HTTP status + timing
-  local meta
-  meta=$(curl -s -L -o "$tmpfile" -w "%{http_code} %{time_total}" --max-time 15 "$url")
-  local http_code
-  local duration
-  http_code=$(echo "$meta" | awk '{print $1}')
-  duration=$(echo "$meta" | awk '{print $2}')
+  # Fetch response body with up to 3 retry attempts during server restart/reload buffers
+  local http_code=""
+  local duration=""
+  local retries=3
+  local attempt=1
 
-  # Resilient retry if first attempt failed or missing required text (e.g. during server reload buffer)
-  if [ "$http_code" != "$expected_status" ] || ([ -n "$required_text" ] && ! grep -i -q "$required_text" "$tmpfile"); then
-    sleep 3
+  while [ $attempt -le $retries ]; do
+    local meta
     meta=$(curl -s -L -o "$tmpfile" -w "%{http_code} %{time_total}" --max-time 15 "$url")
     http_code=$(echo "$meta" | awk '{print $1}')
     duration=$(echo "$meta" | awk '{print $2}')
-  fi
+
+    if [ "$http_code" = "$expected_status" ]; then
+      if [ -z "$required_text" ] || grep -i -q "$required_text" "$tmpfile"; then
+        break
+      fi
+    fi
+
+    if [ $attempt -lt $retries ]; then
+      sleep 4
+    fi
+    attempt=$((attempt + 1))
+  done
 
   if [ "$http_code" = "$expected_status" ]; then
     if [ -n "$required_text" ]; then
@@ -73,6 +81,7 @@ check_endpoint() {
         PASSED=$((PASSED + 1))
       else
         echo "❌ FAIL: ${path} returned HTTP ${http_code} but missing expected content: '${required_text}'"
+        echo "   Response preview: $(head -c 200 "$tmpfile" 2>/dev/null | tr '\n' ' ' || true)"
         FAILED=$((FAILED + 1))
       fi
     else
@@ -81,6 +90,7 @@ check_endpoint() {
     fi
   else
     echo "❌ FAIL: ${path} expected HTTP ${expected_status}, received HTTP ${http_code} (${duration}s)"
+    echo "   Response preview: $(head -c 200 "$tmpfile" 2>/dev/null | tr '\n' ' ' || true)"
     FAILED=$((FAILED + 1))
   fi
 
@@ -90,10 +100,19 @@ check_endpoint() {
 # Function to audit security headers
 check_header() {
   local header_name="$1"
-  local headers
-  headers=$(curl -s -L -I --max-time 10 "${TARGET_URL}/")
+  local headers=""
+  local found=false
 
-  if echo "$headers" | grep -i -q "^${header_name}:"; then
+  for i in 1 2 3; do
+    headers=$(curl -s -L -I --max-time 10 "${TARGET_URL}/")
+    if echo "$headers" | grep -i -q "^${header_name}:"; then
+      found=true
+      break
+    fi
+    sleep 3
+  done
+
+  if [ "$found" = true ]; then
     echo "  ✅ Security Header Present: ${header_name}"
     PASSED=$((PASSED + 1))
   else
@@ -162,7 +181,7 @@ done
 CRAWLED_LINKS=()
 for page in "${PAGES[@]}"; do
   content=$(curl -s -L --max-time 10 "${TARGET_URL}${page}")
-  found_links=$(echo "$content" | grep -oE '(href|src)="[^"#?]+"' | sed -E 's/(href|src)="([^"]+)"/\2/' | grep -vE '^(http|https|mailto|tel|javascript|#):' || true)
+  found_links=$(echo "$content" | grep -oE '(href|src)="[^"#?]+"' | sed -E 's/(href|src)="([^"]+)"/\2/' | grep -vE '^(http|https|mailto|tel|javascript|data|#):' || true)
 
   while IFS= read -r link; do
     [ -z "$link" ] && continue

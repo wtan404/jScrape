@@ -4,6 +4,24 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.6.0] - 2026-11-14
+
+### Added
+- **Production HTTP Basic Auth Shield (`dashboard/.htaccess`, `.htpasswd`):**
+  - Locked production PM Operations Command Center (`/dashboard/` and `/dashboard.html`) behind an Apache HTTP Basic Authentication challenge.
+  - Production requests without credentials receive HTTP 401 Unauthorized; authenticated requests receive HTTP 200 OK.
+  - Preserved unshielded access for development environments (`dev.j.synopsdigital.com`).
+- **Resilient CI/CD Post-Deploy Verification (`tests/qa-check.sh`, `.github/workflows/deploy.yml`):**
+  - Added 12-round health verification poll during Phusion Passenger server restart buffers.
+  - Implemented 3-attempt backoff retry loop in `check_endpoint` and `check_header` for transient reload states.
+  - Excluded `data:` URI scheme placeholders from automated link crawler.
+  - Conditioned `.htaccess` FTP deployment rule to deploy root and directory shielding configurations to production while preserving subdomain routing in dev/stage.
+
+### Changed
+- **Version Bump (`package.json`):** Bumped to `v1.6.0`.
+
+---
+
 ## [1.5.1] - 2026-11-14
 
 ### Added

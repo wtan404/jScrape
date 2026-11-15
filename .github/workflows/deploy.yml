@@ -52,15 +52,19 @@ jobs:
           if [ "${{ github.ref_name }}" = "dev" ]; then
             echo "dir=${BASE_DIR}dev/" >> $GITHUB_OUTPUT
             echo "url=https://dev.j.synopsdigital.com" >> $GITHUB_OUTPUT
+            echo "exclude_htaccess=.htaccess" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref_name }}" = "qa" ]; then
             echo "dir=${BASE_DIR}qa/" >> $GITHUB_OUTPUT
             echo "url=https://qa.j.synopsdigital.com" >> $GITHUB_OUTPUT
+            echo "exclude_htaccess=.htaccess" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref_name }}" = "stage" ]; then
             echo "dir=${BASE_DIR}stage/" >> $GITHUB_OUTPUT
             echo "url=https://stage.j.synopsdigital.com" >> $GITHUB_OUTPUT
+            echo "exclude_htaccess=.htaccess" >> $GITHUB_OUTPUT
           else
             echo "dir=${BASE_DIR}" >> $GITHUB_OUTPUT
             echo "url=https://j.synopsdigital.com" >> $GITHUB_OUTPUT
+            echo "exclude_htaccess=" >> $GITHUB_OUTPUT
           fi
 
       - name: 🔄 Signal Passenger restart
@@ -85,13 +89,20 @@ jobs:
             dev/**
             qa/**
             stage/**
-            .htaccess
-            **/.htaccess
+            ${{ steps.set-target.outputs.exclude_htaccess }}
 
       - name: 🧪 Run Automated Post-Deploy Verification
         run: |
           chmod +x tests/qa-check.sh
-          sleep 5
+          echo "Waiting for passenger service to settle..."
+          for i in {1..12}; do
+            if curl -s -L "${{ steps.set-target.outputs.url }}/health" | grep -q "healthy"; then
+              echo "Server health confirmed: application online."
+              break
+            fi
+            sleep 2
+          done
+          sleep 2
           if [ "${{ github.ref_name }}" = "dev" ]; then
             ./tests/qa-check.sh "${{ steps.set-target.outputs.url }}" --mode=smoke
           elif [ "${{ github.ref_name }}" = "qa" ]; then
