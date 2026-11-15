@@ -4,6 +4,25 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.5.0] - 2026-11-14
+
+### Added
+- **Mock ATS Application & Live Payload Inspector (`dashboard/test-application.html`):**
+  - Built an interactive, high-fidelity mock enterprise job application page (*Acme Cloud Technologies — Director of WebOps & Reliability*).
+  - Simulates 10 divergent ATS questions covering legal work authorization, visa sponsorship, target compensation, notice periods, referral attribution, EEOC disclosures, cover summary, and resume attachments.
+  - Interactive live telemetry inspector displaying real-time field resolution diagnostics, matching rules, raw outgoing HTTP POST JSON payload, and server receipts.
+- **Dynamic Field Resolution Test Harness Script (`tests/run_test_submission.js`):**
+  - Built a Node.js verification harness executing the entire pipeline end-to-end: introspecting target schema questions, applying semantic keyword matching heuristics, generating formatted JSON payloads, and recording verified audit receipts in `submissions_log.json`.
+- **Backend Mock Ingestion Endpoint (`server.js`):**
+  - Added `POST /api/test/mock-ats-submit` endpoint receiving and validating test payloads with candidate telemetry and resume confirmation.
+- **Operations Dashboard Integration (`dashboard/index.html`):**
+  - Added direct navigation button `🧪 Test Schema Inspector` linking to the mock ATS application page.
+
+### Changed
+- **Version Bump (`package.json`):** Bumped to `v1.5.0`.
+
+---
+
 ## [1.4.2] - 2026-11-14
 
 ### Fixed

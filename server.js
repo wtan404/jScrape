@@ -452,6 +452,39 @@ app.post('/api/submissions/queue', async (req, res) => {
   }
 });
 
+// POST /api/test/mock-ats-submit (Mock ATS Endpoint for Testing & Payload Inspection)
+app.post('/api/test/mock-ats-submit', (req, res) => {
+  try {
+    const payload = req.body || {};
+    const answers = payload.answers || [];
+    const resumeInfo = payload.resume_content ? {
+      filename: payload.resume_content_filename || 'resume.pdf',
+      sizeBytes: Math.round(payload.resume_content.length * 0.75)
+    } : null;
+
+    const receipt = {
+      status: 'submitted_mock_ats',
+      httpCode: 200,
+      timestamp: new Date().toISOString(),
+      receiptId: 'mock_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      candidate: {
+        name: `${payload.first_name || ''} ${payload.last_name || ''}`.trim() || payload.name,
+        email: payload.email,
+        phone: payload.phone
+      },
+      resolvedFieldsCount: answers.length,
+      resumeAttached: Boolean(resumeInfo),
+      resumeInfo,
+      receivedPayload: payload
+    };
+
+    console.log(`[Mock ATS] Ingested test submission for ${receipt.candidate.name} (${answers.length} custom fields)`);
+    res.json(receipt);
+  } catch (err) {
+    res.status(500).json({ error: 'Mock ATS ingestion failure', message: err.message });
+  }
+});
+
 // GET /api/dashboard/summary
 app.get('/api/dashboard/summary', (req, res) => {
   try {
