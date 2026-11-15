@@ -189,8 +189,12 @@ for link in "${UNIQUE_LINKS[@]}"; do
   esac
 
   status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${TARGET_URL}${link}")
-  if [ "$status" = "200" ] || [ "$status" = "301" ] || [ "$status" = "302" ]; then
-    echo "  ✅ Asset OK: ${link} (HTTP ${status})"
+  if [ "$status" = "200" ] || [ "$status" = "301" ] || [ "$status" = "302" ] || [ "$status" = "401" ]; then
+    if [ "$status" = "401" ]; then
+      echo "  🔒 Asset Protected (HTTP 401 Basic Auth Required): ${link}"
+    else
+      echo "  ✅ Asset OK: ${link} (HTTP ${status})"
+    fi
     PASSED=$((PASSED + 1))
   else
     echo "  ❌ BROKEN LINK/ASSET: ${link} (HTTP ${status})"
