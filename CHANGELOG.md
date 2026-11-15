@@ -4,6 +4,26 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.5.1] - 2026-11-14
+
+### Added
+- **Real-World Live ATS Schema Introspection Probe (`tests/live_real_world_inspection.js`):**
+  - Created live probe harness fetching actual production schemas from Greenhouse (Figma, Cloudflare) and Lever (Palantir).
+  - Validated real-world API status (HTTP 200) and live question taxonomies across production career boards.
+
+### Fixed
+- **Heuristic Refinements from Live Schema Testing (`submission_engine.js`):**
+  - Disambiguated "Legal Name" from legal work authorization questions.
+  - Disambiguated "Privacy Notice / Policy" acknowledgements from employment notice period questions.
+  - Added auto-mapping for candidate work location / remote residence questions (`"From where do you intend to work?"` &rarr; `San Francisco, CA`).
+  - Added auto-mapping for prior employment / contractor association questions (`"Have you ever worked for..."` &rarr; `"No"`).
+  - Added auto-acceptance for candidate privacy notices and policy consent questionnaires (`"Yes"` / `"Acknowledge"`).
+
+### Changed
+- **Version Bump (`package.json`):** Bumped to `v1.5.1`.
+
+---
+
 ## [1.5.0] - 2026-11-14
 
 ### Added

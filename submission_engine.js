@@ -96,13 +96,28 @@ function resolveFieldAnswer(label = '', type = 'text', options = [], profile = D
     return matchOptionValue(ans, options) || ans;
   }
 
-  // 2. Legal Work Authorization Questions
-  if (cleanLabel.includes('authoriz') || cleanLabel.includes('eligible') || cleanLabel.includes('legal') || cleanLabel.includes('right to work')) {
+  // 2. Legal Work Authorization Questions (guard against "legal name")
+  if (cleanLabel.includes('authoriz') || cleanLabel.includes('eligible') || cleanLabel.includes('right to work') || (cleanLabel.includes('legal') && !cleanLabel.includes('name'))) {
     const ans = profile.legallyAuthorized || 'Yes';
     return matchOptionValue(ans, options) || ans;
   }
 
-  // 3. Salary & Compensation
+  // 3. Privacy Policy & Consent Acknowledgements
+  if (cleanLabel.includes('privacy') || cleanLabel.includes('policy') || cleanLabel.includes('acknowledge') || cleanLabel.includes('consent')) {
+    return matchOptionValue('Yes', options) || matchOptionValue('Acknowledge', options) || 'Yes';
+  }
+
+  // 4. Previous Employment / Prior Association
+  if (cleanLabel.includes('worked for') || cleanLabel.includes('employed by') || cleanLabel.includes('previous employee') || cleanLabel.includes('ever worked')) {
+    return matchOptionValue('No', options) || 'No';
+  }
+
+  // 5. Work Location / Remote Residence
+  if (cleanLabel.includes('where do you') || cleanLabel.includes('location from') || cleanLabel.includes('country do you reside') || cleanLabel.includes('city do you')) {
+    return profile.location || 'San Francisco, CA';
+  }
+
+  // 6. Salary & Compensation
   if (cleanLabel.includes('salary') || cleanLabel.includes('compensation') || cleanLabel.includes('desired pay') || cleanLabel.includes('expectation')) {
     if (type === 'number') {
       return profile.desiredSalary || 160000;
@@ -111,19 +126,19 @@ function resolveFieldAnswer(label = '', type = 'text', options = [], profile = D
     return matchOptionValue(val, options) || val;
   }
 
-  // 4. Availability & Notice Period
-  if (cleanLabel.includes('notice') || cleanLabel.includes('start date') || cleanLabel.includes('available') || cleanLabel.includes('how soon')) {
+  // 7. Availability & Notice Period (guard against "privacy notice")
+  if ((cleanLabel.includes('notice') && !cleanLabel.includes('privacy') && !cleanLabel.includes('policy')) || cleanLabel.includes('start date') || cleanLabel.includes('available to start') || cleanLabel.includes('how soon')) {
     const ans = profile.noticePeriod || '2 Weeks';
     return matchOptionValue(ans, options) || ans;
   }
 
-  // 5. Source / Referral Attribution
+  // 8. Source / Referral Attribution
   if (cleanLabel.includes('hear about') || cleanLabel.includes('source') || cleanLabel.includes('referral') || cleanLabel.includes('how did you')) {
     const ans = profile.referralSource || 'Company Career Page';
     return matchOptionValue(ans, options) || ans;
   }
 
-  // 6. EEOC Demographics (Gender, Race, Veteran, Disability)
+  // 9. EEOC Demographics (Gender, Race, Veteran, Disability)
   if (cleanLabel.includes('gender') || cleanLabel.includes('sex')) {
     return matchOptionValue(profile.eeocGender || 'Decline', options) || 'Decline to Self-Identify';
   }
@@ -137,7 +152,7 @@ function resolveFieldAnswer(label = '', type = 'text', options = [], profile = D
     return matchOptionValue(profile.eeocDisability || 'No', options) || 'No, I do not have a disability';
   }
 
-  // 7. General open-ended or summary prompts
+  // 10. General open-ended or summary prompts
   if (cleanLabel.includes('why') || cleanLabel.includes('tell us') || cleanLabel.includes('cover') || cleanLabel.includes('interest')) {
     return profile.coverNote || '';
   }
