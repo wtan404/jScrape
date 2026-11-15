@@ -277,11 +277,17 @@ function renderTriageTable() {
             `).join('')}
           </select>
         </td>
-        <td style="text-align: right;">
-          <button type="button" class="btn btn-secondary btn-xs" onclick="quickSingleSubmit('${escapeHtml(key)}')" title="Submit this position via API">
-            <i data-lucide="send"></i>
-            <span>Submit</span>
-          </button>
+        <td style="text-align: right; white-space: nowrap;">
+          <div style="display: inline-flex; gap: 0.4rem; justify-content: flex-end; align-items: center;">
+            <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-xs" title="Open original job posting in new tab">
+              <i data-lucide="external-link"></i>
+              <span>View</span>
+            </a>
+            <button type="button" class="btn btn-primary btn-xs" onclick="quickSingleSubmit('${escapeHtml(key)}')" title="Submit this position via API">
+              <i data-lucide="send"></i>
+              <span>Submit</span>
+            </button>
+          </div>
         </td>
       </tr>
     `;

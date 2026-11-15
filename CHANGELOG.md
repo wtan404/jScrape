@@ -4,6 +4,19 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.6.1] - 2026-11-15
+
+### Added
+- **Direct Job Posting Inspection Link (`dashboard/dashboard.js`, `dashboard/index.html`):**
+  - Added a dedicated "View" button (`<a target="_blank">`) with an external-link icon in the 24-hour Hotlist triage table alongside the "Submit" action.
+  - Allows PMs and reviewers to inspect the original live job posting on Greenhouse, Lever, Ashby, or source job boards in a separate tab before or after dispatching submissions.
+  - Enhanced table header to "Actions" with minimum column width styling and updated script cache-busting to `v1.4.3`.
+
+### Changed
+- **Version Bump (`package.json`):** Bumped to `v1.6.1`.
+
+---
+
 ## [1.6.0] - 2026-11-14
 
 ### Added
