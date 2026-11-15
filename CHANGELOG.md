@@ -7,15 +7,17 @@ All notable changes to the jScrape project are documented in this file.
 ## [1.6.0] - 2026-11-14
 
 ### Added
-- **Production Pipeline Promotion & `.htaccess` Security Shield:**
-  - Promoted the complete project release (v1.5.1) through staging up to production (`main` &bull; `https://j.synopsdigital.com`).
-  - **Locked PM Operations Dashboard behind `.htaccess` HTTP Basic Authentication Shield**:
-    - Restricts `https://j.synopsdigital.com/dashboard/` and `/dashboard.html` behind an Apache `AuthType Basic` challenge on production.
-    - Public visitors to `https://j.synopsdigital.com/` enjoy full, unrestricted access to the public job board without auth popups.
-    - Subdomain `dev.j.synopsdigital.com/dashboard/` remains open for active developer testing.
-  - **Credentials Safeguard**: Stored production credentials outside project directory in `D:\Projects\jscrape_prod_credentials.txt`.
-  - **Automated QA Audit Support (`tests/qa-check.sh`)**: Updated crawler to validate `HTTP 401 Unauthorized` as a passing protected asset response during CI/CD audit verification.
-  - **Deployment Pipeline Update (`.cpanel.yml`, `deploy.yml`)**: Enabled sync of directory-level `dashboard/.htaccess` and `.htpasswd` authentication files.
+- **Production HTTP Basic Auth Shield (`dashboard/.htaccess`, `.htpasswd`, `.htaccess`):**
+  - Locked production PM Operations Command Center (`/dashboard/` and `/dashboard.html`) behind an Apache HTTP Basic Authentication challenge.
+  - Production requests without credentials receive HTTP 401 Unauthorized; authenticated requests receive HTTP 200 OK.
+  - Preserved unshielded access for development environments (`dev.j.synopsdigital.com`).
+  - Stored production credentials securely outside the repository at `D:\Projects\jscrape_prod_credentials.txt`.
+- **Resilient CI/CD Post-Deploy Verification (`tests/qa-check.sh`, `.github/workflows/deploy.yml`):**
+  - Added 12-round health verification poll during Phusion Passenger server restart buffers.
+  - Implemented 3-attempt backoff retry loop in `check_endpoint` and `check_header` for transient reload states.
+  - Updated crawler to validate `HTTP 401 Unauthorized` as a passing protected asset response during CI/CD audit verification.
+  - Excluded `data:` URI scheme placeholders from automated link crawler.
+  - Conditioned `.htaccess` FTP deployment rule to deploy root and directory shielding configurations to production while preserving subdomain routing in dev/stage.
 
 ### Changed
 - **Version Bump (`package.json`):** Bumped to `v1.6.0`.

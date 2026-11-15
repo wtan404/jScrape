@@ -15,12 +15,18 @@ PassengerNodejs "/opt/alt/alt-nodejs18/root/usr/bin/node"
     </If>
 
     # Production Shield: Lock PM Operations Dashboard behind HTTP Basic Auth
-    <If "%{HTTP_HOST} =~ /^(j\.)?synopsdigital\.com$/ && %{REQUEST_URI} =~ m#^/(dashboard|dashboard\.html)#">
+    <Files "dashboard.html">
         AuthType Basic
         AuthName "Restricted PM Operations Command Center"
         AuthUserFile /home/synopsdi/public_html/list/.htpasswd
-        Require valid-user
-    </If>
+
+        <If "%{HTTP_HOST} =~ /^(j\.)?synopsdigital\.com$/">
+            Require valid-user
+        </If>
+        <Else>
+            Require all granted
+        </Else>
+    </Files>
 </IfModule>
 
 # Enable Rewrite Engine for Passenger Proxy & Access Control
