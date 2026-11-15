@@ -4,6 +4,24 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.6.0] - 2026-11-14
+
+### Added
+- **Production Pipeline Promotion & `.htaccess` Security Shield:**
+  - Promoted the complete project release (v1.5.1) through staging up to production (`main` &bull; `https://j.synopsdigital.com`).
+  - **Locked PM Operations Dashboard behind `.htaccess` HTTP Basic Authentication Shield**:
+    - Restricts `https://j.synopsdigital.com/dashboard/` and `/dashboard.html` behind an Apache `AuthType Basic` challenge on production.
+    - Public visitors to `https://j.synopsdigital.com/` enjoy full, unrestricted access to the public job board without auth popups.
+    - Subdomain `dev.j.synopsdigital.com/dashboard/` remains open for active developer testing.
+  - **Credentials Safeguard**: Stored production credentials outside project directory in `D:\Projects\jscrape_prod_credentials.txt`.
+  - **Automated QA Audit Support (`tests/qa-check.sh`)**: Updated crawler to validate `HTTP 401 Unauthorized` as a passing protected asset response during CI/CD audit verification.
+  - **Deployment Pipeline Update (`.cpanel.yml`, `deploy.yml`)**: Enabled sync of directory-level `dashboard/.htaccess` and `.htpasswd` authentication files.
+
+### Changed
+- **Version Bump (`package.json`):** Bumped to `v1.6.0`.
+
+---
+
 ## [1.5.1] - 2026-11-14
 
 ### Added

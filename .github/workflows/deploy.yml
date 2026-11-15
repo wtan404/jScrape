@@ -86,7 +86,6 @@ jobs:
             qa/**
             stage/**
             .htaccess
-            **/.htaccess
 
       - name: 🧪 Run Automated Post-Deploy Verification
         run: |
