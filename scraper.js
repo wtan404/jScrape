@@ -5,6 +5,7 @@ const { scrapeAllATSCompanies } = require('./ats_scraper');
 const { scrapeGoogleJobs } = require('./google_jobs_scraper');
 const { verifyAndPruneJobs, isWithin30Days } = require('./verifier');
 const { classifyWorkType } = require('./geo_helper');
+const { extractSalaryFromText } = require('./salary_extractor');
 
 const PREDEFINED_ROLES = [
   'Manager of IT',
@@ -54,6 +55,7 @@ async function scrapeRemoteOK(targetTitles = PREDEFINED_ROLES, keywords = PREDEF
       const hasKeyword = searchKeywords.some(k => (title + ' ' + description).includes(k.toLowerCase()));
 
       if (matchedRole || hasKeyword) {
+        const salary = extractSalaryFromText(job.description || '') || (job.salary || null);
         matches.push({
           id: `remoteok-${job.id}`,
           source: 'RemoteOK Feed',
@@ -61,6 +63,7 @@ async function scrapeRemoteOK(targetTitles = PREDEFINED_ROLES, keywords = PREDEF
           company: job.company || 'Unknown',
           location,
           workType: classifyWorkType(location, job.position),
+          salary,
           url: job.url || `https://remoteok.com/remote-jobs/${job.id}`,
           matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'SEARCH MATCH',
           date: dateStr
@@ -102,6 +105,7 @@ async function scrapeWeWorkRemotely(targetTitles = PREDEFINED_ROLES, keywords = 
       const hasKeyword = searchKeywords.some(k => title.toLowerCase().includes(k.toLowerCase()));
 
       if (matchedRole || hasKeyword) {
+        const salary = extractSalaryFromText(match[0] || '');
         matches.push({
           id: `wwr-${Buffer.from(link).toString('base64').substring(0, 10)}`,
           source: 'WeWorkRemotely Feed',
@@ -109,6 +113,7 @@ async function scrapeWeWorkRemotely(targetTitles = PREDEFINED_ROLES, keywords = 
           company,
           location: 'Remote',
           workType: 'Remote',
+          salary,
           url: link,
           matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'SEARCH MATCH',
           date: dateStr
@@ -151,6 +156,7 @@ async function scrapeRemotive(targetTitles = PREDEFINED_ROLES, keywords = PREDEF
           const hasKeyword = searchKeywords.some(k => (title + ' ' + desc).includes(k.toLowerCase()));
 
           if (matchedRole || hasKeyword) {
+            const salary = job.salary || extractSalaryFromText(job.description || '');
             matches.push({
               id: `remotive-${job.id}`,
               source: 'Remotive Feed',
@@ -159,7 +165,7 @@ async function scrapeRemotive(targetTitles = PREDEFINED_ROLES, keywords = PREDEF
               location: job.candidate_required_location || 'Remote',
               workType: 'Remote',
               url: job.url,
-              salary: job.salary || null,
+              salary,
               matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'SEARCH MATCH',
               date: dateStr
             });

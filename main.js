@@ -1057,6 +1057,20 @@ function formatSalary(job) {
   }
 }
 
+function parseSalaryCeiling(salaryStr) {
+  if (!salaryStr || typeof salaryStr !== 'string') return 0;
+  const clean = salaryStr.replace(/<[^>]+>/g, '').replace(/,/g, '');
+  const matches = clean.match(/(\d+)(?:k|000)?/gi);
+  if (!matches || matches.length === 0) return 0;
+  let max = 0;
+  for (const m of matches) {
+    let num = parseInt(m, 10);
+    if (num < 1000) num *= 1000;
+    if (num > max) max = num;
+  }
+  return max;
+}
+
 function parseSalaryMin(salaryStr) {
   if (!salaryStr) return 0;
   const clean = salaryStr.replace(/,/g, '');
@@ -1141,8 +1155,8 @@ async function filterJobs() {
     // 1. Minimum Acceptable Salary Filter
     if (minProfileSalary > 0) {
       const jobSalaryStr = formatSalary(job);
-      const jobSalNum = parseSalaryMin(jobSalaryStr);
-      if (jobSalNum > 0 && jobSalNum < minProfileSalary) {
+      const jobSalCeiling = parseSalaryCeiling(jobSalaryStr);
+      if (jobSalCeiling > 0 && jobSalCeiling < minProfileSalary) {
         return false;
       }
     }

@@ -4,6 +4,20 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.9.0] - 2026-11-15
+
+### Added
+- **Deep Job Description (JD) Salary Scanner (`salary_extractor.js`, `ats_scraper.js`, `scraper.js`):**
+  - Built an NLP/regex compensation extraction engine scanning full job description HTML and text.
+  - Automatically captures annual ranges, hourly contract rates (converted to 2,080h annual equivalent), and foreign currency pay packages.
+  - Bound scanner to Greenhouse (`job.content`), Lever (`job.descriptionPlain` + `additionalPlain`), Ashby (`job.compensation` + descriptions), SmartRecruiters, and remote feeds (RemoteOK, WeWorkRemotely, Remotive).
+- **Interactive Search Bar Salary Minimum Filter (`dashboard/index.html`, `dashboard/dashboard.js`):**
+  - Added a dedicated minimum salary filter dropdown to the PM Operations search toolbar (`triageSalaryFilter`) with thresholds: `Any Salary`, `$100k+`, `$120k+`, `$140k+`, `$160k+`, `$180k+`, `$200k+`.
+  - Filter logic in `getActiveFilteredJobs()` evaluates the job's compensation ceiling against the selected threshold, instantly hiding roles that fail to meet the user's minimum pay requirement.
+  - Candidate profile target annual salary preserved as an independent ATS payload auto-fill data point.
+
+---
+
 ## [1.8.0] - 2026-11-15
 
 ### Added

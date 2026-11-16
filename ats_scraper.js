@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { classifyWorkType } = require('./geo_helper');
+const { extractSalaryFromText } = require('./salary_extractor');
 
 const DEFAULT_GREENHOUSE_COMPANIES = [
   'webflow', 'squarespace', 'contentful', 'fastly', 'klaviyo', 'braze', 'circleci',
@@ -53,6 +54,7 @@ async function scrapeGreenhouseCompany(company, targetTitles = [], keywords = []
 
       if (matchedTerm || searchTerms.length === 0) {
         const workType = classifyWorkType(location, job.title);
+        const salary = extractSalaryFromText(job.content || '');
         matches.push({
           id: `gh-${company}-${job.id}`,
           source: `Greenhouse (${company.toUpperCase()})`,
@@ -60,6 +62,7 @@ async function scrapeGreenhouseCompany(company, targetTitles = [], keywords = []
           company: company.charAt(0).toUpperCase() + company.slice(1),
           location,
           workType,
+          salary,
           url: job.absolute_url,
           matchedKeyword: matchedTerm ? matchedTerm.toUpperCase() : 'USER MATCH',
           date: job.updated_at || new Date().toISOString()
@@ -95,6 +98,8 @@ async function scrapeLeverCompany(company, targetTitles = [], keywords = []) {
 
       if (matchedTerm || searchTerms.length === 0) {
         const workType = classifyWorkType(location, job.text);
+        const fullDesc = (job.descriptionPlain || '') + ' ' + (job.additionalPlain || '');
+        const salary = extractSalaryFromText(fullDesc);
         matches.push({
           id: `lever-${company}-${job.id}`,
           source: `Lever (${company.toUpperCase()})`,
@@ -102,6 +107,7 @@ async function scrapeLeverCompany(company, targetTitles = [], keywords = []) {
           company: company.charAt(0).toUpperCase() + company.slice(1),
           location,
           workType,
+          salary,
           url: job.hostedUrl,
           matchedKeyword: matchedTerm ? matchedTerm.toUpperCase() : 'USER MATCH',
           date: job.createdAt ? new Date(job.createdAt).toISOString() : new Date().toISOString()
@@ -146,6 +152,16 @@ async function scrapeAshbyCompany(company, targetTitles = [], keywords = []) {
           workType = classifyWorkType(location, job.title);
         }
 
+        let salary = null;
+        if (job.compensation && job.compensation.compensationTierSummary) {
+          salary = job.compensation.compensationTierSummary;
+        } else if (job.compensation && job.compensation.minValue && job.compensation.maxValue) {
+          const cur = job.compensation.currency || '$';
+          salary = `${cur}${Math.round(job.compensation.minValue / 1000)}k - ${cur}${Math.round(job.compensation.maxValue / 1000)}k`;
+        } else {
+          salary = extractSalaryFromText(job.descriptionPlain || job.descriptionHtml || '');
+        }
+
         matches.push({
           id: `ashby-${company}-${job.id}`,
           source: `Ashby (${company.toUpperCase()})`,
@@ -153,6 +169,7 @@ async function scrapeAshbyCompany(company, targetTitles = [], keywords = []) {
           company: company.charAt(0).toUpperCase() + company.slice(1),
           location,
           workType,
+          salary,
           url: job.applyUrl || job.jobUrl,
           matchedKeyword: matchedTerm ? matchedTerm.toUpperCase() : 'USER MATCH',
           date: job.publishedAt || new Date().toISOString()
@@ -193,6 +210,7 @@ async function scrapeSmartRecruitersCompany(company, targetTitles = [], keywords
         else workType = classifyWorkType(location, job.name);
 
         const postingUrl = `https://jobs.smartrecruiters.com/${company}/${job.id}`;
+        const salary = extractSalaryFromText(job.content || job.name || '');
 
         matches.push({
           id: `sr-${company}-${job.id}`,
@@ -201,6 +219,7 @@ async function scrapeSmartRecruitersCompany(company, targetTitles = [], keywords
           company: (job.company && job.company.name) ? job.company.name : (company.charAt(0).toUpperCase() + company.slice(1)),
           location,
           workType,
+          salary,
           url: postingUrl,
           matchedKeyword: matchedTerm ? matchedTerm.toUpperCase() : 'USER MATCH',
           date: job.releasedDate || new Date().toISOString()

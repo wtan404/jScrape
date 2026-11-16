@@ -249,6 +249,7 @@ function getActiveFilteredJobs(applyFilters = true) {
   const searchVal = document.getElementById('triageSearchInput')?.value.toLowerCase().trim() || '';
   const wtFilter = document.getElementById('triageWorkTypeFilter')?.value || 'all';
   const srcFilter = document.getElementById('triageSourceFilter')?.value || 'all';
+  const salFilter = parseInt(document.getElementById('triageSalaryFilter')?.value, 10) || 0;
 
   return list.filter(job => {
     if (searchVal) {
@@ -265,6 +266,13 @@ function getActiveFilteredJobs(applyFilters = true) {
         if (!s.includes('greenhouse') && !s.includes('lever') && !s.includes('ashby') && !s.includes('smartrecruiters') && s !== 'ats') return false;
       } else if (srcFilter === 'feeds') {
         if (!s.includes('remotive') && !s.includes('jobicy') && !s.includes('remoteok') && !s.includes('weworkremotely') && s !== 'feed') return false;
+      }
+    }
+    if (salFilter > 0) {
+      const salaryData = formatSalaryUSD(job.salary, job.title);
+      const ceiling = parseSalaryCeiling(salaryData.formatted);
+      if (ceiling > 0 && ceiling < salFilter) {
+        return false;
       }
     }
     return true;
@@ -394,6 +402,20 @@ function formatSalaryUSD(rawSalary, jobTitle = '') {
     isConverted: true,
     orig: raw
   };
+}
+
+function parseSalaryCeiling(salaryStr) {
+  if (!salaryStr || typeof salaryStr !== 'string') return 0;
+  const clean = salaryStr.replace(/<[^>]+>/g, '').replace(/,/g, '');
+  const matches = clean.match(/(\d+)(?:k|000)?/gi);
+  if (!matches || matches.length === 0) return 0;
+  let max = 0;
+  for (const m of matches) {
+    let num = parseInt(m, 10);
+    if (num < 1000) num *= 1000;
+    if (num > max) max = num;
+  }
+  return max;
 }
 
 // --------------------------------------------------------------------------

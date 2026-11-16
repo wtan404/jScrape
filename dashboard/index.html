@@ -740,6 +740,16 @@
               <option value="ats">ATS Direct (GH / Lever / Ashby)</option>
               <option value="feeds">Curated Tech Feeds</option>
             </select>
+
+            <select id="triageSalaryFilter" class="select-control" onchange="renderTriageTable()" title="Filter by Minimum Acceptable Salary">
+              <option value="0">Any Salary</option>
+              <option value="100000">Min. $100k / yr</option>
+              <option value="120000">Min. $120k / yr</option>
+              <option value="140000">Min. $140k / yr</option>
+              <option value="160000">Min. $160k / yr</option>
+              <option value="180000">Min. $180k / yr</option>
+              <option value="200000">Min. $200k+ / yr</option>
+            </select>
           </div>
 
           <div class="triage-cta-module">
@@ -991,6 +1001,6 @@
     </div>
   </div>
 
-  <script src="dashboard.js?v=1.8.0&t=20261115c"></script>
+  <script src="dashboard.js?v=1.9.0&t=20261115d"></script>
 </body>
 </html>
