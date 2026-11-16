@@ -943,12 +943,6 @@ function renderTriageTable() {
                 <i data-lucide="rotate-ccw"></i>
                 <span>Restore</span>
               </button>
-              ${job.url ? `
-                <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-xs" title="Open original job posting in new tab">
-                  <i data-lucide="external-link"></i>
-                  <span>View</span>
-                </a>
-              ` : ''}
             </div>
           </td>
         </tr>
