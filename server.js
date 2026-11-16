@@ -208,26 +208,69 @@ app.get('/api/jobs/applications', (req, res) => {
   }
 });
 
-// POST /api/jobs/application-status (Update status: applied, saved, skipped)
+// POST /api/jobs/application-status (Update status: applied, dismissed, active)
 app.post('/api/jobs/application-status', (req, res) => {
   try {
-    const { jobId, status, resumeId, notes } = req.body;
+    const { jobId, status, resumeId, resumeLabel, notes, job } = req.body;
     if (!jobId) {
       return res.status(400).json({ error: 'Missing jobId parameter.' });
     }
 
     const apps = readApplications();
-    apps[jobId] = {
-      status: status || 'unreviewed',
-      resumeId: resumeId || null,
-      notes: notes || '',
-      updatedAt: new Date().toISOString()
-    };
+    if (status === 'active' || status === 'restored') {
+      delete apps[jobId];
+    } else {
+      apps[jobId] = {
+        ...(apps[jobId] || {}),
+        jobId,
+        status: status || 'unreviewed',
+        resumeId: resumeId || null,
+        resumeLabel: resumeLabel || null,
+        notes: notes || '',
+        updatedAt: new Date().toISOString(),
+        job: job || (apps[jobId] && apps[jobId].job) || null
+      };
+    }
     saveApplications(apps);
 
-    res.json({ status: 'success', application: apps[jobId] });
+    res.json({ status: 'success', application: apps[jobId] || null, all: apps });
   } catch (err) {
     res.status(500).json({ error: 'Failed to save application status.', message: err.message });
+  }
+});
+
+// POST /api/jobs/application-batch-status (Batch update: multiple jobs applied or dismissed)
+app.post('/api/jobs/application-batch-status', (req, res) => {
+  try {
+    const { updates } = req.body;
+    if (!Array.isArray(updates)) {
+      return res.status(400).json({ error: 'Updates must be an array.' });
+    }
+
+    const apps = readApplications();
+    const now = new Date().toISOString();
+    updates.forEach(u => {
+      if (!u || !u.jobId) return;
+      if (u.status === 'active' || u.status === 'restored') {
+        delete apps[u.jobId];
+      } else {
+        apps[u.jobId] = {
+          ...(apps[u.jobId] || {}),
+          jobId: u.jobId,
+          status: u.status || 'unreviewed',
+          resumeId: u.resumeId || null,
+          resumeLabel: u.resumeLabel || null,
+          notes: u.notes || '',
+          updatedAt: now,
+          job: u.job || (apps[u.jobId] && apps[u.jobId].job) || null
+        };
+      }
+    });
+    saveApplications(apps);
+
+    res.json({ status: 'success', count: updates.length, all: apps });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save batch application status.', message: err.message });
   }
 });
 

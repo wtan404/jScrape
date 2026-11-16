@@ -1211,6 +1211,13 @@ async function filterJobs() {
     filtered.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
   }
 
+  // Filter out dropped/irrelevant postings
+  const appStatusMap = getApplicationStatusMap();
+  filtered = filtered.filter(job => {
+    const key = job.id || job.url;
+    return !appStatusMap.dismissed[key];
+  });
+
   renderJobs(filtered);
 
   if (applyBtn) {
@@ -1220,9 +1227,59 @@ async function filterJobs() {
   }
 }
 
+function getApplicationStatusMap() {
+  try {
+    const raw = localStorage.getItem('scrapedeez_job_applications');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        applied: (parsed && parsed.applied) || {},
+        dismissed: (parsed && parsed.dismissed) || {}
+      };
+    }
+  } catch (e) {}
+  return { applied: {}, dismissed: {} };
+}
+
+function mainMarkApplied(key) {
+  const appStatusMap = getApplicationStatusMap();
+  const job = allJobs.find(j => (j.id || j.url) === key);
+  if (!job) return;
+
+  appStatusMap.applied[key] = {
+    jobId: key,
+    job: { ...job },
+    status: 'Applied',
+    appliedAt: new Date().toISOString(),
+    notes: 'Marked via Public Search Board'
+  };
+  delete appStatusMap.dismissed[key];
+
+  localStorage.setItem('scrapedeez_job_applications', JSON.stringify(appStatusMap));
+  filterJobs();
+}
+
+function mainDismissJob(key) {
+  const appStatusMap = getApplicationStatusMap();
+  const job = allJobs.find(j => (j.id || j.url) === key);
+  if (!job) return;
+
+  appStatusMap.dismissed[key] = {
+    jobId: key,
+    job: { ...job },
+    dismissedAt: new Date().toISOString(),
+    reason: 'Irrelevant'
+  };
+  delete appStatusMap.applied[key];
+
+  localStorage.setItem('scrapedeez_job_applications', JSON.stringify(appStatusMap));
+  filterJobs();
+}
+
 function renderJobs(jobs) {
   const jobsList = document.getElementById('jobsList');
   const totalEl = document.getElementById('totalMatchesCount');
+  const appStatusMap = getApplicationStatusMap();
 
   if (totalEl) totalEl.textContent = jobs.length;
   if (!jobsList) return;
@@ -1239,6 +1296,8 @@ function renderJobs(jobs) {
   }
 
   jobsList.innerHTML = jobs.map(job => {
+    const key = job.id || job.url;
+    const isApplied = !!appStatusMap.applied[key];
     const rawWt = (job.workType || '').toLowerCase();
     const locLower = (job.location || '').toLowerCase();
     const titleLower = (job.title || '').toLowerCase();
@@ -1265,6 +1324,7 @@ function renderJobs(jobs) {
             <span class="job-company">${escapeHtml(job.company)}</span>
             <span class="job-location-top"><i data-lucide="map-pin"></i> ${escapeHtml(job.location || 'Remote')}</span>
             <span class="work-type-badge ${workTypeClass}">${workTypeLabel}</span>
+            ${isApplied ? '<span class="badge-applied" title="Application tracked in Operations Hub"><i data-lucide="check-circle-2"></i> Applied</span>' : ''}
             ${job.distanceMiles !== undefined && job.distanceMiles < 9000 ? `<span class="badge-distance"><i data-lucide="navigation"></i> ${Math.round(job.distanceMiles) <= 0 ? '&lt; 1' : Math.round(job.distanceMiles)} mi away</span>` : ''}
           </div>
           
@@ -1277,10 +1337,18 @@ function renderJobs(jobs) {
           </div>
         </div>
         <div class="job-action">
-          <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer">
-            <span>Apply / View</span>
-            <i data-lucide="external-link"></i>
-          </a>
+          <div class="job-card-actions">
+            <button type="button" class="btn-card-quick btn-apply-card" onclick="mainMarkApplied('${escapeHtml(key)}')" title="Mark as Already Applied">
+              <i data-lucide="check"></i>
+            </button>
+            <button type="button" class="btn-card-quick btn-drop-card" onclick="mainDismissJob('${escapeHtml(key)}')" title="Drop / Hide as Irrelevant">
+              <i data-lucide="eye-off"></i>
+            </button>
+            <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer">
+              <span>Apply / View</span>
+              <i data-lucide="external-link"></i>
+            </a>
+          </div>
         </div>
       </article>
     `;

@@ -45,6 +45,9 @@ let savedResumes = [];
 let applicantProfile = { ...CANONICAL_DEFAULT_PROFILE };
 let submissionLogs = [];
 let selectedJobs = new Map(); // jobId -> { job, resumeId }
+let currentQueueTab = 'active'; // 'active' | 'applied' | 'dismissed'
+let appliedJobsMap = {}; // key -> { jobId, job, status, resumeId, resumeLabel, notes, appliedAt }
+let dismissedJobsMap = {}; // key -> { jobId, job, reason, dismissedAt }
 
 let selectedResumeUploadBase64 = null;
 let selectedResumeUploadFileName = null;
@@ -66,6 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function initDashboard(forceRefresh = false) {
   try {
+    loadApplicationsState();
+
     let summary = null;
     if (isLocalBackend()) {
       try {
@@ -107,6 +112,7 @@ async function initDashboard(forceRefresh = false) {
     renderResumesList();
     renderTriageTable();
     renderReceiptsLog();
+    updateQueueBadgeCounts();
     if (window.lucide) lucide.createIcons();
   }
 }
@@ -117,10 +123,152 @@ function updateKPIs(count24h, resumesCount, subsCount, totalVerified) {
   const elSubs = document.getElementById('metricSubmissionsCount');
   const elTotal = document.getElementById('metricTotalVerified');
 
-  if (el24h) el24h.textContent = count24h ?? 0;
+  const activeCount = getActiveFilteredJobs(false).length;
+  const appliedCount = Object.keys(appliedJobsMap).length;
+
+  if (el24h) el24h.textContent = activeCount;
   if (elResumes) elResumes.textContent = resumesCount ?? 0;
-  if (elSubs) elSubs.textContent = subsCount ?? 0;
+  if (elSubs) elSubs.textContent = appliedCount;
   if (elTotal) elTotal.textContent = totalVerified ? totalVerified.toLocaleString() : '0';
+
+  updateQueueBadgeCounts();
+}
+
+function loadApplicationsState() {
+  try {
+    const raw = localStorage.getItem('scrapedeez_job_applications');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        if (parsed.applied && typeof parsed.applied === 'object') {
+          appliedJobsMap = { ...parsed.applied };
+        }
+        if (parsed.dismissed && typeof parsed.dismissed === 'object') {
+          dismissedJobsMap = { ...parsed.dismissed };
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Error reading application state from localStorage:', e);
+  }
+
+  // Also import from submissionLogs if not already present in appliedJobsMap
+  if (Array.isArray(submissionLogs)) {
+    submissionLogs.forEach(log => {
+      const key = log.url || log.receiptId;
+      if (key && !appliedJobsMap[key]) {
+        appliedJobsMap[key] = {
+          jobId: key,
+          job: {
+            title: log.title,
+            company: log.company,
+            url: log.url,
+            source: 'ATS'
+          },
+          status: 'Applied',
+          resumeLabel: log.resumeLabel || 'Default Resume',
+          appliedAt: log.submittedAt || new Date().toISOString(),
+          notes: log.message || ''
+        };
+      }
+    });
+  }
+}
+
+function saveApplicationsState() {
+  try {
+    localStorage.setItem('scrapedeez_job_applications', JSON.stringify({
+      applied: appliedJobsMap,
+      dismissed: dismissedJobsMap
+    }));
+  } catch (e) {}
+
+  if (isLocalBackend()) {
+    try {
+      const updates = [];
+      Object.values(appliedJobsMap).forEach(app => {
+        updates.push({
+          jobId: app.jobId,
+          status: app.status || 'Applied',
+          resumeId: app.resumeId,
+          resumeLabel: app.resumeLabel,
+          notes: app.notes,
+          job: app.job
+        });
+      });
+      Object.values(dismissedJobsMap).forEach(dis => {
+        updates.push({
+          jobId: dis.jobId,
+          status: 'dismissed',
+          notes: dis.reason,
+          job: dis.job
+        });
+      });
+      if (updates.length > 0) {
+        fetch('./api/jobs/application-batch-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updates })
+        }).catch(() => {});
+      }
+    } catch (e) {}
+  }
+
+  updateQueueBadgeCounts();
+}
+
+function updateQueueBadgeCounts() {
+  const activeJobs = getActiveFilteredJobs(false);
+  const appliedCount = Object.keys(appliedJobsMap).length;
+  const dismissedCount = Object.keys(dismissedJobsMap).length;
+
+  const elActive = document.getElementById('countTabActive');
+  const elApplied = document.getElementById('countTabApplied');
+  const elDismissed = document.getElementById('countTabDismissed');
+
+  if (elActive) elActive.textContent = activeJobs.length;
+  if (elApplied) elApplied.textContent = appliedCount;
+  if (elDismissed) elDismissed.textContent = dismissedCount;
+
+  const kpi24h = document.getElementById('metric24hCount');
+  if (kpi24h) kpi24h.textContent = activeJobs.length;
+
+  const kpiSubs = document.getElementById('metricSubmissionsCount');
+  if (kpiSubs) kpiSubs.textContent = appliedCount;
+}
+
+function getActiveFilteredJobs(applyFilters = true) {
+  let list = allCuratedJobs.filter(job => {
+    const key = job.id || job.url;
+    if (appliedJobsMap[key] || dismissedJobsMap[key]) return false;
+    return true;
+  });
+
+  if (!applyFilters) return list;
+
+  const searchVal = document.getElementById('triageSearchInput')?.value.toLowerCase().trim() || '';
+  const wtFilter = document.getElementById('triageWorkTypeFilter')?.value || 'all';
+  const srcFilter = document.getElementById('triageSourceFilter')?.value || 'all';
+
+  return list.filter(job => {
+    if (searchVal) {
+      const text = (job.title + ' ' + job.company + ' ' + (job.matchedKeyword || '') + ' ' + (job.location || '')).toLowerCase();
+      if (!text.includes(searchVal)) return false;
+    }
+    if (wtFilter !== 'all') {
+      const wt = (job.workType || '').toLowerCase();
+      if (!wt.includes(wtFilter)) return false;
+    }
+    if (srcFilter !== 'all') {
+      const s = (job.source || '').toLowerCase();
+      if (srcFilter === 'ats') {
+        if (!s.includes('greenhouse') && !s.includes('lever') && !s.includes('ashby') && !s.includes('smartrecruiters') && s !== 'ats') return false;
+      } else if (srcFilter === 'feeds') {
+        if (!s.includes('remotive') && !s.includes('jobicy') && !s.includes('remoteok') && !s.includes('weworkremotely') && s !== 'feed') return false;
+      }
+    }
+    return true;
+  });
 }
 
 // --------------------------------------------------------------------------
@@ -186,7 +334,19 @@ async function fetch24hQueue() {
   if (countEl) countEl.textContent = allCuratedJobs.length;
 }
 
+function switchQueueTab(tabName) {
+  currentQueueTab = tabName;
+  ['active', 'applied', 'dismissed'].forEach(t => {
+    const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+    if (btn) btn.classList.toggle('active', t === tabName);
+  });
+  selectedJobs.clear();
+  updateStickyDispatchBar();
+  renderTriageTable();
+}
+
 function renderTriageTable() {
+  const thead = document.getElementById('triageTableHead');
   const tbody = document.getElementById('triageTableBody');
   if (!tbody) return;
 
@@ -194,106 +354,420 @@ function renderTriageTable() {
   const wtFilter = document.getElementById('triageWorkTypeFilter')?.value || 'all';
   const srcFilter = document.getElementById('triageSourceFilter')?.value || 'all';
 
-  const filtered = allCuratedJobs.filter(job => {
-    // 1. Text Search
-    if (searchVal) {
-      const text = (job.title + ' ' + job.company + ' ' + (job.matchedKeyword || '') + ' ' + (job.location || '')).toLowerCase();
-      if (!text.includes(searchVal)) return false;
+  // 1. ACTIVE 24H QUEUE
+  if (currentQueueTab === 'active') {
+    if (thead) {
+      thead.innerHTML = `
+        <tr>
+          <th style="width: 40px; text-align: center;">
+            <input type="checkbox" id="chkSelectAll" class="chk-select-job" onchange="toggleSelectAll(this.checked)" title="Select/Deselect All">
+          </th>
+          <th>Employer & Source</th>
+          <th>Role Title & Match</th>
+          <th>Location & Setup</th>
+          <th>Age</th>
+          <th>Tailored Resume</th>
+          <th style="text-align: right; min-width: 220px;">Actions</th>
+        </tr>
+      `;
     }
 
-    // 2. Work Setup
-    if (wtFilter !== 'all') {
-      const wt = (job.workType || '').toLowerCase();
-      if (!wt.includes(wtFilter)) return false;
+    const filtered = getActiveFilteredJobs(true);
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            <i data-lucide="check-circle" style="width: 32px; height: 32px; margin: 0 auto 0.6rem; color: var(--accent-emerald);"></i>
+            <p>No active 24-hour positions matching your filters. All caught up or moved to Tracking!</p>
+          </td>
+        </tr>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
     }
 
-    // 3. Source Filter
-    if (srcFilter === 'ats') {
-      const s = (job.source || '').toLowerCase();
-      if (!s.includes('greenhouse') && !s.includes('lever') && !s.includes('ashby') && !s.includes('smartrecruiters')) return false;
-    } else if (srcFilter === 'feeds') {
-      const s = (job.source || '').toLowerCase();
-      if (!s.includes('remotive') && !s.includes('jobicy') && !s.includes('remoteok') && !s.includes('weworkremotely')) return false;
-    }
+    tbody.innerHTML = filtered.map(job => {
+      const key = job.id || job.url;
+      const isChecked = selectedJobs.has(key);
+      const timeAgo = formatTimeAgo(job.date);
+      const assignedResumeId = selectedJobs.get(key)?.resumeId || (savedResumes[0] ? savedResumes[0].id : '');
 
-    return true;
-  });
+      return `
+        <tr class="${isChecked ? 'selected' : ''}" id="row_${escapeHtml(key)}">
+          <td style="text-align: center;">
+            <input type="checkbox" class="chk-select-job" 
+              ${isChecked ? 'checked' : ''} 
+              onchange="toggleJobSelection('${escapeHtml(key)}', this.checked)">
+          </td>
+          <td>
+            <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">${escapeHtml(job.company)}</div>
+            <span class="triage-company-badge">${escapeHtml(job.source || 'ATS')}</span>
+          </td>
+          <td>
+            <div class="triage-role-title">
+              <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" style="color:var(--text-main); text-decoration:none;" title="Open posting in new tab">
+                ${escapeHtml(job.title)}
+              </a>
+            </div>
+            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+              ${job.matchedKeyword ? `<span class="hotlist-tag match-tag"><i data-lucide="sparkles"></i> ${escapeHtml(job.matchedKeyword)}</span>` : ''}
+              ${job.salary ? `<span class="hotlist-tag salary-tag"><i data-lucide="dollar-sign"></i> ${escapeHtml(job.salary)}</span>` : ''}
+            </div>
+          </td>
+          <td>
+            <div>${escapeHtml(job.location || 'Remote')}</div>
+            <div style="font-size: 0.75rem; color: var(--text-dim);">${escapeHtml(job.workType || 'Remote')}</div>
+          </td>
+          <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-emerald);">
+            ${timeAgo}
+          </td>
+          <td>
+            <select class="triage-resume-select" id="resume_sel_${escapeHtml(key)}" onchange="updateJobResume('${escapeHtml(key)}', this.value)">
+              ${savedResumes.length === 0 ? '<option value="">Default Resume</option>' : ''}
+              ${savedResumes.map(r => `
+                <option value="${r.id}" ${assignedResumeId === r.id ? 'selected' : ''}>
+                  ${escapeHtml(r.label)}
+                </option>
+              `).join('')}
+            </select>
+          </td>
+          <td style="text-align: right; white-space: nowrap;">
+            <div style="display: inline-flex; gap: 0.35rem; justify-content: flex-end; align-items: center;">
+              <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-xs" title="Open original job posting in new tab">
+                <i data-lucide="external-link"></i>
+                <span>View</span>
+              </a>
+              <button type="button" class="btn btn-primary btn-xs" onclick="quickSingleSubmit('${escapeHtml(key)}')" title="Auto-submit / package application">
+                <i data-lucide="send"></i>
+                <span>Submit</span>
+              </button>
+              <button type="button" class="btn btn-applied btn-xs" onclick="markJobAsApplied('${escapeHtml(key)}')" title="Mark as already filled out / applied">
+                <i data-lucide="check"></i>
+                <span>Applied</span>
+              </button>
+              <button type="button" class="btn btn-drop btn-xs" onclick="dismissJob('${escapeHtml(key)}')" title="Drop / Hide as irrelevant">
+                <i data-lucide="eye-off"></i>
+                <span>Drop</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
 
-  if (filtered.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="7" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
-          <i data-lucide="check-circle" style="width: 32px; height: 32px; margin: 0 auto 0.6rem; color: var(--accent-emerald);"></i>
-          <p>No 24-hour positions matching your active filters. All caught up!</p>
-        </td>
-      </tr>
-    `;
     if (window.lucide) lucide.createIcons();
     return;
   }
 
-  tbody.innerHTML = filtered.map(job => {
-    const key = job.id || job.url;
-    const isChecked = selectedJobs.has(key);
-    const timeAgo = formatTimeAgo(job.date);
-    const assignedResumeId = selectedJobs.get(key)?.resumeId || (savedResumes[0] ? savedResumes[0].id : '');
+  // 2. APPLIED & TRACKING QUEUE
+  if (currentQueueTab === 'applied') {
+    if (thead) {
+      thead.innerHTML = `
+        <tr>
+          <th>Employer & Role</th>
+          <th>Location & Work Setup</th>
+          <th>Date Applied</th>
+          <th>Tailored Resume</th>
+          <th>Application Status</th>
+          <th style="text-align: right; min-width: 170px;">Actions</th>
+        </tr>
+      `;
+    }
 
-    return `
-      <tr class="${isChecked ? 'selected' : ''}" id="row_${escapeHtml(key)}">
-        <td style="text-align: center;">
-          <input type="checkbox" class="chk-select-job" 
-            ${isChecked ? 'checked' : ''} 
-            onchange="toggleJobSelection('${escapeHtml(key)}', this.checked)">
-        </td>
-        <td>
-          <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">${escapeHtml(job.company)}</div>
-          <span class="triage-company-badge">${escapeHtml(job.source || 'ATS')}</span>
-        </td>
-        <td>
-          <div class="triage-role-title">
-            <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" style="color:var(--text-main); text-decoration:none;" title="Open posting in new tab">
-              ${escapeHtml(job.title)}
-            </a>
-          </div>
-          <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
-            ${job.matchedKeyword ? `<span class="hotlist-tag match-tag"><i data-lucide="sparkles"></i> ${escapeHtml(job.matchedKeyword)}</span>` : ''}
-            ${job.salary ? `<span class="hotlist-tag salary-tag"><i data-lucide="dollar-sign"></i> ${escapeHtml(job.salary)}</span>` : ''}
-          </div>
-        </td>
-        <td>
-          <div>${escapeHtml(job.location || 'Remote')}</div>
-          <div style="font-size: 0.75rem; color: var(--text-dim);">${escapeHtml(job.workType || 'Remote')}</div>
-        </td>
-        <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-emerald);">
-          ${timeAgo}
-        </td>
-        <td>
-          <select class="triage-resume-select" id="resume_sel_${escapeHtml(key)}" onchange="updateJobResume('${escapeHtml(key)}', this.value)">
-            ${savedResumes.length === 0 ? '<option value="">Default Resume</option>' : ''}
-            ${savedResumes.map(r => `
-              <option value="${r.id}" ${assignedResumeId === r.id ? 'selected' : ''}>
-                ${escapeHtml(r.label)}
-              </option>
-            `).join('')}
-          </select>
-        </td>
-        <td style="text-align: right; white-space: nowrap;">
-          <div style="display: inline-flex; gap: 0.4rem; justify-content: flex-end; align-items: center;">
-            <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-xs" title="Open original job posting in new tab">
-              <i data-lucide="external-link"></i>
-              <span>View</span>
-            </a>
-            <button type="button" class="btn btn-primary btn-xs" onclick="quickSingleSubmit('${escapeHtml(key)}')" title="Submit this position via API">
-              <i data-lucide="send"></i>
-              <span>Submit</span>
-            </button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join('');
+    let appliedList = Object.values(appliedJobsMap);
+    if (searchVal) {
+      appliedList = appliedList.filter(item => {
+        const j = item.job || {};
+        const text = (j.title + ' ' + j.company + ' ' + (item.notes || '') + ' ' + (item.status || '')).toLowerCase();
+        return text.includes(searchVal);
+      });
+    }
 
-  if (window.lucide) lucide.createIcons();
+    if (appliedList.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            <i data-lucide="file-check" style="width: 32px; height: 32px; margin: 0 auto 0.6rem; color: var(--accent-emerald);"></i>
+            <p>No applied applications in tracking yet. Click "Submit" or "Applied" on any active job to track it here!</p>
+          </td>
+        </tr>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    // Sort newest applied first
+    appliedList.sort((a, b) => new Date(b.appliedAt || 0).getTime() - new Date(a.appliedAt || 0).getTime());
+
+    tbody.innerHTML = appliedList.map(item => {
+      const key = item.jobId;
+      const job = item.job || {};
+      const timeAgo = formatTimeAgo(item.appliedAt);
+      const appliedDate = item.appliedAt ? new Date(item.appliedAt).toLocaleDateString() : 'Recently';
+
+      return `
+        <tr id="row_${escapeHtml(key)}">
+          <td>
+            <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">${escapeHtml(job.company || 'Company')}</div>
+            <div class="triage-role-title" style="margin-top: 0.2rem;">
+              <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" style="color:var(--text-main); text-decoration:none;" title="Open posting in new tab">
+                ${escapeHtml(job.title || 'Job Title')}
+              </a>
+            </div>
+          </td>
+          <td>
+            <div>${escapeHtml(job.location || 'Remote')}</div>
+            <div style="font-size: 0.75rem; color: var(--text-dim);">${escapeHtml(job.workType || 'Remote')}</div>
+          </td>
+          <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-emerald);">
+            ${timeAgo}
+            <div style="font-size: 0.7rem; color: var(--text-dim);">${appliedDate}</div>
+          </td>
+          <td>
+            <span style="font-size: 0.78rem; color: var(--text-muted);"><i data-lucide="file-text"></i> ${escapeHtml(item.resumeLabel || 'Default Resume')}</span>
+          </td>
+          <td>
+            <select class="status-select-badge" onchange="updateAppliedStatus('${escapeHtml(key)}', this.value)">
+              <option value="Applied" ${item.status === 'Applied' ? 'selected' : ''}>🟢 Applied</option>
+              <option value="Interviewing" ${item.status === 'Interviewing' ? 'selected' : ''}>🔵 Interviewing</option>
+              <option value="Offer" ${item.status === 'Offer' ? 'selected' : ''}>⭐ Offer</option>
+              <option value="Archived" ${item.status === 'Archived' ? 'selected' : ''}>⚪ Archived</option>
+              <option value="Rejected" ${item.status === 'Rejected' ? 'selected' : ''}>🔴 Rejected</option>
+            </select>
+          </td>
+          <td style="text-align: right; white-space: nowrap;">
+            <div style="display: inline-flex; gap: 0.35rem; justify-content: flex-end; align-items: center;">
+              ${job.url ? `
+                <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-xs" title="Open original job posting in new tab">
+                  <i data-lucide="external-link"></i>
+                  <span>View</span>
+                </a>
+              ` : ''}
+              <button type="button" class="btn btn-secondary btn-xs" onclick="restoreJob('${escapeHtml(key)}')" title="Move back to Active 24h Queue">
+                <i data-lucide="undo-2"></i>
+                <span>Re-Activate</span>
+              </button>
+              <button type="button" class="btn btn-drop btn-xs" onclick="removeTrackingRecord('${escapeHtml(key)}')" title="Remove from tracking">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  // 3. DISMISSED / HIDDEN QUEUE
+  if (currentQueueTab === 'dismissed') {
+    if (thead) {
+      thead.innerHTML = `
+        <tr>
+          <th>Employer & Role Title</th>
+          <th>Location & Source</th>
+          <th>Dropped Date</th>
+          <th>Drop Reason</th>
+          <th style="text-align: right; min-width: 140px;">Actions</th>
+        </tr>
+      `;
+    }
+
+    let dismissedList = Object.values(dismissedJobsMap);
+    if (searchVal) {
+      dismissedList = dismissedList.filter(item => {
+        const j = item.job || {};
+        const text = (j.title + ' ' + j.company + ' ' + (item.reason || '')).toLowerCase();
+        return text.includes(searchVal);
+      });
+    }
+
+    if (dismissedList.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            <i data-lucide="sparkles" style="width: 32px; height: 32px; margin: 0 auto 0.6rem; color: var(--accent-purple-light);"></i>
+            <p>No dismissed postings. Click "Drop" on any irrelevant job in the active queue to hide it from review.</p>
+          </td>
+        </tr>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    dismissedList.sort((a, b) => new Date(b.dismissedAt || 0).getTime() - new Date(a.dismissedAt || 0).getTime());
+
+    tbody.innerHTML = dismissedList.map(item => {
+      const key = item.jobId;
+      const job = item.job || {};
+      const timeAgo = formatTimeAgo(item.dismissedAt);
+
+      return `
+        <tr id="row_${escapeHtml(key)}">
+          <td>
+            <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">${escapeHtml(job.company || 'Company')}</div>
+            <div class="triage-role-title" style="margin-top: 0.2rem;">
+              <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" style="color:var(--text-main); text-decoration:none;" title="Open posting in new tab">
+                ${escapeHtml(job.title || 'Job Title')}
+              </a>
+            </div>
+          </td>
+          <td>
+            <div>${escapeHtml(job.location || 'Remote')}</div>
+            <span class="triage-company-badge">${escapeHtml(job.source || 'ATS')}</span>
+          </td>
+          <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dim);">
+            ${timeAgo}
+          </td>
+          <td>
+            <span style="font-family: var(--font-mono); font-size: 0.74rem; color: #f87171; background: rgba(239, 68, 68, 0.1); padding: 0.2rem 0.5rem; border-radius: 4px;">
+              ${escapeHtml(item.reason || 'Irrelevant')}
+            </span>
+          </td>
+          <td style="text-align: right; white-space: nowrap;">
+            <div style="display: inline-flex; gap: 0.35rem; justify-content: flex-end; align-items: center;">
+              ${job.url ? `
+                <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-xs" title="Open original job posting in new tab">
+                  <i data-lucide="external-link"></i>
+                  <span>View</span>
+                </a>
+              ` : ''}
+              <button type="button" class="btn btn-primary btn-xs" onclick="restoreJob('${escapeHtml(key)}')" title="Restore back to Active 24h Queue">
+                <i data-lucide="rotate-ccw"></i>
+                <span>Restore</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+}
+
+// --------------------------------------------------------------------------
+// Queue Action Operations (Mark Applied, Dismiss, Restore)
+// --------------------------------------------------------------------------
+
+function markJobAsApplied(key) {
+  const job = allCuratedJobs.find(j => (j.id || j.url) === key) || (dismissedJobsMap[key] && dismissedJobsMap[key].job);
+  if (!job) return;
+
+  const resumeSelect = document.getElementById(`resume_sel_${key}`);
+  const resumeId = resumeSelect ? resumeSelect.value : (savedResumes[0] ? savedResumes[0].id : null);
+  const resumeLabel = getResumeLabel(resumeId);
+
+  appliedJobsMap[key] = {
+    jobId: key,
+    job: { ...job },
+    status: 'Applied',
+    resumeId,
+    resumeLabel,
+    appliedAt: new Date().toISOString(),
+    notes: 'Marked via PM Operations Dashboard'
+  };
+
+  delete dismissedJobsMap[key];
+  selectedJobs.delete(key);
+  saveApplicationsState();
+
+  showToast(`✅ Marked "${job.title}" as Applied & moved to Tracking Queue!`);
+  renderTriageTable();
+  updateStickyDispatchBar();
+}
+
+function dismissJob(key) {
+  const job = allCuratedJobs.find(j => (j.id || j.url) === key) || (appliedJobsMap[key] && appliedJobsMap[key].job);
+  if (!job) return;
+
+  dismissedJobsMap[key] = {
+    jobId: key,
+    job: { ...job },
+    dismissedAt: new Date().toISOString(),
+    reason: 'Irrelevant'
+  };
+
+  delete appliedJobsMap[key];
+  selectedJobs.delete(key);
+  saveApplicationsState();
+
+  showToast(`🚫 Dropped "${job.title}" as irrelevant.`);
+  renderTriageTable();
+  updateStickyDispatchBar();
+}
+
+function restoreJob(key) {
+  const item = appliedJobsMap[key] || dismissedJobsMap[key];
+  const title = item?.job?.title || 'Position';
+
+  delete dismissedJobsMap[key];
+  delete appliedJobsMap[key];
+  saveApplicationsState();
+
+  showToast(`✨ Restored "${title}" to Active Queue.`);
+  renderTriageTable();
+  updateStickyDispatchBar();
+}
+
+function removeTrackingRecord(key) {
+  delete appliedJobsMap[key];
+  delete dismissedJobsMap[key];
+  saveApplicationsState();
+  showToast('Removed tracking record.');
+  renderTriageTable();
+}
+
+function updateAppliedStatus(key, newStatus) {
+  if (appliedJobsMap[key]) {
+    appliedJobsMap[key].status = newStatus;
+    saveApplicationsState();
+    showToast(`Updated status to: ${newStatus}`);
+  }
+}
+
+function executeBatchMarkApplied() {
+  if (selectedJobs.size === 0) return;
+  const count = selectedJobs.size;
+  selectedJobs.forEach((val, key) => {
+    appliedJobsMap[key] = {
+      jobId: key,
+      job: { ...val.job },
+      status: 'Applied',
+      resumeId: val.resumeId,
+      resumeLabel: getResumeLabel(val.resumeId),
+      appliedAt: new Date().toISOString(),
+      notes: 'Batch marked via PM Operations Dashboard'
+    };
+    delete dismissedJobsMap[key];
+  });
+  selectedJobs.clear();
+  saveApplicationsState();
+  showToast(`✅ Moved ${count} position(s) to Applied Tracking Queue!`);
+  renderTriageTable();
+  updateStickyDispatchBar();
+}
+
+function executeBatchDismiss() {
+  if (selectedJobs.size === 0) return;
+  const count = selectedJobs.size;
+  selectedJobs.forEach((val, key) => {
+    dismissedJobsMap[key] = {
+      jobId: key,
+      job: { ...val.job },
+      dismissedAt: new Date().toISOString(),
+      reason: 'Irrelevant'
+    };
+    delete appliedJobsMap[key];
+  });
+  selectedJobs.clear();
+  saveApplicationsState();
+  showToast(`🚫 Dropped ${count} position(s) as irrelevant.`);
+  renderTriageTable();
+  updateStickyDispatchBar();
 }
 
 // --------------------------------------------------------------------------
@@ -319,7 +793,9 @@ function toggleJobSelection(key, isChecked) {
 }
 
 function toggleSelectAll(isChecked) {
-  allCuratedJobs.forEach(job => {
+  if (currentQueueTab !== 'active') return;
+  const list = getActiveFilteredJobs(true);
+  list.forEach(job => {
     const key = job.id || job.url;
     if (isChecked) {
       const resumeSelect = document.getElementById(`resume_sel_${key}`);
@@ -365,7 +841,7 @@ function updateStickyDispatchBar() {
 
   if (!bar) return;
 
-  if (count > 0) {
+  if (count > 0 && currentQueueTab === 'active') {
     bar.style.display = 'flex';
     if (countBadge) countBadge.textContent = count;
   } else {
@@ -439,10 +915,27 @@ async function submitBatchPayload(itemsList) {
       if (result && result.receipts) {
         submissionLogs = [...result.receipts, ...submissionLogs];
         renderReceiptsLog();
-        const subsCountEl = document.getElementById('metricSubmissionsCount');
-        if (subsCountEl) subsCountEl.textContent = submissionLogs.length;
 
-        showToast(`✅ Dispatched ${result.processedCount} application(s) via API`);
+        // Move submitted items to Applied Tracking Queue
+        itemsList.forEach(item => {
+          const key = item.job.id || item.job.url;
+          appliedJobsMap[key] = {
+            jobId: key,
+            job: { ...item.job },
+            status: 'Applied',
+            resumeId: item.resumeId,
+            resumeLabel: getResumeLabel(item.resumeId),
+            appliedAt: new Date().toISOString(),
+            notes: 'Submitted via API'
+          };
+          delete dismissedJobsMap[key];
+          selectedJobs.delete(key);
+        });
+        saveApplicationsState();
+        renderTriageTable();
+        updateStickyDispatchBar();
+
+        showToast(`✅ Dispatched ${result.processedCount} application(s) via API and moved to Tracking!`);
         return;
       }
     } catch (err) {
@@ -467,10 +960,28 @@ async function submitBatchPayload(itemsList) {
     localStorage.setItem('scrapedeez_submission_logs', JSON.stringify(submissionLogs));
   } catch (e) {}
 
+  // Move submitted items to Applied Tracking Queue
+  itemsList.forEach(item => {
+    const key = item.job.id || item.job.url;
+    appliedJobsMap[key] = {
+      jobId: key,
+      job: { ...item.job },
+      status: 'Applied',
+      resumeId: item.resumeId,
+      resumeLabel: getResumeLabel(item.resumeId),
+      appliedAt: new Date().toISOString(),
+      notes: 'Submitted via Operations Dashboard'
+    };
+    delete dismissedJobsMap[key];
+    selectedJobs.delete(key);
+  });
+  saveApplicationsState();
+
   renderReceiptsLog();
-  const subsCountEl = document.getElementById('metricSubmissionsCount');
-  if (subsCountEl) subsCountEl.textContent = submissionLogs.length;
-  showToast(`✅ Generated packages for ${receipts.length} position(s)`);
+  renderTriageTable();
+  updateStickyDispatchBar();
+
+  showToast(`✅ Generated packages for ${receipts.length} position(s) and moved to Tracking!`);
 }
 
 function getResumeLabel(id) {

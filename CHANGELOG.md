@@ -4,6 +4,32 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.7.0] - 2026-11-15
+
+### Added
+- **Multi-Queue Triage Switcher & Application Tracking Hub (`dashboard/index.html`, `dashboard/dashboard.js`):**
+  - Added a 3-tab pipeline switcher to the PM Operations Command Center:
+    - **`🔥 Active 24h Queue`**: Fresh unapplied roles with real-time count badges.
+    - **`📋 Applied & Tracking Queue`**: Dedicated queue tracking all submitted and manually completed applications with submission timestamps, tailored resume references, and status lifecycle dropdowns (`Applied`, `Interviewing`, `Offer`, `Archived`, `Rejected`).
+    - **`🚫 Dismissed / Hidden Queue`**: Archive of dropped/irrelevant listings with 1-click "Restore" action.
+  - Added per-row quick action controls:
+    - **`Applied`**: 1-click checkmark action to mark applications filled out directly on employer career portals.
+    - **`Drop`**: 1-click hide/dismiss action to discard irrelevant or non-fitting listings from the active feed.
+  - Added batch sticky actions: **"Mark Selected as Applied"** and **"Drop Selected as Irrelevant"**.
+  - Automatically moves any submitted job (via API or assisted packages) directly into the Applied Tracking Queue.
+- **Public Search Board Curation & Application Badges (`main.js`, `styles.css`):**
+  - Excluded dismissed/irrelevant postings from the main public search feed.
+  - Added **`✅ Applied`** status badge on public job cards to clearly indicate positions already submitted.
+  - Added quick card action buttons ("Mark Applied" & "Drop") to curate the feed directly from the public board.
+- **Backend Tracking Persistence API (`server.js`):**
+  - Enhanced `POST /api/jobs/application-status` and added `POST /api/jobs/application-batch-status` for syncing application tracking states and restoration to `job_applications.json`.
+  - Maintained client-side `localStorage` (`scrapedeez_job_applications`) caching for offline and static Apache deployment compatibility.
+
+### Changed
+- **Version Bump (`package.json`):** Bumped to `v1.7.0`.
+
+---
+
 ## [1.6.1] - 2026-11-15
 
 ### Added
