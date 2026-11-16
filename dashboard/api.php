@@ -289,6 +289,7 @@ switch ($action) {
         $detectedSalary = null;
         $detectedSource = 'Direct Manual Import';
         $detectedDate = gmdate('Y-m-d\TH:i:s\Z');
+        $rawJdText = '';
 
         // 1. Check for Greenhouse Board API
         if (preg_match('#boards\.greenhouse\.io/([^/]+)/jobs/([0-9]+)#i', $targetUrl, $ghMatches)) {
@@ -314,6 +315,7 @@ switch ($action) {
                     $detectedLocation = isset($ghData['location']['name']) ? $ghData['location']['name'] : 'Remote';
                     $detectedSource = "Greenhouse (" . strtoupper($ghCompany) . ")";
                     $content = $ghData['content'] ?? '';
+                    $rawJdText = $content;
                     if (preg_match('/\$([0-9]{2,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)\s*(?:-|to)\s*\$([0-9]{2,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)/i', $content, $salMatch)) {
                         $detectedSalary = $salMatch[0];
                     }
@@ -344,6 +346,7 @@ switch ($action) {
                     $detectedCompany = ucfirst($levCompany);
                     $detectedLocation = isset($levData['categories']['location']) ? $levData['categories']['location'] : 'Remote';
                     $detectedSource = "Lever (" . strtoupper($levCompany) . ")";
+                    $rawJdText = ($levData['descriptionPlain'] ?? '') . ' ' . ($levData['additionalPlain'] ?? '');
                 }
             }
         }
@@ -364,6 +367,7 @@ switch ($action) {
             curl_close($ch);
 
             if (!empty($html)) {
+                $rawJdText = $html;
                 // A. Parse JSON-LD JobPosting schema
                 if (preg_match_all('#<script[^>]+type=[\'"]application/ld\+json[\'"][^>]*>([\s\S]*?)</script>#i', $html, $scriptMatches)) {
                     foreach ($scriptMatches[1] as $jsonStr) {
@@ -430,13 +434,33 @@ switch ($action) {
         }
 
         // Work type classification
-        $combinedText = strtolower($detectedTitle . ' ' . $detectedLocation);
-        if (strpos($combinedText, 'remote') !== false) {
-            $detectedWorkType = 'Remote';
-        } elseif (strpos($combinedText, 'hybrid') !== false) {
+        $combinedText = strtolower($detectedTitle . ' ' . $detectedLocation . ' ' . $rawJdText);
+        if (strpos($combinedText, 'hybrid') !== false) {
             $detectedWorkType = 'Hybrid';
+        } elseif (strpos($combinedText, 'remote') !== false || strpos($combinedText, 'telecommute') !== false || strpos($combinedText, 'work from home') !== false) {
+            $detectedWorkType = 'Remote';
         } else {
             $detectedWorkType = 'Remote';
+        }
+
+        // Check for specific group of states restriction
+        $isLimitedStateGroup = false;
+        if ($detectedWorkType === 'Remote' || $detectedWorkType === 'Hybrid') {
+            if (
+                preg_match('/(?:eligible|participating|specific|select|selected|approved|certain|limited)\s+(?:us\s+)?states/i', $combinedText) ||
+                preg_match('/(?:remote|telecommute|wfh)[\s\S]{0,100}(?:only\s+in|restricted\s+to|limited\s+to|eligible\s+states|following\s+states|selected\s+states|certain\s+states|specific\s+states)/i', $combinedText) ||
+                preg_match('/(?:must\s+(?:reside|live|be\s+located)|open\s+to\s+(?:residents\s+of|candidates\s+in)|hiring\s+(?:only\s+)?in)[\s\S]{0,120}(?:following\s+states|these\s+states|selected\s+states|select\s+states|\b(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC)(?:\s*,\s*[A-Z]{2})+\b)/i', $combinedText) ||
+                preg_match('/(?:remote|hybrid)\s*[-–—:]\s*(?:[A-Za-z\s]+,\s*){1,10}[A-Za-z\s]+/i', $detectedLocation) ||
+                preg_match('/(?:remote|hybrid)\s*\((?:[A-Z]{2}[,\s\/]+){1,15}[A-Z]{2}\)/i', $detectedLocation) ||
+                preg_match('/\((?:[A-Z]{2}[,\s\/]+){1,15}[A-Z]{2}\)\s*(?:remote|hybrid)/i', $detectedLocation) ||
+                preg_match('/(?:,\s*us-[a-z\s]+){2,}/i', $detectedLocation)
+            ) {
+                $isLimitedStateGroup = true;
+            }
+        }
+
+        if ($isLimitedStateGroup) {
+            $detectedLocation = 'limited, US';
         }
 
         $jobId = 'manual-' . substr(md5($targetUrl), 0, 10);

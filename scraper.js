@@ -4,7 +4,7 @@ const path = require('path');
 const { scrapeAllATSCompanies } = require('./ats_scraper');
 const { scrapeGoogleJobs } = require('./google_jobs_scraper');
 const { verifyAndPruneJobs, isWithin14Days, isWithin30Days } = require('./verifier');
-const { classifyWorkType } = require('./geo_helper');
+const { classifyWorkType, detectLocationAndWorkType } = require('./geo_helper');
 const { extractSalaryFromText } = require('./salary_extractor');
 
 const PREDEFINED_ROLES = [
@@ -90,7 +90,7 @@ async function scrapeRemoteOK(targetTitles = PREDEFINED_ROLES, keywords = PREDEF
       const hasKeyword = searchKeywords.some(k => (title + ' ' + description).includes(k.toLowerCase()));
 
       if (matchedRole || hasKeyword) {
-        const workType = classifyWorkType(location, job.position);
+        const { location: finalLocation, workType } = detectLocationAndWorkType(location, job.position, job.description || '');
         if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') continue;
 
         const salary = extractSalaryFromText(job.description || '') || (job.salary || null);
@@ -99,7 +99,7 @@ async function scrapeRemoteOK(targetTitles = PREDEFINED_ROLES, keywords = PREDEF
           source: 'RemoteOK Feed',
           title: job.position || 'Remote Position',
           company: job.company || 'Unknown',
-          location,
+          location: finalLocation,
           workType,
           salary,
           url: job.url || `https://remoteok.com/remote-jobs/${job.id}`,
@@ -155,14 +155,17 @@ async function scrapeWeWorkRemotely(targetTitles = PREDEFINED_ROLES, keywords = 
       const hasKeyword = searchKeywords.some(k => combinedText.includes(k.toLowerCase()));
 
       if (matchedRole || hasKeyword) {
+        const { location: finalLocation, workType } = detectLocationAndWorkType('Remote', title, cleanDesc);
+        if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') continue;
+
         const salary = extractSalaryFromText(content);
         matches.push({
           id: `wwr-${Buffer.from(link).toString('base64').substring(0, 10)}`,
           source: 'WeWorkRemotely Feed',
           title,
           company,
-          location: 'Remote',
-          workType: 'Remote',
+          location: finalLocation,
+          workType,
           salary,
           url: link,
           matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'SEARCH MATCH',
@@ -208,7 +211,7 @@ async function scrapeRemotive(targetTitles = PREDEFINED_ROLES, keywords = PREDEF
           const hasKeyword = searchKeywords.some(k => (title + ' ' + desc).includes(k.toLowerCase()));
 
           if (matchedRole || hasKeyword) {
-            const workType = classifyWorkType(job.candidate_required_location || 'Remote', job.title);
+            const { location: finalLocation, workType } = detectLocationAndWorkType(job.candidate_required_location || 'Remote', job.title, job.description || '');
             if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') continue;
 
             const salary = job.salary || extractSalaryFromText(job.description || '');
@@ -217,7 +220,7 @@ async function scrapeRemotive(targetTitles = PREDEFINED_ROLES, keywords = PREDEF
               source: 'Remotive Feed',
               title: job.title || 'Remote Tech Position',
               company: (job.company_name || 'Tech Company').trim(),
-              location: job.candidate_required_location || 'Remote',
+              location: finalLocation,
               workType,
               url: job.url,
               salary,
@@ -264,7 +267,7 @@ async function scrapeJobicy(targetTitles = PREDEFINED_ROLES, keywords = PREDEFIN
           const hasKeyword = searchKeywords.some(k => (title + ' ' + desc).includes(k.toLowerCase()));
 
           if (matchedRole || hasKeyword) {
-            const workType = classifyWorkType(job.jobGeo || 'Remote', job.jobTitle);
+            const { location: finalLocation, workType } = detectLocationAndWorkType(job.jobGeo || 'Remote', job.jobTitle, (job.jobExcerpt || '') + ' ' + (job.jobDescription || ''));
             if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') continue;
 
             let salaryFormatted = null;
@@ -277,7 +280,7 @@ async function scrapeJobicy(targetTitles = PREDEFINED_ROLES, keywords = PREDEFIN
               source: 'Jobicy Feed',
               title: job.jobTitle || 'Tech Position',
               company: (job.companyName || 'Company').replace(/&#038;/g, '&').trim(),
-              location: job.jobGeo || 'Remote / US',
+              location: finalLocation,
               workType,
               url: job.url,
               salary: salaryFormatted,
@@ -345,7 +348,7 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
       continue;
     }
 
-    const workType = job.workType || classifyWorkType(job.location, job.title);
+    const { location: finalLocation, workType } = detectLocationAndWorkType(job.location, job.title, job.description || job.content || '');
     if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') {
       continue;
     }
@@ -354,6 +357,7 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
 
     mergedJobs.push({
       ...job,
+      location: finalLocation,
       workType,
       isNew: isNew,
       verifiedAt: new Date().toISOString()

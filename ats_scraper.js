@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { classifyWorkType } = require('./geo_helper');
+const { classifyWorkType, detectLocationAndWorkType } = require('./geo_helper');
 const { extractSalaryFromText } = require('./salary_extractor');
 
 const DEFAULT_GREENHOUSE_COMPANIES = [
@@ -71,7 +71,7 @@ async function scrapeGreenhouseCompany(company, targetTitles = [], keywords = []
       const matchedTerm = searchTerms.find(term => title.includes(term) || content.includes(term));
 
       if (matchedTerm || searchTerms.length === 0) {
-        const workType = classifyWorkType(location, job.title);
+        const { location: finalLocation, workType } = detectLocationAndWorkType(location, job.title, job.content || '');
         if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') continue;
 
         const salary = extractSalaryFromText(job.content || '');
@@ -80,7 +80,7 @@ async function scrapeGreenhouseCompany(company, targetTitles = [], keywords = []
           source: `Greenhouse (${company.toUpperCase()})`,
           title: job.title,
           company: company.charAt(0).toUpperCase() + company.slice(1),
-          location,
+          location: finalLocation,
           workType,
           salary,
           url: job.absolute_url,
@@ -120,17 +120,17 @@ async function scrapeLeverCompany(company, targetTitles = [], keywords = []) {
       const matchedTerm = searchTerms.find(term => title.includes(term) || description.includes(term));
 
       if (matchedTerm || searchTerms.length === 0) {
-        const workType = classifyWorkType(location, job.text);
+        const fullDesc = (job.descriptionPlain || '') + ' ' + (job.additionalPlain || '');
+        const { location: finalLocation, workType } = detectLocationAndWorkType(location, job.text, fullDesc);
         if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') continue;
 
-        const fullDesc = (job.descriptionPlain || '') + ' ' + (job.additionalPlain || '');
         const salary = extractSalaryFromText(fullDesc);
         matches.push({
           id: `lever-${company}-${job.id}`,
           source: `Lever (${company.toUpperCase()})`,
           title: job.text,
           company: company.charAt(0).toUpperCase() + company.slice(1),
-          location,
+          location: finalLocation,
           workType,
           salary,
           url: job.hostedUrl,
@@ -171,14 +171,12 @@ async function scrapeAshbyCompany(company, targetTitles = [], keywords = []) {
       const matchedTerm = searchTerms.find(term => title.includes(term) || content.includes(term));
 
       if (matchedTerm || searchTerms.length === 0) {
-        let workType = 'Onsite';
-        if (job.workplaceType) {
-          const wt = job.workplaceType.toLowerCase();
-          if (wt.includes('remote') || job.isRemote) workType = 'Remote';
-          else if (wt.includes('hybrid')) workType = 'Hybrid';
-        } else {
-          workType = classifyWorkType(location, job.title);
-        }
+        const fullDesc = (job.descriptionPlain || job.descriptionHtml || '');
+        const { location: finalLocation, workType } = detectLocationAndWorkType(
+          location,
+          job.title,
+          fullDesc
+        );
 
         if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') continue;
 
@@ -189,7 +187,7 @@ async function scrapeAshbyCompany(company, targetTitles = [], keywords = []) {
           const cur = job.compensation.currency || '$';
           salary = `${cur}${Math.round(job.compensation.minValue / 1000)}k - ${cur}${Math.round(job.compensation.maxValue / 1000)}k`;
         } else {
-          salary = extractSalaryFromText(job.descriptionPlain || job.descriptionHtml || '');
+          salary = extractSalaryFromText(fullDesc);
         }
 
         matches.push({
@@ -197,7 +195,7 @@ async function scrapeAshbyCompany(company, targetTitles = [], keywords = []) {
           source: `Ashby (${company.toUpperCase()})`,
           title: job.title,
           company: company.charAt(0).toUpperCase() + company.slice(1),
-          location,
+          location: finalLocation,
           workType,
           salary,
           url: job.applyUrl || job.jobUrl,
@@ -236,10 +234,11 @@ async function scrapeSmartRecruitersCompany(company, targetTitles = [], keywords
       const matchedTerm = searchTerms.find(term => title.includes(term) || dept.includes(term));
 
       if (matchedTerm || searchTerms.length === 0) {
-        let workType = 'Onsite';
-        if (job.location && job.location.remote) workType = 'Remote';
-        else if (job.location && job.location.hybrid) workType = 'Hybrid';
-        else workType = classifyWorkType(location, job.name);
+        const { location: finalLocation, workType } = detectLocationAndWorkType(
+          location,
+          job.name,
+          job.content || ''
+        );
 
         if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') continue;
 
@@ -251,7 +250,7 @@ async function scrapeSmartRecruitersCompany(company, targetTitles = [], keywords
           source: `SmartRecruiters (${company.toUpperCase()})`,
           title: job.name,
           company: (job.company && job.company.name) ? job.company.name : (company.charAt(0).toUpperCase() + company.slice(1)),
-          location,
+          location: finalLocation,
           workType,
           salary,
           url: postingUrl,

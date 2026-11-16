@@ -5,6 +5,7 @@ const cron = require('node-cron');
 const axios = require('axios');
 const { runScraperJob } = require('./scraper');
 const { extractSalaryFromText } = require('./salary_extractor');
+const { detectLocationAndWorkType } = require('./geo_helper');
 const {
   readProfile,
   saveProfile,
@@ -455,6 +456,7 @@ async function parseJobUrl(targetUrl) {
   let detectedSalary = null;
   let detectedSource = 'Direct Manual Import';
   let detectedDate = new Date().toISOString();
+  let rawJdContent = '';
 
   // 1. Greenhouse Board API
   const ghMatch = targetUrl.match(/boards\.greenhouse\.io\/([^/]+)\/jobs\/([0-9]+)/i);
@@ -469,6 +471,7 @@ async function parseJobUrl(targetUrl) {
         detectedCompany = ghCompany.charAt(0).toUpperCase() + ghCompany.slice(1);
         detectedLocation = res.data.location?.name || 'Remote';
         detectedSource = `Greenhouse (${ghCompany.toUpperCase()})`;
+        rawJdContent = res.data.content || '';
         const sal = extractSalaryFromText(res.data.content || '');
         if (sal) detectedSalary = sal;
       }
@@ -488,6 +491,7 @@ async function parseJobUrl(targetUrl) {
         detectedCompany = levCompany.charAt(0).toUpperCase() + levCompany.slice(1);
         detectedLocation = res.data.categories?.location || 'Remote';
         detectedSource = `Lever (${levCompany.toUpperCase()})`;
+        rawJdContent = (res.data.descriptionPlain || res.data.description || '') + ' ' + (res.data.additionalPlain || '');
       }
     } catch (e) {}
   }
@@ -504,6 +508,7 @@ async function parseJobUrl(targetUrl) {
       });
       const html = typeof res.data === 'string' ? res.data : '';
       if (html) {
+        rawJdContent = html;
         // A. JSON-LD
         const jsonLdMatches = html.match(/<script[^>]+type=['"]application\/ld\+json['"][^>]*>([\s\S]*?)<\/script>/gi);
         if (jsonLdMatches) {
@@ -575,10 +580,9 @@ async function parseJobUrl(targetUrl) {
     detectedTitle = `Opportunity at ${detectedCompany}`;
   }
 
-  const combined = (detectedTitle + ' ' + detectedLocation).toLowerCase();
-  if (combined.includes('remote')) detectedWorkType = 'Remote';
-  else if (combined.includes('hybrid')) detectedWorkType = 'Hybrid';
-  else detectedWorkType = 'Remote';
+  const resolved = detectLocationAndWorkType(detectedLocation, detectedTitle, rawJdContent);
+  detectedLocation = resolved.location;
+  detectedWorkType = resolved.workType;
 
   const hash = Buffer.from(targetUrl).toString('base64').substring(0, 10).replace(/[^a-zA-Z0-9]/g, '');
   return {

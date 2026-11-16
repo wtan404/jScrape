@@ -828,36 +828,15 @@
 
   <main class="dashboard-layout">
 
-    <!-- 4-Card KPI Overview (First Section) -->
-    <section class="dash-metrics-grid">
-      <div class="dash-metric-card">
-        <div class="dash-metric-num" id="metric24hCount" style="color: var(--accent-amber);">0</div>
-        <div class="dash-metric-label" id="metricHotlistLabel"><i data-lucide="flame"></i> 72h Hotlist Positions</div>
-      </div>
-      <div class="dash-metric-card">
-        <div class="dash-metric-num" id="metricResumesCount" style="color: var(--accent-purple-light);">0</div>
-        <div class="dash-metric-label"><i data-lucide="file-text"></i> Stored Resume Variations</div>
-      </div>
-      <div class="dash-metric-card">
-        <div class="dash-metric-num" id="metricSubmissionsCount" style="color: var(--accent-emerald);">0</div>
-        <div class="dash-metric-label"><i data-lucide="check-circle-2"></i> Dispatched Submissions</div>
-      </div>
-      <div class="dash-metric-card">
-        <div class="dash-metric-num" id="metricTotalVerified" style="color: var(--accent-violet);">0</div>
-        <div class="dash-metric-label"><i data-lucide="database"></i> 14-Day Verified Roles</div>
-      </div>
-    </section>
-
     <!-- Main Full-Width Operational Center -->
     <section class="triage-center" style="width: 100%;">
 
-      <!-- Queue Switcher Tabs & Time Horizon Selector -->
+      <!-- Queue Switcher Tabs & Span Selector -->
       <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
         <div class="queue-tabs-bar" style="flex: 1; min-width: 320px; margin-bottom: 0;">
           <button type="button" class="queue-tab-btn active" id="tabBtnActive" onclick="switchQueueTab('active')">
             <i data-lucide="flame"></i>
-            <span id="tabLabelActive">Active 72h Queue</span>
-            <span class="queue-pill-count" id="countTabActive">0</span>
+            <span id="tabLabelActive">Active List &lt;0/0&gt;</span>
           </button>
           <button type="button" class="queue-tab-btn" id="tabBtnApplied" onclick="switchQueueTab('applied')">
             <i data-lucide="check-circle-2"></i>
@@ -871,13 +850,14 @@
           </button>
         </div>
 
-        <!-- Time Horizon Scope Selector -->
+        <!-- Span Scope Selector -->
         <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.4rem 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
           <i data-lucide="clock" style="width: 14px; height: 14px; color: var(--accent-purple-light);"></i>
-          <span style="font-size: 0.76rem; color: var(--text-dim); font-weight: 600;">Time Horizon:</span>
-          <select id="triageTimeHorizon" class="select-control" style="padding: 0.2rem 0.5rem; font-size: 0.78rem; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-main); font-weight: 600;" onchange="switchTimeHorizon(this.value)" title="Switch between 72h fresh hotlist and full 14-day archive">
+          <span style="font-size: 0.76rem; color: var(--text-dim); font-weight: 600;">Span:</span>
+          <select id="triageTimeHorizon" class="select-control" style="padding: 0.2rem 0.5rem; font-size: 0.78rem; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-main); font-weight: 600;" onchange="switchTimeHorizon(this.value)" title="Filter roles by time span">
             <option value="72h" selected>72h Hotlist</option>
-            <option value="14d">Full 14-Day Archive (2 Weeks)</option>
+            <option value="7d">1 Week</option>
+            <option value="14d">2 Weeks</option>
           </select>
         </div>
       </div>
@@ -892,10 +872,10 @@
               <!-- Row 1: Search Input -->
               <div class="input-icon-wrap">
                 <i data-lucide="search" class="input-icon"></i>
-                <input type="text" id="triageSearchInput" class="triage-search-input" placeholder="Search roles by title, employer, or keyword..." oninput="renderTriageTable()">
+                <input type="text" id="triageSearchInput" class="triage-search-input" placeholder="Search roles by title, employer, or keyword..." oninput="onTriageFilterChange()">
               </div>
               <!-- Row 2: Sources Dropdown directly under Search Input, same width -->
-              <select id="triageSourceFilter" class="select-control full-width" onchange="renderTriageTable()" title="Filter by Source">
+              <select id="triageSourceFilter" class="select-control full-width" onchange="onTriageFilterChange()" title="Filter by Source">
                 <option value="all">All Sources (ATS + Feeds)</option>
                 <option value="ats">ATS Direct (GH / Lever / Ashby / SmartRecruiters)</option>
                 <option value="feeds">Curated Tech Feeds (RemoteOK, WWR, Remotive, Jobicy)</option>
@@ -907,10 +887,10 @@
               <!-- Row 1: Salary numeric manual input first -->
               <div class="salary-input-wrap">
                 <span class="currency-symbol">$</span>
-                <input type="number" id="triageSalaryFilter" class="input-control salary-numeric-input" placeholder="Min. Salary (e.g. 140000)" min="0" step="5000" oninput="renderTriageTable()" title="Filter by Minimum Acceptable Salary (USD)">
+                <input type="number" id="triageSalaryFilter" class="input-control salary-numeric-input" placeholder="Min. Salary (e.g. 140000)" min="0" step="5000" oninput="onTriageFilterChange()" title="Filter by Minimum Acceptable Salary (USD)">
               </div>
               <!-- Row 2: Work Setups underneath -->
-              <select id="triageWorkTypeFilter" class="select-control full-width" onchange="renderTriageTable()" title="Filter by Work Setup">
+              <select id="triageWorkTypeFilter" class="select-control full-width" onchange="onTriageFilterChange()" title="Filter by Work Setup">
                 <option value="all">All Setups (Remote & Hybrid)</option>
                 <option value="remote">Remote Only</option>
                 <option value="hybrid">Hybrid Only</option>
@@ -951,10 +931,7 @@
           <select id="manualJobResumeSelect" class="select-control" style="min-width: 180px; max-width: 240px;" title="Assigned Resume for this Application">
             <option value="">Default Resume</option>
           </select>
-          <button type="button" class="btn btn-primary" onclick="importAndTrackJob()" id="btnImportTrack" title="Scan listing & add to Applied / Tracking queue">
-            <i data-lucide="sparkles"></i>
-            <span>Scan & Track</span>
-          </button>
+          <button type="button" class="btn btn-primary" onclick="importAndTrackJob()" id="btnImportTrack" title="Add to Applied / Tracking queue">Track</button>
         </div>
       </div>
 
@@ -983,6 +960,19 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- 25-Item Pagination Controls Bar -->
+      <div id="triagePaginationBar" class="pagination-bar" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; margin-bottom: 1.25rem; padding: 0.55rem 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.8rem; color: var(--text-dim);">
+        <button type="button" class="btn btn-secondary btn-xs" id="btnPagePrev" onclick="changeTriagePage(-1)" disabled style="padding: 0.35rem 0.75rem;">
+          &larr; Previous
+        </button>
+        <span id="triagePageIndicator" style="font-weight: 600; color: var(--text-main);">
+          Page 1 of 1 (0 roles)
+        </span>
+        <button type="button" class="btn btn-secondary btn-xs" id="btnPageNext" onclick="changeTriagePage(1)" disabled style="padding: 0.35rem 0.75rem;">
+          Next &rarr;
+        </button>
       </div>
 
       <!-- Live Submissions & Receipts Log -->
@@ -1194,6 +1184,6 @@
     </div>
   </div>
 
-  <script src="dashboard.js?v=1.15.0&t=20261116e"></script>
+  <script src="dashboard.js?v=1.16.0&t=20261116f"></script>
 </body>
 </html>

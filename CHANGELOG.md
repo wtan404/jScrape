@@ -4,6 +4,33 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.16.0] - 2026-11-16
+
+### Added
+- **State-Restricted Job Description Location Scanning (`geo_helper.js`, `ats_scraper.js`, `scraper.js`, `server.js`, `dashboard/api.php`, `dashboard/dashboard.js`):**
+  - Integrated `detectLocationAndWorkType()` deep JD scanning engine across Greenhouse, Lever, Ashby, SmartRecruiters, tech feeds, and manual URL imports.
+  - Detects remote and hybrid roles restricted to a specific subset/group of US states (e.g. eligible states, participating states, list of state abbreviations/names, etc.).
+  - Normalizes restricted listings to display primary location as **`limited, US`** with the sub title indicating **`Remote`** or **`Hybrid`**.
+- **25-Item Results Pagination Bar (`dashboard/index.html`, `dashboard/dashboard.js`):**
+  - Implemented client-side pagination limited to 25 items per page (`TRIAGE_PAGE_SIZE = 25`) with `Previous`, `Page X of Y (<total> roles)`, and `Next` navigation controls.
+  - Automatically resets to Page 1 on search queries, Span scope changes, salary threshold adjustments, and work setup filter toggles.
+
+### Changed
+- **Removed 4 KPI Metric Cards (`dashboard/index.html`, `dashboard/dashboard.js`):**
+  - Completely removed `.dash-metrics-grid` from the top of the dashboard for a streamlined, table-focused layout.
+  - Added safe null-checking guards for metric elements in `dashboard.js`.
+- **Dynamic Active Tab Counter Format (`dashboard/index.html`, `dashboard/dashboard.js`):**
+  - Transformed the primary tab header into a dynamic display counter: `Active List <Displayed/Total>` (e.g., `Active List <25/140>`).
+- **Span Filter Expansion (`dashboard/index.html`, `dashboard/dashboard.js`):**
+  - Renamed `Time Horizon:` dropdown to **`Span:`**.
+  - Added a **`1 Week`** (7d) scope option alongside `72h Hotlist` and `2 Weeks` (14d archive).
+- **Manual Application Add CTA Simplification (`dashboard/index.html`, `dashboard/dashboard.js`):**
+  - Replaced `Scan & Track` button with simplified **`Track`** CTA (no icon, no "Scan"), displaying `Tracking...` during URL scanning.
+- **Cache-Busting Asset Synchronization (`dashboard/index.html`):**
+  - Updated script reference to `dashboard.js?v=1.16.0&t=20261116f`.
+
+---
+
 ## [1.15.0] - 2026-11-16
 
 ### Added

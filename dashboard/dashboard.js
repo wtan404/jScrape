@@ -42,8 +42,11 @@ const DEFAULT_SEED_RESUMES = [
 
 let allCuratedJobs = [];
 let allHotlist72hJobs = [];
+let allWeek7dJobs = [];
 let allArchive14dJobs = [];
-let currentTimeHorizon = '72h'; // '72h' | '14d'
+let currentTimeHorizon = '72h'; // '72h' | '7d' | '14d'
+let currentTriagePage = 1;
+const TRIAGE_PAGE_SIZE = 25;
 let savedResumes = [];
 let applicantProfile = { ...CANONICAL_DEFAULT_PROFILE };
 let submissionLogs = [];
@@ -129,6 +132,105 @@ async function initDashboard(forceRefresh = false) {
     updateQueueBadgeCounts();
     if (window.lucide) lucide.createIcons();
   }
+}
+
+// --------------------------------------------------------------------------
+// Location Formatting & Subtitle Engine
+// --------------------------------------------------------------------------
+
+function formatJobLocationAndWorkType(job) {
+  if (!job) return { location: 'Remote', workType: 'Remote' };
+  let loc = job.location || 'Remote';
+  let wt = job.workType || 'Remote';
+
+  if (loc.toLowerCase() === 'limited, us') {
+    return { location: 'limited, US', workType: wt || 'Remote' };
+  }
+
+  // Scan location and description for state-restricted remote/hybrid roles
+  const combined = `${loc} ${job.title || ''} ${job.description || ''}`.toLowerCase();
+  if (wt !== 'Onsite') {
+    const isLimited =
+      /(?:eligible|participating|specific|select|selected|approved|certain|limited)\s+(?:us\s+)?states/i.test(combined) ||
+      /(?:remote|telecommute|wfh)[\s\S]{0,100}(?:only\s+in|restricted\s+to|limited\s+to|eligible\s+states|following\s+states|selected\s+states|certain\s+states|specific\s+states)/i.test(combined) ||
+      /(?:must\s+(?:reside|live|be\s+located)|open\s+to\s+(?:residents\s+of|candidates\s+in)|hiring\s+(?:only\s+)?in)[\s\S]{0,120}(?:following\s+states|these\s+states|selected\s+states|select\s+states|\b(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC)(?:\s*,\s*[A-Z]{2})+\b)/i.test(combined) ||
+      /(?:remote|hybrid)\s*[-–—:]\s*(?:[A-Za-z\s]+,\s*){1,10}[A-Za-z\s]+/i.test(loc) && /(?:california|texas|new york|washington|florida|colorado|illinois|\b(?:ca|ny|tx|wa|fl|il|ma|co|nc|ga|va|mi|oh|pa|nj|az)\b)/i.test(loc) ||
+      /(?:remote|hybrid)\s*\((?:[A-Z]{2}[,\s/]+){1,15}[A-Z]{2}\)/i.test(loc) ||
+      /\((?:[A-Z]{2}[,\s/]+){1,15}[A-Z]{2}\)\s*(?:remote|hybrid)/i.test(loc) ||
+      /(?:,\s*us-[a-z\s]+){2,}/i.test(loc) ||
+      /(?:remote|hybrid)[\s\S]{0,30}(?:select|specific|certain|limited)\s+states/i.test(loc);
+
+    if (isLimited) {
+      loc = 'limited, US';
+    }
+  }
+
+  return { location: loc, workType: wt };
+}
+
+// --------------------------------------------------------------------------
+// 25-Item Pagination Controls & Filter Handlers
+// --------------------------------------------------------------------------
+
+function updatePaginationControls(totalItems) {
+  const paginationBar = document.getElementById('triagePaginationBar');
+  const btnPrev = document.getElementById('btnPagePrev');
+  const btnNext = document.getElementById('btnPageNext');
+  const indicator = document.getElementById('triagePageIndicator');
+
+  if (!paginationBar) return;
+
+  const totalPages = Math.max(1, Math.ceil(totalItems / TRIAGE_PAGE_SIZE));
+  if (currentTriagePage > totalPages) currentTriagePage = totalPages;
+  if (currentTriagePage < 1) currentTriagePage = 1;
+
+  if (indicator) {
+    indicator.textContent = `Page ${currentTriagePage} of ${totalPages} (${totalItems} ${totalItems === 1 ? 'role' : 'roles'})`;
+  }
+  if (btnPrev) btnPrev.disabled = currentTriagePage <= 1;
+  if (btnNext) btnNext.disabled = currentTriagePage >= totalPages;
+}
+
+function changeTriagePage(delta) {
+  let totalItems = 0;
+  if (currentQueueTab === 'active') {
+    totalItems = getActiveFilteredJobs(true).length;
+  } else if (currentQueueTab === 'applied') {
+    const searchVal = document.getElementById('triageSearchInput')?.value.toLowerCase().trim() || '';
+    let appliedList = Object.values(appliedJobsMap);
+    if (searchVal) {
+      appliedList = appliedList.filter(item => {
+        const j = item.job || {};
+        const text = (j.title + ' ' + j.company + ' ' + (item.notes || '') + ' ' + (item.status || '')).toLowerCase();
+        return text.includes(searchVal);
+      });
+    }
+    totalItems = appliedList.length;
+  } else if (currentQueueTab === 'dismissed') {
+    const searchVal = document.getElementById('triageSearchInput')?.value.toLowerCase().trim() || '';
+    let dismissedList = Object.values(dismissedJobsMap);
+    if (searchVal) {
+      dismissedList = dismissedList.filter(item => {
+        const j = item.job || {};
+        const text = (j.title + ' ' + j.company + ' ' + (item.reason || '')).toLowerCase();
+        return text.includes(searchVal);
+      });
+    }
+    totalItems = dismissedList.length;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(totalItems / TRIAGE_PAGE_SIZE));
+  const newPage = currentTriagePage + delta;
+  if (newPage >= 1 && newPage <= totalPages) {
+    currentTriagePage = newPage;
+    renderTriageTable();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function onTriageFilterChange() {
+  currentTriagePage = 1;
+  renderTriageTable();
 }
 
 function updateKPIs(count24h, resumesCount, subsCount, totalVerified) {
@@ -378,6 +480,13 @@ function updateQueueBadgeCounts() {
   const appliedCount = Object.keys(appliedJobsMap).length;
   const dismissedCount = Object.keys(dismissedJobsMap).length;
 
+  const tabLabelActive = document.getElementById('tabLabelActive');
+  if (tabLabelActive) {
+    const total = activeJobs.length;
+    const displayed = Math.min(total, TRIAGE_PAGE_SIZE);
+    tabLabelActive.textContent = `Active List <${displayed}/${total}>`;
+  }
+
   const elActive = document.getElementById('countTabActive');
   const elApplied = document.getElementById('countTabApplied');
   const elDismissed = document.getElementById('countTabDismissed');
@@ -622,6 +731,7 @@ function switchProfileTab(tabName) {
 
 async function fetch24hQueue() {
   const SEVENTY_TWO_HOURS_MS = 72 * 60 * 60 * 1000;
+  const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
   const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
   const now = Date.now();
 
@@ -638,13 +748,21 @@ async function fetch24hQueue() {
         return !isNaN(t) && (now - t) <= FOURTEEN_DAYS_MS;
       });
 
+      // Filter to 1 week (7 days)
+      allWeek7dJobs = allArchive14dJobs.filter(j => {
+        const t = new Date(j.date).getTime();
+        return (now - t) <= ONE_WEEK_MS;
+      });
+
       // Filter to 72h hotlist
       allHotlist72hJobs = allArchive14dJobs.filter(j => {
         const t = new Date(j.date).getTime();
         return (now - t) <= SEVENTY_TWO_HOURS_MS;
       });
 
-      allCuratedJobs = (currentTimeHorizon === '14d') ? allArchive14dJobs : allHotlist72hJobs;
+      if (currentTimeHorizon === '14d') allCuratedJobs = allArchive14dJobs;
+      else if (currentTimeHorizon === '7d') allCuratedJobs = allWeek7dJobs;
+      else allCuratedJobs = allHotlist72hJobs;
 
       const totalVerifiedEl = document.getElementById('metricTotalVerified');
       if (totalVerifiedEl) totalVerifiedEl.textContent = allArchive14dJobs.length.toLocaleString();
@@ -654,6 +772,7 @@ async function fetch24hQueue() {
         const data = await res.json();
         if (data && Array.isArray(data.jobs)) {
           allHotlist72hJobs = data.jobs;
+          allWeek7dJobs = data.jobs;
           allArchive14dJobs = data.jobs;
           allCuratedJobs = data.jobs;
         }
@@ -669,21 +788,11 @@ async function fetch24hQueue() {
 
 function switchTimeHorizon(horizon) {
   currentTimeHorizon = horizon || '72h';
-  allCuratedJobs = (currentTimeHorizon === '14d') ? allArchive14dJobs : allHotlist72hJobs;
+  if (currentTimeHorizon === '14d') allCuratedJobs = allArchive14dJobs;
+  else if (currentTimeHorizon === '7d') allCuratedJobs = allWeek7dJobs;
+  else allCuratedJobs = allHotlist72hJobs;
 
-  const tabLabel = document.getElementById('tabLabelActive');
-  if (tabLabel) {
-    tabLabel.textContent = (currentTimeHorizon === '14d') ? 'Active 14d Archive' : 'Active 72h Queue';
-  }
-
-  const kpiLabel = document.getElementById('metricHotlistLabel');
-  if (kpiLabel) {
-    kpiLabel.innerHTML = (currentTimeHorizon === '14d')
-      ? '<i data-lucide="archive"></i> 14d Active View Roles'
-      : '<i data-lucide="flame"></i> 72h Hotlist Positions';
-    if (window.lucide) lucide.createIcons();
-  }
-
+  currentTriagePage = 1;
   selectedJobs.clear();
   updateStickyDispatchBar();
   renderTriageTable();
@@ -692,6 +801,7 @@ function switchTimeHorizon(horizon) {
 
 function switchQueueTab(tabName) {
   currentQueueTab = tabName;
+  currentTriagePage = 1;
   ['active', 'applied', 'dismissed'].forEach(t => {
     const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
     if (btn) btn.classList.toggle('active', t === tabName);
@@ -738,6 +848,10 @@ function renderTriageTable() {
     const filtered = getActiveFilteredJobs(true);
 
     if (filtered.length === 0) {
+      currentTriagePage = 1;
+      const tabLabelActive = document.getElementById('tabLabelActive');
+      if (tabLabelActive) tabLabelActive.textContent = 'Active List <0/0>';
+      updatePaginationControls(0);
       tbody.innerHTML = `
         <tr>
           <td colspan="7" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
@@ -750,12 +864,28 @@ function renderTriageTable() {
       return;
     }
 
-    tbody.innerHTML = filtered.map(job => {
+    const totalItems = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / TRIAGE_PAGE_SIZE));
+    if (currentTriagePage > totalPages) currentTriagePage = totalPages;
+    if (currentTriagePage < 1) currentTriagePage = 1;
+
+    const startIndex = (currentTriagePage - 1) * TRIAGE_PAGE_SIZE;
+    const pagedJobs = filtered.slice(startIndex, startIndex + TRIAGE_PAGE_SIZE);
+
+    const tabLabelActive = document.getElementById('tabLabelActive');
+    if (tabLabelActive) {
+      tabLabelActive.textContent = `Active List <${pagedJobs.length}/${totalItems}>`;
+    }
+
+    updatePaginationControls(totalItems);
+
+    tbody.innerHTML = pagedJobs.map(job => {
       const key = job.id || job.url;
       const isChecked = selectedJobs.has(key);
       const timeAgo = formatTimeAgo(job.date);
       const assignedResumeId = selectedJobs.get(key)?.resumeId || (savedResumes[0] ? savedResumes[0].id : '');
       const salaryResult = formatSalaryUSD(job.salary, job.title);
+      const { location: locDisplay, workType: wtDisplay } = formatJobLocationAndWorkType(job);
 
       return `
         <tr class="${isChecked ? 'selected' : ''}" id="row_${escapeHtml(key)}">
@@ -780,8 +910,8 @@ function renderTriageTable() {
             </div>
           </td>
           <td>
-            <div>${escapeHtml(job.location || 'Remote')}</div>
-            <div style="font-size: 0.74rem; font-style: italic; color: var(--text-dim); margin-top: 0.1rem;">${escapeHtml(job.workType || 'Remote')}</div>
+            <div>${escapeHtml(locDisplay)}</div>
+            <div style="font-size: 0.74rem; font-style: italic; color: var(--text-dim); margin-top: 0.1rem;">${escapeHtml(wtDisplay)}</div>
           </td>
           <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-emerald);">
             ${timeAgo}
@@ -848,6 +978,8 @@ function renderTriageTable() {
     }
 
     if (appliedList.length === 0) {
+      currentTriagePage = 1;
+      updatePaginationControls(0);
       tbody.innerHTML = `
         <tr>
           <td colspan="6" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
@@ -863,11 +995,22 @@ function renderTriageTable() {
     // Sort newest applied first
     appliedList.sort((a, b) => new Date(b.appliedAt || 0).getTime() - new Date(a.appliedAt || 0).getTime());
 
-    tbody.innerHTML = appliedList.map(item => {
+    const totalItems = appliedList.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / TRIAGE_PAGE_SIZE));
+    if (currentTriagePage > totalPages) currentTriagePage = totalPages;
+    if (currentTriagePage < 1) currentTriagePage = 1;
+
+    const startIndex = (currentTriagePage - 1) * TRIAGE_PAGE_SIZE;
+    const pagedApplied = appliedList.slice(startIndex, startIndex + TRIAGE_PAGE_SIZE);
+
+    updatePaginationControls(totalItems);
+
+    tbody.innerHTML = pagedApplied.map(item => {
       const key = item.jobId;
       const job = item.job || {};
       const timeAgo = formatTimeAgo(item.appliedAt);
       const appliedDate = item.appliedAt ? new Date(item.appliedAt).toLocaleDateString() : 'Recently';
+      const { location: locDisplay, workType: wtDisplay } = formatJobLocationAndWorkType(job);
 
       return `
         <tr id="row_${escapeHtml(key)}">
@@ -880,8 +1023,8 @@ function renderTriageTable() {
             </div>
           </td>
           <td>
-            <div>${escapeHtml(job.location || 'Remote')}</div>
-            <div style="font-size: 0.74rem; font-style: italic; color: var(--text-dim); margin-top: 0.1rem;">${escapeHtml(job.workType || 'Remote')}</div>
+            <div>${escapeHtml(locDisplay)}</div>
+            <div style="font-size: 0.74rem; font-style: italic; color: var(--text-dim); margin-top: 0.1rem;">${escapeHtml(wtDisplay)}</div>
           </td>
           <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-emerald);">
             ${timeAgo}
@@ -943,6 +1086,8 @@ function renderTriageTable() {
     }
 
     if (dismissedList.length === 0) {
+      currentTriagePage = 1;
+      updatePaginationControls(0);
       tbody.innerHTML = `
         <tr>
           <td colspan="5" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
@@ -957,10 +1102,21 @@ function renderTriageTable() {
 
     dismissedList.sort((a, b) => new Date(b.dismissedAt || 0).getTime() - new Date(a.dismissedAt || 0).getTime());
 
-    tbody.innerHTML = dismissedList.map(item => {
+    const totalItems = dismissedList.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / TRIAGE_PAGE_SIZE));
+    if (currentTriagePage > totalPages) currentTriagePage = totalPages;
+    if (currentTriagePage < 1) currentTriagePage = 1;
+
+    const startIndex = (currentTriagePage - 1) * TRIAGE_PAGE_SIZE;
+    const pagedDismissed = dismissedList.slice(startIndex, startIndex + TRIAGE_PAGE_SIZE);
+
+    updatePaginationControls(totalItems);
+
+    tbody.innerHTML = pagedDismissed.map(item => {
       const key = item.jobId;
       const job = item.job || {};
       const timeAgo = formatTimeAgo(item.dismissedAt);
+      const { location: locDisplay, workType: wtDisplay } = formatJobLocationAndWorkType(job);
 
       return `
         <tr id="row_${escapeHtml(key)}">
@@ -973,8 +1129,8 @@ function renderTriageTable() {
             </div>
           </td>
           <td>
-            <div>${escapeHtml(job.location || 'Remote')}</div>
-            <div style="font-size: 0.74rem; font-style: italic; color: var(--text-dim); margin-top: 0.15rem;">${escapeHtml(job.source || 'ATS')}</div>
+            <div>${escapeHtml(locDisplay)}</div>
+            <div style="font-size: 0.74rem; font-style: italic; color: var(--text-dim); margin-top: 0.15rem;">${escapeHtml(job.source || wtDisplay || 'ATS')}</div>
           </td>
           <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dim);">
             ${timeAgo}
@@ -1988,11 +2144,9 @@ async function importAndTrackJob() {
     return;
   }
 
-  const origBtnContent = btn ? btn.innerHTML : '';
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i> <span>Scanning...</span>`;
-    if (window.lucide) lucide.createIcons();
+    btn.textContent = 'Tracking...';
   }
 
   try {
@@ -2040,13 +2194,19 @@ async function importAndTrackJob() {
         host = host.charAt(0).toUpperCase() + host.slice(1);
       } catch (e) {}
 
+      const resolvedLoc = formatJobLocationAndWorkType({
+        location: 'Remote',
+        workType: 'Remote',
+        title: `Opportunity at ${host}`
+      });
+
       scannedJob = {
         id: 'manual-' + Math.random().toString(36).substring(2, 10),
         source: 'Manual Import',
         title: `Opportunity at ${host}`,
         company: host,
-        location: 'Remote',
-        workType: 'Remote',
+        location: resolvedLoc.location,
+        workType: resolvedLoc.workType,
         salary: null,
         url: targetUrl,
         matchedKeyword: 'MANUAL ENTRY',
@@ -2094,8 +2254,7 @@ async function importAndTrackJob() {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = origBtnContent;
-      if (window.lucide) lucide.createIcons();
+      btn.textContent = 'Track';
     }
   }
 }
