@@ -14,24 +14,6 @@ const {
 const app = express();
 const PORT = process.env.PORT || 8090;
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(express.static(__dirname));
-
-// Route Alias: transparently forward /dashboard/api/* to /api/*
-app.use((req, res, next) => {
-  if (req.url.startsWith('/dashboard/api/')) {
-    req.url = req.url.replace('/dashboard/api/', '/api/');
-  }
-  next();
-});
-
-// Dedicated /dashboard path handlers
-app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
-app.get(['/dashboard', '/dashboard/'], (req, res) => {
-  res.sendFile(path.join(__dirname, 'dashboard', 'index.html'));
-});
-
 const DATA_FILE = path.join(__dirname, 'jobs_data.json');
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 const APPLICATIONS_FILE = path.join(__dirname, 'job_applications.json');
@@ -55,16 +37,230 @@ function saveResumesMeta(list) {
   fs.writeFileSync(RESUMES_META, JSON.stringify(list, null, 2));
 }
 
+function sanitizeApplicationsStructure(apps) {
+  if (!apps || typeof apps !== 'object') {
+    return { applied: {}, dismissed: {} };
+  }
+  const result = {
+    applied: (apps.applied && typeof apps.applied === 'object') ? apps.applied : {},
+    dismissed: (apps.dismissed && typeof apps.dismissed === 'object') ? apps.dismissed : {}
+  };
+  Object.entries(apps).forEach(([k, v]) => {
+    if (k === 'applied' || k === 'dismissed') return;
+    if (v && typeof v === 'object' && v.status) {
+      const st = String(v.status).toLowerCase();
+      if (st === 'dismissed' || st === 'drop') {
+        result.dismissed[k] = v;
+      } else {
+        result.applied[k] = v;
+      }
+    }
+  });
+  return result;
+}
+
 function readApplications() {
   if (fs.existsSync(APPLICATIONS_FILE)) {
-    try { return JSON.parse(fs.readFileSync(APPLICATIONS_FILE, 'utf8')); } catch (e) { return {}; }
+    try {
+      const parsed = JSON.parse(fs.readFileSync(APPLICATIONS_FILE, 'utf8'));
+      return sanitizeApplicationsStructure(parsed);
+    } catch (e) {
+      return { applied: {}, dismissed: {} };
+    }
   }
-  return {};
+  return { applied: {}, dismissed: {} };
 }
 
 function saveApplications(apps) {
-  fs.writeFileSync(APPLICATIONS_FILE, JSON.stringify(apps, null, 2));
+  const sanitized = sanitizeApplicationsStructure(apps);
+  fs.writeFileSync(APPLICATIONS_FILE, JSON.stringify(sanitized, null, 2));
 }
+
+// PHP API Emulation for local Node dev environment
+function handlePhpApi(req, res) {
+  const action = req.query.action || '';
+  const apps = readApplications();
+
+  if (action === 'summary') {
+    const profile = readProfile();
+    const resumes = readResumesMeta();
+    let count72h = 0;
+    let totalVerified = 0;
+    if (fs.existsSync(DATA_FILE)) {
+      try {
+        const jd = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+        const rawJobs = jd.jobs || [];
+        totalVerified = rawJobs.length;
+        const cutoff = Date.now() - (72 * 3600 * 1000);
+        count72h = rawJobs.filter(j => j.date && new Date(j.date).getTime() >= cutoff).length;
+      } catch (e) {}
+    }
+    return res.json({
+      profile,
+      resumesCount: resumes.length,
+      resumes,
+      jobsCount24h: count72h,
+      totalVerified,
+      submissionsCount: Object.keys(apps.applied).length,
+      applications: apps
+    });
+  }
+
+  if (action === 'applications') {
+    if (req.method === 'POST') {
+      const body = req.body || {};
+      if (body.applied && typeof body.applied === 'object') {
+        Object.assign(apps.applied, body.applied);
+      }
+      if (body.dismissed && typeof body.dismissed === 'object') {
+        Object.assign(apps.dismissed, body.dismissed);
+      }
+      saveApplications(apps);
+      return res.json({
+        status: 'success',
+        message: 'Applications state synchronized.',
+        appliedCount: Object.keys(apps.applied).length,
+        dismissedCount: Object.keys(apps.dismissed).length,
+        applications: apps
+      });
+    }
+    return res.json(apps);
+  }
+
+  if (action === 'application-status') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+    const { jobId, job = {}, status, action: op = status || 'applied', reason, notes, resumeId, resumeLabel, appliedAt, dismissedAt } = req.body;
+    if (!jobId) return res.status(400).json({ error: 'Missing jobId' });
+    const now = new Date().toISOString();
+
+    if (op === 'applied') {
+      delete apps.dismissed[jobId];
+      apps.applied[jobId] = {
+        jobId,
+        job,
+        status: status || 'Applied',
+        resumeId: resumeId || null,
+        resumeLabel: resumeLabel || 'Default Resume',
+        notes: notes || 'Application recorded via Command Center',
+        appliedAt: appliedAt || now,
+        updatedAt: now
+      };
+    } else if (op === 'dismiss' || op === 'drop') {
+      delete apps.applied[jobId];
+      apps.dismissed[jobId] = {
+        jobId,
+        job,
+        reason: reason || 'Marked as irrelevant by PM',
+        dismissedAt: dismissedAt || now,
+        updatedAt: now
+      };
+    } else if (op === 'restore' || op === 're-activate') {
+      delete apps.applied[jobId];
+      delete apps.dismissed[jobId];
+    } else if (op === 'update_status') {
+      if (apps.applied[jobId]) {
+        apps.applied[jobId].status = status || apps.applied[jobId].status;
+        apps.applied[jobId].updatedAt = now;
+        if (notes) apps.applied[jobId].notes = notes;
+      }
+    } else if (op === 'remove_tracking') {
+      delete apps.applied[jobId];
+    }
+    saveApplications(apps);
+
+    return res.json({
+      status: 'success',
+      action: op,
+      jobId,
+      appliedCount: Object.keys(apps.applied).length,
+      dismissedCount: Object.keys(apps.dismissed).length
+    });
+  }
+
+  if (action === 'application-batch-status') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+    const { jobs = [], action: op = 'mark_applied', status, reason } = req.body;
+    const now = new Date().toISOString();
+    let updatedCount = 0;
+
+    jobs.forEach(item => {
+      const key = item.jobId || item.id || item.url;
+      if (!key) return;
+      const jobData = item.job || item;
+
+      if (op === 'mark_applied') {
+        delete apps.dismissed[key];
+        apps.applied[key] = {
+          jobId: key,
+          job: jobData,
+          status: status || 'Applied',
+          resumeId: item.resumeId || null,
+          resumeLabel: item.resumeLabel || 'Default Resume',
+          notes: 'Batch application recorded via Command Center',
+          appliedAt: now,
+          updatedAt: now
+        };
+        updatedCount++;
+      } else if (op === 'dismiss' || op === 'drop') {
+        delete apps.applied[key];
+        apps.dismissed[key] = {
+          jobId: key,
+          job: jobData,
+          reason: reason || 'Dropped during batch triage',
+          dismissedAt: now,
+          updatedAt: now
+        };
+        updatedCount++;
+      }
+    });
+    saveApplications(apps);
+
+    return res.json({
+      status: 'success',
+      action: op,
+      updatedCount,
+      appliedCount: Object.keys(apps.applied).length,
+      dismissedCount: Object.keys(apps.dismissed).length
+    });
+  }
+
+  if (action === 'profile') {
+    if (req.method === 'POST') {
+      saveProfile(req.body);
+      return res.json({ status: 'success', profile: req.body });
+    }
+    return res.json(readProfile());
+  }
+
+  return res.json({
+    status: 'healthy',
+    service: 'jscrape-persistence-api',
+    timestamp: new Date().toISOString(),
+    actions: ['applications', 'application-status', 'application-batch-status', 'profile', 'summary']
+  });
+}
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Mount PHP API dynamically BEFORE express.static
+app.all(['/api.php', '/dashboard/api.php'], handlePhpApi);
+
+// Route Alias: transparently forward /dashboard/api/* to /api/*
+app.use((req, res, next) => {
+  if (req.url.startsWith('/dashboard/api/')) {
+    req.url = req.url.replace('/dashboard/api/', '/api/');
+  }
+  next();
+});
+
+// Dedicated /dashboard path handlers
+app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
+app.get(['/dashboard', '/dashboard/'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard', 'index.html'));
+});
+
+app.use(express.static(__dirname));
 
 // Helper to read config
 function readConfig() {
@@ -211,29 +407,58 @@ app.get('/api/jobs/applications', (req, res) => {
 // POST /api/jobs/application-status (Update status: applied, dismissed, active)
 app.post('/api/jobs/application-status', (req, res) => {
   try {
-    const { jobId, status, resumeId, resumeLabel, notes, job } = req.body;
+    const { jobId, status, resumeId, resumeLabel, notes, job, action: op, reason, dismissedAt, appliedAt } = req.body;
     if (!jobId) {
       return res.status(400).json({ error: 'Missing jobId parameter.' });
     }
 
     const apps = readApplications();
-    if (status === 'active' || status === 'restored') {
-      delete apps[jobId];
-    } else {
-      apps[jobId] = {
-        ...(apps[jobId] || {}),
+    const effectiveOp = op || status || 'applied';
+    const now = new Date().toISOString();
+
+    if (effectiveOp === 'active' || effectiveOp === 'restore' || effectiveOp === 'restored') {
+      delete apps.applied[jobId];
+      delete apps.dismissed[jobId];
+    } else if (effectiveOp === 'dismiss' || effectiveOp === 'drop' || effectiveOp === 'dismissed') {
+      delete apps.applied[jobId];
+      apps.dismissed[jobId] = {
         jobId,
-        status: status || 'unreviewed',
+        job: job || (apps.dismissed[jobId] && apps.dismissed[jobId].job) || {},
+        reason: reason || 'Irrelevant',
+        dismissedAt: dismissedAt || now,
+        updatedAt: now
+      };
+    } else if (effectiveOp === 'remove_tracking') {
+      delete apps.applied[jobId];
+    } else if (effectiveOp === 'update_status') {
+      if (apps.applied[jobId]) {
+        apps.applied[jobId].status = status || apps.applied[jobId].status;
+        apps.applied[jobId].updatedAt = now;
+        if (notes) apps.applied[jobId].notes = notes;
+      }
+    } else { // applied
+      delete apps.dismissed[jobId];
+      apps.applied[jobId] = {
+        jobId,
+        job: job || (apps.applied[jobId] && apps.applied[jobId].job) || {},
+        status: status || 'Applied',
         resumeId: resumeId || null,
-        resumeLabel: resumeLabel || null,
-        notes: notes || '',
-        updatedAt: new Date().toISOString(),
-        job: job || (apps[jobId] && apps[jobId].job) || null
+        resumeLabel: resumeLabel || 'Default Resume',
+        notes: notes || 'Application recorded',
+        appliedAt: appliedAt || now,
+        updatedAt: now
       };
     }
     saveApplications(apps);
 
-    res.json({ status: 'success', application: apps[jobId] || null, all: apps });
+    res.json({
+      status: 'success',
+      action: effectiveOp,
+      jobId,
+      appliedCount: Object.keys(apps.applied).length,
+      dismissedCount: Object.keys(apps.dismissed).length,
+      all: apps
+    });
   } catch (err) {
     res.status(500).json({ error: 'Failed to save application status.', message: err.message });
   }
@@ -242,33 +467,55 @@ app.post('/api/jobs/application-status', (req, res) => {
 // POST /api/jobs/application-batch-status (Batch update: multiple jobs applied or dismissed)
 app.post('/api/jobs/application-batch-status', (req, res) => {
   try {
-    const { updates } = req.body;
-    if (!Array.isArray(updates)) {
+    const { updates, jobs, action: op } = req.body;
+    const items = updates || jobs;
+    if (!Array.isArray(items)) {
       return res.status(400).json({ error: 'Updates must be an array.' });
     }
 
     const apps = readApplications();
     const now = new Date().toISOString();
-    updates.forEach(u => {
-      if (!u || !u.jobId) return;
-      if (u.status === 'active' || u.status === 'restored') {
-        delete apps[u.jobId];
+    items.forEach(u => {
+      const key = u.jobId || u.id || u.url;
+      if (!key) return;
+      const jobData = u.job || u;
+      const effectiveOp = op || u.status || 'applied';
+
+      if (effectiveOp === 'active' || effectiveOp === 'restore' || effectiveOp === 'restored') {
+        delete apps.applied[key];
+        delete apps.dismissed[key];
+      } else if (effectiveOp === 'dismiss' || effectiveOp === 'drop' || effectiveOp === 'dismissed') {
+        delete apps.applied[key];
+        apps.dismissed[key] = {
+          jobId: key,
+          job: jobData,
+          reason: u.reason || u.notes || 'Dropped during batch triage',
+          dismissedAt: u.dismissedAt || now,
+          updatedAt: now
+        };
       } else {
-        apps[u.jobId] = {
-          ...(apps[u.jobId] || {}),
-          jobId: u.jobId,
-          status: u.status || 'unreviewed',
+        delete apps.dismissed[key];
+        apps.applied[key] = {
+          jobId: key,
+          job: jobData,
+          status: u.status || 'Applied',
           resumeId: u.resumeId || null,
-          resumeLabel: u.resumeLabel || null,
-          notes: u.notes || '',
-          updatedAt: now,
-          job: u.job || (apps[u.jobId] && apps[u.jobId].job) || null
+          resumeLabel: u.resumeLabel || 'Default Resume',
+          notes: u.notes || 'Batch application recorded',
+          appliedAt: u.appliedAt || now,
+          updatedAt: now
         };
       }
     });
     saveApplications(apps);
 
-    res.json({ status: 'success', count: updates.length, all: apps });
+    res.json({
+      status: 'success',
+      count: items.length,
+      appliedCount: Object.keys(apps.applied).length,
+      dismissedCount: Object.keys(apps.dismissed).length,
+      all: apps
+    });
   } catch (err) {
     res.status(500).json({ error: 'Failed to save batch application status.', message: err.message });
   }
@@ -542,9 +789,9 @@ app.get('/api/dashboard/summary', (req, res) => {
       const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
       const jobs = data.jobs || [];
       totalVerified = jobs.length;
-      const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+      const SEVENTY_TWO_HOURS_MS = 72 * 60 * 60 * 1000;
       const now = Date.now();
-      jobsCount24h = jobs.filter(j => j && j.date && (now - new Date(j.date).getTime()) <= TWENTY_FOUR_HOURS_MS).length;
+      jobsCount24h = jobs.filter(j => j && j.date && (now - new Date(j.date).getTime()) <= SEVENTY_TWO_HOURS_MS).length;
     }
 
     res.json({
@@ -553,7 +800,7 @@ app.get('/api/dashboard/summary', (req, res) => {
       resumes,
       jobsCount24h,
       totalVerified,
-      submissionsCount: logs.length,
+      submissionsCount: Object.keys(applications.applied || {}).length || logs.length,
       recentLogs: logs.slice(0, 10),
       applications
     });

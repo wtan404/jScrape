@@ -1293,16 +1293,32 @@ function mainMarkApplied(key) {
   const job = allJobs.find(j => (j.id || j.url) === key);
   if (!job) return;
 
+  const now = new Date().toISOString();
   appStatusMap.applied[key] = {
     jobId: key,
     job: { ...job },
     status: 'Applied',
-    appliedAt: new Date().toISOString(),
+    appliedAt: now,
     notes: 'Marked via Public Search Board'
   };
   delete appStatusMap.dismissed[key];
 
   localStorage.setItem('scrapedeez_job_applications', JSON.stringify(appStatusMap));
+
+  // Asynchronous cloud persistence across all devices
+  fetch(`./api.php?action=application-status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      jobId: key,
+      action: 'applied',
+      job: { ...job },
+      status: 'Applied',
+      appliedAt: now,
+      notes: 'Marked via Public Search Board'
+    })
+  }).catch(() => {});
+
   filterJobs();
 }
 
@@ -1311,15 +1327,30 @@ function mainDismissJob(key) {
   const job = allJobs.find(j => (j.id || j.url) === key);
   if (!job) return;
 
+  const now = new Date().toISOString();
   appStatusMap.dismissed[key] = {
     jobId: key,
     job: { ...job },
-    dismissedAt: new Date().toISOString(),
+    dismissedAt: now,
     reason: 'Irrelevant'
   };
   delete appStatusMap.applied[key];
 
   localStorage.setItem('scrapedeez_job_applications', JSON.stringify(appStatusMap));
+
+  // Asynchronous cloud persistence across all devices
+  fetch(`./api.php?action=application-status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      jobId: key,
+      action: 'dismiss',
+      job: { ...job },
+      reason: 'Irrelevant',
+      dismissedAt: now
+    })
+  }).catch(() => {});
+
   filterJobs();
 }
 
@@ -1956,16 +1987,43 @@ async function deleteResumeVariation(id) {
 async function fetchApplicationTracking() {
   let loaded = false;
   try {
-    const res = await fetch(`./api/jobs/applications?t=${Date.now()}`);
-    const text = await res.text();
+    let data = null;
     try {
-      const data = JSON.parse(text);
-      if (data && typeof data === 'object') {
-        applicationsMap = data;
-        localStorage.setItem('scrapedeez_applications', JSON.stringify(applicationsMap));
-        loaded = true;
-      }
+      const res = await fetch(`./api.php?action=applications&t=${Date.now()}`);
+      if (res.ok) data = await res.json();
     } catch (e) {}
+
+    if (!data) {
+      try {
+        const res = await fetch(`./api/jobs/applications?t=${Date.now()}`);
+        if (res.ok) data = await res.json();
+      } catch (e) {}
+    }
+
+    if (!data) {
+      try {
+        const res = await fetch(`./job_applications.json?t=${Date.now()}`);
+        if (res.ok) data = await res.json();
+      } catch (e) {}
+    }
+
+    if (data && typeof data === 'object') {
+      const serverApplied = (data.applied && typeof data.applied === 'object') ? data.applied : {};
+      const serverDismissed = (data.dismissed && typeof data.dismissed === 'object') ? data.dismissed : {};
+
+      // Sync public board status map
+      const currentStatusMap = getApplicationStatusMap();
+      const unifiedMap = {
+        applied: { ...currentStatusMap.applied, ...serverApplied },
+        dismissed: { ...currentStatusMap.dismissed, ...serverDismissed }
+      };
+      localStorage.setItem('scrapedeez_job_applications', JSON.stringify(unifiedMap));
+
+      // Sync applicationsMap for tracker tab
+      applicationsMap = { ...applicationsMap, ...serverApplied };
+      localStorage.setItem('scrapedeez_applications', JSON.stringify(applicationsMap));
+      loaded = true;
+    }
   } catch (err) {}
 
   if (!loaded) {

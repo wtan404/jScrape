@@ -69,21 +69,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function initDashboard(forceRefresh = false) {
   try {
+    // 1. Instant optimistic load from browser localStorage
     loadApplicationsState();
 
+    // 2. Fetch server cloud state (PHP API in prod / Express in local dev)
     let summary = null;
-    if (isLocalBackend()) {
+    try {
+      const res = await fetch(`./api.php?action=summary&t=${Date.now()}`);
+      if (res.ok) {
+        summary = await res.json();
+      }
+    } catch (e) {
+      summary = null;
+    }
+
+    if (!summary) {
       try {
         const res = await fetch(`./api/dashboard/summary?t=${Date.now()}`);
         if (res.ok) {
-          const text = await res.text();
-          try {
-            summary = JSON.parse(text);
-          } catch (e) {
-            summary = null;
-          }
+          summary = await res.json();
         }
-      } catch (e) {
+      } catch (e2) {
         summary = null;
       }
     }
@@ -92,20 +98,25 @@ async function initDashboard(forceRefresh = false) {
       applicantProfile = { ...CANONICAL_DEFAULT_PROFILE, ...summary.profile };
       savedResumes = (summary.resumes && summary.resumes.length > 0) ? summary.resumes : await getFallbackResumes();
       submissionLogs = summary.recentLogs || [];
+      if (summary.applications) {
+        await syncApplicationsFromServer(summary.applications);
+      }
       updateKPIs(summary.jobsCount24h, savedResumes.length, submissionLogs.length, summary.totalVerified);
     } else {
       await loadProfileFallback();
       await loadResumesFallback();
       await loadLogsFallback();
+      await syncApplicationsFromServer();
     }
 
-    // 2. Fetch 24-hour job queue
+    // 3. Fetch 72-hour job queue
     await fetch24hQueue();
 
   } catch (err) {
     console.warn('Dashboard initialization warning:', err);
     await loadProfileFallback();
     await loadResumesFallback();
+    await syncApplicationsFromServer();
     await fetch24hQueue();
   } finally {
     populateProfileForm();
@@ -175,6 +186,143 @@ function loadApplicationsState() {
   }
 }
 
+async function syncApplicationsFromServer(serverData = null) {
+  try {
+    let data = serverData;
+    if (!data) {
+      try {
+        const res = await fetch(`./api.php?action=applications&t=${Date.now()}`);
+        if (res.ok) data = await res.json();
+      } catch (e) {}
+    }
+    if (!data) {
+      try {
+        const res = await fetch(`./api/jobs/applications?t=${Date.now()}`);
+        if (res.ok) data = await res.json();
+      } catch (e) {}
+    }
+    if (!data) {
+      try {
+        const res = await fetch(`../job_applications.json?t=${Date.now()}`);
+        if (res.ok) data = await res.json();
+      } catch (e) {}
+    }
+
+    if (data && typeof data === 'object') {
+      const serverApplied = (data.applied && typeof data.applied === 'object') ? data.applied : {};
+      const serverDismissed = (data.dismissed && typeof data.dismissed === 'object') ? data.dismissed : {};
+
+      // Detect if we have local uncommitted changes from an offline/previous session
+      let hasLocalUnsynced = false;
+      Object.keys(appliedJobsMap).forEach(k => {
+        if (!serverApplied[k]) hasLocalUnsynced = true;
+      });
+      Object.keys(dismissedJobsMap).forEach(k => {
+        if (!serverDismissed[k]) hasLocalUnsynced = true;
+      });
+
+      // Merge: server state is primary multi-device authority
+      appliedJobsMap = { ...appliedJobsMap, ...serverApplied };
+      dismissedJobsMap = { ...dismissedJobsMap, ...serverDismissed };
+
+      try {
+        localStorage.setItem('scrapedeez_job_applications', JSON.stringify({
+          applied: appliedJobsMap,
+          dismissed: dismissedJobsMap
+        }));
+      } catch (e) {}
+
+      if (hasLocalUnsynced) {
+        syncApplicationsToServer();
+      }
+      return true;
+    }
+  } catch (err) {
+    console.warn('Applications cloud sync notice:', err.message);
+  }
+  return false;
+}
+
+async function syncApplicationsToServer() {
+  try {
+    const payload = {
+      applied: appliedJobsMap,
+      dismissed: dismissedJobsMap
+    };
+    const res = await fetch(`./api.php?action=applications`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      await fetch(`./api/jobs/application-batch-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates: Object.values(appliedJobsMap) })
+      });
+    }
+  } catch (e) {}
+}
+
+async function persistApplicationStatus(jobId, action, extra = {}) {
+  const payload = { jobId, action, ...extra };
+  try {
+    const res = await fetch(`./api.php?action=application-status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      await fetch(`./api/jobs/application-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+  } catch (err) {
+    console.warn('Action sync notice:', err.message);
+  }
+}
+
+async function persistBatchApplicationStatus(action, jobs) {
+  const payload = { action, jobs };
+  try {
+    const res = await fetch(`./api.php?action=application-batch-status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      await fetch(`./api/jobs/application-batch-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates: jobs, action })
+      });
+    }
+  } catch (err) {
+    console.warn('Batch sync notice:', err.message);
+  }
+}
+
+async function persistProfile(profile) {
+  try {
+    const res = await fetch(`./api.php?action=profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profile)
+    });
+    if (!res.ok) {
+      await fetch(`./api/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile)
+      });
+    }
+  } catch (err) {
+    console.warn('Profile sync notice:', err.message);
+  }
+}
+
 function saveApplicationsState() {
   try {
     localStorage.setItem('scrapedeez_job_applications', JSON.stringify({
@@ -182,37 +330,6 @@ function saveApplicationsState() {
       dismissed: dismissedJobsMap
     }));
   } catch (e) {}
-
-  if (isLocalBackend()) {
-    try {
-      const updates = [];
-      Object.values(appliedJobsMap).forEach(app => {
-        updates.push({
-          jobId: app.jobId,
-          status: app.status || 'Applied',
-          resumeId: app.resumeId,
-          resumeLabel: app.resumeLabel,
-          notes: app.notes,
-          job: app.job
-        });
-      });
-      Object.values(dismissedJobsMap).forEach(dis => {
-        updates.push({
-          jobId: dis.jobId,
-          status: 'dismissed',
-          notes: dis.reason,
-          job: dis.job
-        });
-      });
-      if (updates.length > 0) {
-        fetch('./api/jobs/application-batch-status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ updates })
-        }).catch(() => {});
-      }
-    } catch (e) {}
-  }
 
   updateQueueBadgeCounts();
 }
@@ -809,6 +926,7 @@ function markJobAsApplied(key) {
   const resumeSelect = document.getElementById(`resume_sel_${key}`);
   const resumeId = resumeSelect ? resumeSelect.value : (savedResumes[0] ? savedResumes[0].id : null);
   const resumeLabel = getResumeLabel(resumeId);
+  const now = new Date().toISOString();
 
   appliedJobsMap[key] = {
     jobId: key,
@@ -816,13 +934,23 @@ function markJobAsApplied(key) {
     status: 'Applied',
     resumeId,
     resumeLabel,
-    appliedAt: new Date().toISOString(),
+    appliedAt: now,
     notes: 'Marked via PM Operations Dashboard'
   };
 
   delete dismissedJobsMap[key];
   selectedJobs.delete(key);
   saveApplicationsState();
+
+  // Async server persistence across all devices
+  persistApplicationStatus(key, 'applied', {
+    job: { ...job },
+    status: 'Applied',
+    resumeId,
+    resumeLabel,
+    appliedAt: now,
+    notes: 'Marked via PM Operations Dashboard'
+  });
 
   showToast(`✅ Marked "${job.title}" as Applied & moved to Tracking Queue!`);
   renderTriageTable();
@@ -833,16 +961,24 @@ function dismissJob(key) {
   const job = allCuratedJobs.find(j => (j.id || j.url) === key) || (appliedJobsMap[key] && appliedJobsMap[key].job);
   if (!job) return;
 
+  const now = new Date().toISOString();
   dismissedJobsMap[key] = {
     jobId: key,
     job: { ...job },
-    dismissedAt: new Date().toISOString(),
+    dismissedAt: now,
     reason: 'Irrelevant'
   };
 
   delete appliedJobsMap[key];
   selectedJobs.delete(key);
   saveApplicationsState();
+
+  // Async server persistence across all devices
+  persistApplicationStatus(key, 'dismiss', {
+    job: { ...job },
+    reason: 'Irrelevant',
+    dismissedAt: now
+  });
 
   showToast(`🚫 Dropped "${job.title}" as irrelevant.`);
   renderTriageTable();
@@ -857,6 +993,9 @@ function restoreJob(key) {
   delete appliedJobsMap[key];
   saveApplicationsState();
 
+  // Async server persistence across all devices
+  persistApplicationStatus(key, 'restore');
+
   showToast(`✨ Restored "${title}" to Active Queue.`);
   renderTriageTable();
   updateStickyDispatchBar();
@@ -866,6 +1005,10 @@ function removeTrackingRecord(key) {
   delete appliedJobsMap[key];
   delete dismissedJobsMap[key];
   saveApplicationsState();
+
+  // Async server persistence across all devices
+  persistApplicationStatus(key, 'remove_tracking');
+
   showToast('Removed tracking record.');
   renderTriageTable();
 }
@@ -874,6 +1017,10 @@ function updateAppliedStatus(key, newStatus) {
   if (appliedJobsMap[key]) {
     appliedJobsMap[key].status = newStatus;
     saveApplicationsState();
+
+    // Async server persistence across all devices
+    persistApplicationStatus(key, 'update_status', { status: newStatus });
+
     showToast(`Updated status to: ${newStatus}`);
   }
 }
@@ -881,20 +1028,30 @@ function updateAppliedStatus(key, newStatus) {
 function executeBatchMarkApplied() {
   if (selectedJobs.size === 0) return;
   const count = selectedJobs.size;
+  const now = new Date().toISOString();
+  const batchList = [];
+
   selectedJobs.forEach((val, key) => {
-    appliedJobsMap[key] = {
+    const rec = {
       jobId: key,
       job: { ...val.job },
       status: 'Applied',
       resumeId: val.resumeId,
       resumeLabel: getResumeLabel(val.resumeId),
-      appliedAt: new Date().toISOString(),
+      appliedAt: now,
       notes: 'Batch marked via PM Operations Dashboard'
     };
+    appliedJobsMap[key] = rec;
     delete dismissedJobsMap[key];
+    batchList.push(rec);
   });
+
   selectedJobs.clear();
   saveApplicationsState();
+
+  // Async batch server persistence
+  persistBatchApplicationStatus('mark_applied', batchList);
+
   showToast(`✅ Moved ${count} position(s) to Applied Tracking Queue!`);
   renderTriageTable();
   updateStickyDispatchBar();
@@ -903,17 +1060,27 @@ function executeBatchMarkApplied() {
 function executeBatchDismiss() {
   if (selectedJobs.size === 0) return;
   const count = selectedJobs.size;
+  const now = new Date().toISOString();
+  const batchList = [];
+
   selectedJobs.forEach((val, key) => {
-    dismissedJobsMap[key] = {
+    const rec = {
       jobId: key,
       job: { ...val.job },
-      dismissedAt: new Date().toISOString(),
+      dismissedAt: now,
       reason: 'Irrelevant'
     };
+    dismissedJobsMap[key] = rec;
     delete appliedJobsMap[key];
+    batchList.push(rec);
   });
+
   selectedJobs.clear();
   saveApplicationsState();
+
+  // Async batch server persistence
+  persistBatchApplicationStatus('dismiss', batchList);
+
   showToast(`🚫 Dropped ${count} position(s) as irrelevant.`);
   renderTriageTable();
   updateStickyDispatchBar();
@@ -1110,21 +1277,26 @@ async function submitBatchPayload(itemsList) {
   } catch (e) {}
 
   // Move submitted items to Applied Tracking Queue
+  const now = new Date().toISOString();
+  const appliedBatch = [];
   itemsList.forEach(item => {
     const key = item.job.id || item.job.url;
-    appliedJobsMap[key] = {
+    const rec = {
       jobId: key,
       job: { ...item.job },
       status: 'Applied',
       resumeId: item.resumeId,
       resumeLabel: getResumeLabel(item.resumeId),
-      appliedAt: new Date().toISOString(),
+      appliedAt: now,
       notes: 'Submitted via Operations Dashboard'
     };
+    appliedJobsMap[key] = rec;
     delete dismissedJobsMap[key];
     selectedJobs.delete(key);
+    appliedBatch.push(rec);
   });
   saveApplicationsState();
+  persistBatchApplicationStatus('mark_applied', appliedBatch);
 
   renderReceiptsLog();
   renderTriageTable();
@@ -1251,15 +1423,8 @@ async function saveProfileData() {
   const btn = document.getElementById('btnSaveProfile');
   if (btn) btn.textContent = 'Saving...';
 
-  if (isLocalBackend()) {
-    try {
-      await fetch(`./api/profile`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profile)
-      });
-    } catch (e) {}
-  }
+  // Cloud server persistence
+  await persistProfile(profile);
 
   applicantProfile = profile;
   try {
@@ -1512,18 +1677,39 @@ async function deleteResume(id) {
 
 async function loadProfileFallback() {
   let loaded = null;
-  // Tier 1: Local Storage user overrides
+  // Tier 1: Direct server profile fetch
   try {
-    const saved = localStorage.getItem('scrapedeez_profile');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed && parsed.fullName) {
-        loaded = parsed;
-      }
+    const res = await fetch(`./api.php?action=profile&t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.fullName) loaded = data;
     }
   } catch (e) {}
 
-  // Tier 2: Direct static fetch of applicant_profile.json
+  if (!loaded) {
+    try {
+      const res = await fetch(`../profile.json?t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.fullName) loaded = data;
+      }
+    } catch (e) {}
+  }
+
+  // Tier 2: Local Storage user overrides
+  if (!loaded) {
+    try {
+      const saved = localStorage.getItem('scrapedeez_profile');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.fullName) {
+          loaded = parsed;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Tier 3: Direct static fetch of applicant_profile.json
   if (!loaded) {
     try {
       const res = await fetch(`../applicant_profile.json?t=${Date.now()}`);
@@ -1536,7 +1722,7 @@ async function loadProfileFallback() {
     } catch (e) {}
   }
 
-  // Tier 3: Merge with canonical default profile
+  // Tier 4: Merge with canonical default profile
   applicantProfile = {
     ...CANONICAL_DEFAULT_PROFILE,
     ...(loaded || {})

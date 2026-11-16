@@ -4,6 +4,21 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.10.0] - 2026-11-16
+
+### Added
+- **Cross-Device Cloud State Synchronization (`dashboard/api.php`, `api.php`, `dashboard/dashboard.js`, `main.js`, `server.js`):**
+  - Resolved local browser session isolation (`localStorage`), enabling triage sorting and actions (Mark as Applied, Drop / Dismiss, Restore, Status Lifecycle transitions) and Candidate Profile settings to persist permanently across all devices (desktop workstation, laptop, mobile phone, tablet, and across different browsers).
+  - Built high-performance server-side persistence API (`dashboard/api.php` and root proxy `api.php`) with atomic file locking (`LOCK_EX`) managing `job_applications.json` and `profile.json` natively under Apache/PHP on cPanel.
+  - Engineered Node.js development server parity in `server.js`, dynamically mounting `/api.php` and `/dashboard/api.php` prior to static asset middleware.
+  - Implemented multi-tier cloud hydration in `dashboard/dashboard.js`: instant zero-flicker render from client cache, followed by authoritative cloud merge and automated legacy local session data migration.
+  - Connected public search board (`main.js`) to live cloud tracking state, ensuring dismissed roles remain hidden and applied badges display consistently everywhere.
+- **Automated Deployment State Shield (`.github/workflows/deploy.yml`):**
+  - Added `job_applications.json` and `profile.json` to the FTP deployment `exclude:` configuration.
+  - Prevents automated 12-hour GitHub Actions deployment runs from overwriting live candidate tracking records.
+
+---
+
 ## [1.9.0] - 2026-11-15
 
 ### Added

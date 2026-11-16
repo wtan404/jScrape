@@ -86,6 +86,8 @@ jobs:
             **/node_modules/**
             .env*
             README.md
+            job_applications.json
+            profile.json
             dev/**
             qa/**
             stage/**
