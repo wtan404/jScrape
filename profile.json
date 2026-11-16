@@ -1,0 +1,29 @@
+{
+  "fullName": "William Tan",
+  "email": "wtan.web404@gmail.com",
+  "phone": "+1.619.928.9574",
+  "location": "San Diego, CA",
+  "linkedInUrl": "https://linkedin.com/in/willtan",
+  "githubUrl": "https://github.com/wtan404",
+  "portfolioUrl": "https://synopsdigital.com",
+  "targetSalary": 160000,
+  "workAuth": "US Citizen / Authorized (No Sponsorship Required)",
+  "noticePeriod": "2 Weeks",
+  "coverNote": "IT Operations leader and Web Operations specialist with over 10 years of experience delivering enterprise solutions across multiple platforms. Proven track record of scaling global IT initiatives, bridging IT with commercial strategy, leading cross-functional teams, managing change control (ServiceNow), and engineering path-to-production CI/CD workflows.",
+  "skills": [
+    "Enterprise Web & Digital Operations",
+    "Technical Program Management",
+    "Release Management & Governance",
+    "Change Control Management (ServiceNow)",
+    "CI/CD Pipelines & DevOps",
+    "Path-to-Production Architecture",
+    "Cloud & Data Migrations",
+    "Shopify Theme Architecture & Integrations",
+    "WordPress & Drupal",
+    "JavaScript, PHP, Liquid, SQL",
+    "Conversion Rate Optimization (CRO)",
+    "GDPR, Privacy & ADA Accessibility",
+    "Agile / Scrum Governance",
+    "Vendor & Resource Management"
+  ]
+}

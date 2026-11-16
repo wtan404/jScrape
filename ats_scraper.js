@@ -62,7 +62,7 @@ async function scrapeGreenhouseCompany(company, targetTitles = [], keywords = []
     const matches = [];
 
     for (const job of jobs) {
-      if (isExcludedRole(job.title || '')) continue;
+      if (isExcludedRole(job.title || '', job.content || '')) continue;
 
       const title = (job.title || '').toLowerCase();
       const content = (job.content || '').toLowerCase();
@@ -72,6 +72,8 @@ async function scrapeGreenhouseCompany(company, targetTitles = [], keywords = []
 
       if (matchedTerm || searchTerms.length === 0) {
         const workType = classifyWorkType(location, job.title);
+        if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') continue;
+
         const salary = extractSalaryFromText(job.content || '');
         matches.push({
           id: `gh-${company}-${job.id}`,
@@ -109,7 +111,7 @@ async function scrapeLeverCompany(company, targetTitles = [], keywords = []) {
 
     for (const job of jobs) {
       const category = job.categories ? (job.categories.team || job.categories.department || '') : '';
-      if (isExcludedRole(job.text || '', category)) continue;
+      if (isExcludedRole(job.text || '', category + ' ' + (job.descriptionPlain || ''))) continue;
 
       const title = (job.text || '').toLowerCase();
       const description = (job.descriptionPlain || '').toLowerCase();
@@ -119,6 +121,8 @@ async function scrapeLeverCompany(company, targetTitles = [], keywords = []) {
 
       if (matchedTerm || searchTerms.length === 0) {
         const workType = classifyWorkType(location, job.text);
+        if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') continue;
+
         const fullDesc = (job.descriptionPlain || '') + ' ' + (job.additionalPlain || '');
         const salary = extractSalaryFromText(fullDesc);
         matches.push({
@@ -158,7 +162,7 @@ async function scrapeAshbyCompany(company, targetTitles = [], keywords = []) {
     for (const job of jobs) {
       if (!job || !job.isListed) continue;
       const dept = job.department || '';
-      if (isExcludedRole(job.title || '', dept)) continue;
+      if (isExcludedRole(job.title || '', dept + ' ' + (job.descriptionPlain || ''))) continue;
 
       const title = (job.title || '').toLowerCase();
       const content = (job.descriptionPlain || job.descriptionHtml || '').toLowerCase();
@@ -175,6 +179,8 @@ async function scrapeAshbyCompany(company, targetTitles = [], keywords = []) {
         } else {
           workType = classifyWorkType(location, job.title);
         }
+
+        if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') continue;
 
         let salary = null;
         if (job.compensation && job.compensation.compensationTierSummary) {
@@ -234,6 +240,8 @@ async function scrapeSmartRecruitersCompany(company, targetTitles = [], keywords
         if (job.location && job.location.remote) workType = 'Remote';
         else if (job.location && job.location.hybrid) workType = 'Hybrid';
         else workType = classifyWorkType(location, job.name);
+
+        if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') continue;
 
         const postingUrl = `https://jobs.smartrecruiters.com/${company}/${job.id}`;
         const salary = extractSalaryFromText(job.content || job.name || '');

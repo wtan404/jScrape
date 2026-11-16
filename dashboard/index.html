@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>PM Operations Command Center — Scrapedeez</title>
-  <meta name="description" content="Dedicated PM Operations Dashboard: Review 24h job hotlist, assign resume variations, and execute automated applications.">
+  <title>Scrapedeez — Operations Dashboard</title>
+  <meta name="description" content="Dedicated Operations Dashboard: Review 72h job hotlist, assign resume variations, and execute automated applications.">
   <meta name="theme-color" content="#0c0a17" id="metaThemeColor">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
@@ -776,12 +776,7 @@
   <header class="app-header">
     <div class="container header-wrap">
       <div class="brand">
-        <img src="../synops_logo.jpg" alt="Synops Logo" class="brand-logo-img">
         <span class="brand-title">SCRAPE<span class="highlight">DEEZ</span></span>
-        <span class="dash-badge-live" style="margin-left: 0.8rem;">
-          <span class="pulse-dot"></span>
-          <span>PM Command Center</span>
-        </span>
       </div>
 
       <div class="dash-nav-actions">
@@ -872,10 +867,9 @@
               </div>
               <!-- Row 2: Work Setups underneath -->
               <select id="triageWorkTypeFilter" class="select-control full-width" onchange="renderTriageTable()" title="Filter by Work Setup">
-                <option value="all">All Work Setups</option>
+                <option value="all">All Setups (Remote & Hybrid)</option>
                 <option value="remote">Remote Only</option>
                 <option value="hybrid">Hybrid Only</option>
-                <option value="onsite">Onsite Only</option>
               </select>
             </div>
           </div>
@@ -887,9 +881,9 @@
             <i data-lucide="user"></i>
             <span>Profile</span>
           </button>
-          <button type="button" class="btn btn-secondary triage-cta-btn" onclick="openResumesModal()" id="btnOpenResumesModal" title="Manage Tailored Resume Variations">
+          <button type="button" class="btn btn-secondary triage-cta-btn" onclick="openResumesModal()" id="btnOpenResumesModal" title="Manage Tailored Resumes">
             <i data-lucide="folder-check"></i>
-            <span>Resume Variations</span>
+            <span>Resume</span>
           </button>
         </div>
       </div>
@@ -1053,7 +1047,7 @@
   <div class="modal-overlay" id="resumeVariationsModal" onclick="handleModalBackdropClick(event, 'resumeVariationsModal')">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 style="margin: 0;"><i data-lucide="folder-check"></i> Resume Variations</h3>
+        <h3 style="margin: 0;"><i data-lucide="folder-check"></i> Resumes</h3>
         <button type="button" class="modal-close-btn" onclick="closeResumesModal()" aria-label="Close Resume Modal">
           <i data-lucide="x"></i>
         </button>

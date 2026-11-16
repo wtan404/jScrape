@@ -86,10 +86,13 @@ async function scrapeRemoteOK(targetTitles = PREDEFINED_ROLES, keywords = PREDEF
       const description = (job.description || '').toLowerCase();
       const location = job.location || 'Remote';
 
-      const matchedRole = searchRoles.find(r => title.includes(r.toLowerCase()));
+      const matchedRole = searchRoles.find(r => (title + ' ' + description).includes(r.toLowerCase()));
       const hasKeyword = searchKeywords.some(k => (title + ' ' + description).includes(k.toLowerCase()));
 
       if (matchedRole || hasKeyword) {
+        const workType = classifyWorkType(location, job.position);
+        if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') continue;
+
         const salary = extractSalaryFromText(job.description || '') || (job.salary || null);
         matches.push({
           id: `remoteok-${job.id}`,
@@ -97,7 +100,7 @@ async function scrapeRemoteOK(targetTitles = PREDEFINED_ROLES, keywords = PREDEF
           title: job.position || 'Remote Position',
           company: job.company || 'Unknown',
           location,
-          workType: classifyWorkType(location, job.position),
+          workType,
           salary,
           url: job.url || `https://remoteok.com/remote-jobs/${job.id}`,
           matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'SEARCH MATCH',
@@ -111,7 +114,7 @@ async function scrapeRemoteOK(targetTitles = PREDEFINED_ROLES, keywords = PREDEF
   }
 }
 
-// Scrape WeWorkRemotely Feed (Filtered for < 30 days old)
+// Scrape WeWorkRemotely Feed (Filtered for < 30 days old with deep JD scanning)
 async function scrapeWeWorkRemotely(targetTitles = PREDEFINED_ROLES, keywords = PREDEFINED_KEYWORDS) {
   try {
     const response = await axios.get('https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss', { headers: BROWSER_HEADERS, timeout: 8000 });
@@ -119,15 +122,23 @@ async function scrapeWeWorkRemotely(targetTitles = PREDEFINED_ROLES, keywords = 
 
     const xml = response.data;
     const matches = [];
-    const itemRegex = /<item>[\s\S]*?<title><!\[CDATA\[(.*?)\]\]><\/title>[\s\S]*?<link>(.*?)<\/link>[\s\S]*?<pubDate>(.*?)<\/pubDate>/g;
+    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
     const searchRoles = targetTitles.length > 0 ? targetTitles : PREDEFINED_ROLES;
     const searchKeywords = keywords.length > 0 ? keywords : PREDEFINED_KEYWORDS;
 
-    let match;
-    while ((match = itemRegex.exec(xml)) !== null) {
-      const rawTitle = match[1];
-      const link = match[2];
-      const pubDate = match[3];
+    let itemBlock;
+    while ((itemBlock = itemRegex.exec(xml)) !== null) {
+      const content = itemBlock[1];
+      const titleMatch = content.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/);
+      const linkMatch = content.match(/<link>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/);
+      const pubDateMatch = content.match(/<pubDate>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/pubDate>/);
+      const descMatch = content.match(/<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/);
+
+      if (!titleMatch || !linkMatch || !pubDateMatch) continue;
+
+      const rawTitle = titleMatch[1].trim();
+      const link = linkMatch[1].trim();
+      const pubDate = pubDateMatch[1].trim();
       const dateStr = new Date(pubDate).toISOString();
 
       if (!isWithin30Days(dateStr)) continue;
@@ -135,14 +146,16 @@ async function scrapeWeWorkRemotely(targetTitles = PREDEFINED_ROLES, keywords = 
       const parts = rawTitle.split(':');
       const company = parts.length > 1 ? parts[0].trim() : 'Unknown';
       const title = parts.length > 1 ? parts.slice(1).join(':').trim() : rawTitle;
+      const cleanDesc = (descMatch ? descMatch[1] : '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      const combinedText = (title + ' ' + company + ' ' + cleanDesc).toLowerCase();
 
-      if (isExcludedRole(title, rawTitle)) continue;
+      if (isExcludedRole(title, combinedText)) continue;
 
-      const matchedRole = searchRoles.find(r => title.toLowerCase().includes(r.toLowerCase()));
-      const hasKeyword = searchKeywords.some(k => title.toLowerCase().includes(k.toLowerCase()));
+      const matchedRole = searchRoles.find(r => combinedText.includes(r.toLowerCase()));
+      const hasKeyword = searchKeywords.some(k => combinedText.includes(k.toLowerCase()));
 
       if (matchedRole || hasKeyword) {
-        const salary = extractSalaryFromText(match[0] || '');
+        const salary = extractSalaryFromText(content);
         matches.push({
           id: `wwr-${Buffer.from(link).toString('base64').substring(0, 10)}`,
           source: 'WeWorkRemotely Feed',
@@ -191,10 +204,13 @@ async function scrapeRemotive(targetTitles = PREDEFINED_ROLES, keywords = PREDEF
 
           const title = (job.title || '').toLowerCase();
           const desc = (job.description || '').toLowerCase();
-          const matchedRole = searchRoles.find(r => title.includes(r.toLowerCase()));
+          const matchedRole = searchRoles.find(r => (title + ' ' + desc).includes(r.toLowerCase()));
           const hasKeyword = searchKeywords.some(k => (title + ' ' + desc).includes(k.toLowerCase()));
 
           if (matchedRole || hasKeyword) {
+            const workType = classifyWorkType(job.candidate_required_location || 'Remote', job.title);
+            if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') continue;
+
             const salary = job.salary || extractSalaryFromText(job.description || '');
             matches.push({
               id: `remotive-${job.id}`,
@@ -202,7 +218,7 @@ async function scrapeRemotive(targetTitles = PREDEFINED_ROLES, keywords = PREDEF
               title: job.title || 'Remote Tech Position',
               company: (job.company_name || 'Tech Company').trim(),
               location: job.candidate_required_location || 'Remote',
-              workType: 'Remote',
+              workType,
               url: job.url,
               salary,
               matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'SEARCH MATCH',
@@ -244,10 +260,13 @@ async function scrapeJobicy(targetTitles = PREDEFINED_ROLES, keywords = PREDEFIN
 
           const title = (job.jobTitle || '').toLowerCase();
           const desc = (job.jobExcerpt || job.jobDescription || '').toLowerCase();
-          const matchedRole = searchRoles.find(r => title.includes(r.toLowerCase()));
+          const matchedRole = searchRoles.find(r => (title + ' ' + desc).includes(r.toLowerCase()));
           const hasKeyword = searchKeywords.some(k => (title + ' ' + desc).includes(k.toLowerCase()));
 
           if (matchedRole || hasKeyword) {
+            const workType = classifyWorkType(job.jobGeo || 'Remote', job.jobTitle);
+            if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') continue;
+
             let salaryFormatted = null;
             if (job.salaryMin && job.salaryMax) {
               salaryFormatted = `$${Math.round(job.salaryMin/1000)}k - $${Math.round(job.salaryMax/1000)}k`;
@@ -259,7 +278,7 @@ async function scrapeJobicy(targetTitles = PREDEFINED_ROLES, keywords = PREDEFIN
               title: job.jobTitle || 'Tech Position',
               company: (job.companyName || 'Company').replace(/&#038;/g, '&').trim(),
               location: job.jobGeo || 'Remote / US',
-              workType: classifyWorkType(job.jobGeo || 'Remote', job.jobTitle),
+              workType,
               url: job.url,
               salary: salaryFormatted,
               matchedKeyword: matchedRole ? matchedRole.toUpperCase() : 'SEARCH MATCH',
@@ -322,8 +341,16 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
     if (seenUrls.has(key)) continue;
     seenUrls.add(key);
 
-    const isNew = !existingIdSet.has(job.id || job.url);
+    if (job.title && isExcludedRole(job.title, (job.company || '') + ' ' + (job.matchedKeyword || ''))) {
+      continue;
+    }
+
     const workType = job.workType || classifyWorkType(job.location, job.title);
+    if (workType.toLowerCase().includes('onsite') || workType.toLowerCase() === 'on-site') {
+      continue;
+    }
+
+    const isNew = !existingIdSet.has(job.id || job.url);
 
     mergedJobs.push({
       ...job,

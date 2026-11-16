@@ -28,7 +28,29 @@ if (!fs.existsSync(RESUMES_DIR)) {
 // Helpers for Resumes & Applications
 function readResumesMeta() {
   if (fs.existsSync(RESUMES_META)) {
-    try { return JSON.parse(fs.readFileSync(RESUMES_META, 'utf8')); } catch (e) { return []; }
+    try {
+      const list = JSON.parse(fs.readFileSync(RESUMES_META, 'utf8'));
+      let modified = false;
+      for (const item of list) {
+        if (!item.storedFile && item.fileName) {
+          item.storedFile = item.id + '_' + item.fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+          modified = true;
+        }
+        if (item.storedFile && item.fileBase64) {
+          const filePath = path.join(RESUMES_DIR, item.storedFile);
+          if (!fs.existsSync(filePath)) {
+            try {
+              const cleanBase64 = item.fileBase64.replace(/^data:[^;]+;base64,/, '');
+              fs.writeFileSync(filePath, Buffer.from(cleanBase64, 'base64'));
+            } catch (err) {}
+          }
+        }
+      }
+      if (modified) {
+        saveResumesMeta(list);
+      }
+      return list;
+    } catch (e) { return []; }
   }
   return [];
 }
@@ -614,12 +636,18 @@ app.get('/api/resumes/:id/download', (req, res) => {
       return res.status(404).send('Resume not found.');
     }
 
-    const filePath = path.join(RESUMES_DIR, target.storedFile);
+    const storedFile = target.storedFile || (target.id + '_' + (target.fileName || 'resume.docx').replace(/[^a-zA-Z0-9._-]/g, '_'));
+    const filePath = path.join(RESUMES_DIR, storedFile);
+    if (!fs.existsSync(filePath) && target.fileBase64) {
+      const cleanBase64 = target.fileBase64.replace(/^data:[^;]+;base64,/, '');
+      fs.writeFileSync(filePath, Buffer.from(cleanBase64, 'base64'));
+    }
+
     if (!fs.existsSync(filePath)) {
       return res.status(404).send('Resume file missing on disk.');
     }
 
-    res.download(filePath, target.fileName);
+    res.download(filePath, target.fileName || 'resume.docx');
   } catch (err) {
     res.status(500).send('Error downloading resume.');
   }

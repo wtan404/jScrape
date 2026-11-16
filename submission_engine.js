@@ -9,14 +9,14 @@ const RESUMES_META = path.join(RESUMES_DIR, 'metadata.json');
 
 // Extended Canonical Profile Knowledge Base (Handles Divergent Form Fields)
 const DEFAULT_PROFILE = {
-  fullName: 'Will Tan',
-  email: 'will@synopsdigital.com',
-  phone: '415-555-0199',
-  location: 'San Francisco, CA',
+  fullName: 'William Tan',
+  email: 'wtan.web404@gmail.com',
+  phone: '+1.619.928.9574',
+  location: 'San Diego, CA',
   linkedInUrl: 'https://linkedin.com/in/willtan',
   githubUrl: 'https://github.com/wtan404',
   portfolioUrl: 'https://synopsdigital.com',
-  coverNote: 'Experienced WebOps, DevOps & IT Engineering Manager with a proven track record leading high-availability cloud infrastructure, continuous delivery pipelines, and cross-functional engineering teams.',
+  coverNote: 'IT Operations leader and Web Operations specialist with over 10 years of experience delivering enterprise solutions across multiple platforms. Proven track record of scaling global IT initiatives, bridging IT with commercial strategy, leading cross-functional teams, managing change control (ServiceNow), and engineering path-to-production CI/CD workflows.',
   
   // Extended Resolution Fields for Divergent Questions
   legallyAuthorized: 'Yes',

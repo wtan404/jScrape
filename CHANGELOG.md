@@ -4,6 +4,34 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.12.0] - 2026-11-16
+
+### Added
+- **Candidate Profile & Multi-Resume Document Ingestion (`applicant_profile.json`, `profile.json`, `submission_engine.js`, `dashboard/dashboard.js`, `uploads/resumes/metadata.json`, `server.js`):**
+  - Integrated candidate profile for William Tan (San Diego, CA, +1.619.928.9574, `wtan.web404@gmail.com`, $160k target salary, 10+ years enterprise IT & WebOps).
+  - Ingested two verified resume documents into `uploads/resumes/` and embedded complete Base64 payloads into `uploads/resumes/metadata.json`:
+    - Corporate / IT Lead & Operations: `William Tan - Resume.docx` (Release Management, ServiceNow, WebOps, DevOps, Governance).
+    - Web Operations & E-commerce: `William Tan - E-commerce Resume.docx` (Shopify Theme Architecture, Web Architecture, CRO, Integrations).
+  - Built automatic file reconstitution on backend server startup and download routes, ensuring `.docx` files are re-generated on disk whenever missing.
+  - Enhanced client-side `downloadResume()` to detect `.docx` MIME types and stream downloads seamlessly across browsers.
+
+### Changed
+- **Header & Branding Simplification (`dashboard/index.html`):**
+  - Removed the `PM Command Center` pillbox badge (`.dash-badge-live`) from the navigation bar.
+  - Removed the logo image icon (`.brand-logo-img`) adjacent to the brand name, presenting a clean, modern typographic identity (`SCRAPEDEEZ`).
+  - Updated document title to `Scrapedeez — Operations Dashboard` and shortened the modal header to `Resumes`.
+  - Dropped `Variations` text from the action CTA button (`<span>Resume</span>`).
+- **Results Action Stack Optimization (`dashboard/dashboard.js`):**
+  - Removed the redundant `View` CTA button from the right column action stack in both the Active 72h Queue and Applied/Tracking Queue. Clicking the role title already opens the original posting in a new tab.
+- **Work Setup Policy — Strict Onsite Exclusion (`dashboard/index.html`, `dashboard/dashboard.js`, `scraper.js`, `ats_scraper.js`):**
+  - Removed `Onsite Only` option from the Work Setups dropdown (`#triageWorkTypeFilter`), retaining `All Setups (Remote & Hybrid)`, `Remote Only`, and `Hybrid Only`.
+  - Filtered out all `Onsite` postings in dashboard rendering (`getActiveFilteredJobs`), feed scrapers (RemoteOK, WeWorkRemotely, Remotive, Jobicy), ATS platforms (Greenhouse, Lever, Ashby, SmartRecruiters), and multi-feed deduplication (`mergeAndDeduplicateJobs`).
+- **Deep JD Keyword Scanning Across All Scrapers (`scraper.js`, `ats_scraper.js`):**
+  - Upgraded WeWorkRemotely RSS feed scraper to parse the full `<description>` body for each item, matching target roles and keywords against both title and description text.
+  - Aligned deep JD scanning across all ATS platforms while preserving strict IT role negative guardrails against HR, Finance, and non-technical Product Managers.
+
+---
+
 ## [1.11.0] - 2026-11-16
 
 ### Added

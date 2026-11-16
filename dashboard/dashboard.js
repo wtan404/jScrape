@@ -3,14 +3,14 @@
    ========================================================================== */
 
 const CANONICAL_DEFAULT_PROFILE = {
-  fullName: 'Will Tan',
-  email: 'will@synopsdigital.com',
-  phone: '415-555-0199',
-  location: 'San Francisco, CA',
+  fullName: 'William Tan',
+  email: 'wtan.web404@gmail.com',
+  phone: '+1.619.928.9574',
+  location: 'San Diego, CA',
   linkedInUrl: 'https://linkedin.com/in/willtan',
   githubUrl: 'https://github.com/wtan404',
   portfolioUrl: 'https://synopsdigital.com',
-  coverNote: 'Experienced WebOps, DevOps & IT Engineering Manager with a proven track record leading high-availability cloud infrastructure, continuous delivery pipelines, and cross-functional engineering teams.',
+  coverNote: 'IT Operations leader and Web Operations specialist with over 10 years of experience delivering enterprise solutions across multiple platforms. Proven track record of scaling global IT initiatives, bridging IT with commercial strategy, leading cross-functional teams, managing change control (ServiceNow), and engineering path-to-production CI/CD workflows.',
   legallyAuthorized: 'Yes',
   requiresSponsorship: 'No',
   desiredSalary: 160000,
@@ -21,21 +21,21 @@ const CANONICAL_DEFAULT_PROFILE = {
 
 const DEFAULT_SEED_RESUMES = [
   {
-    id: 'res_seed_devops',
-    label: 'DevOps & Cloud Infrastructure Lead',
-    specialization: 'AWS, Kubernetes, Terraform, CI/CD',
-    fileName: 'Will_Tan_DevOps_Cloud_Lead.pdf',
+    id: 'res_it_corp_lead',
+    label: 'Corporate / IT Lead & Operations',
+    specialization: 'IT Management, Release Management, WebOps, DevOps, Governance',
+    fileName: 'William Tan - Resume.docx',
     uploadDate: new Date().toISOString(),
-    sizeBytes: 148200,
+    sizeBytes: 12228,
     isDefault: true
   },
   {
-    id: 'res_seed_webops',
-    label: 'WebOps & Engineering Manager',
-    specialization: 'Web Operations, Platform Infrastructure, Team Leadership',
-    fileName: 'Will_Tan_WebOps_Engineering_Manager.pdf',
+    id: 'res_web_ecommerce',
+    label: 'Web Operations & E-commerce',
+    specialization: 'Website Operations, Shopify, Web Architecture, E-commerce, CRO',
+    fileName: 'William Tan - E-commerce Resume.docx',
     uploadDate: new Date().toISOString(),
-    sizeBytes: 154300,
+    sizeBytes: 653030,
     isDefault: false
   }
 ];
@@ -410,6 +410,9 @@ function getActiveFilteredJobs(applyFilters = true) {
     if (appliedJobsMap[key] || dismissedJobsMap[key]) return false;
     // Exclude HR, Finance, and non-technical Product Managers (strict IT focus)
     if (isDashExcludedRole(job.title || '', (job.company || '') + ' ' + (job.matchedKeyword || ''))) return false;
+    // Exclude Onsite positions from curated results (Remote & Hybrid only)
+    const wt = (job.workType || '').toLowerCase();
+    if (wt.includes('onsite') || wt === 'on-site') return false;
     return true;
   });
 
@@ -751,10 +754,6 @@ function renderTriageTable() {
           </td>
           <td style="text-align: right; width: 90px; min-width: 90px; padding: 0.5rem 0.4rem;">
             <div class="action-stack-vert">
-              <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-xs" title="Open original job posting in new tab">
-                <i data-lucide="external-link"></i>
-                <span>View</span>
-              </a>
               <button type="button" class="btn btn-primary btn-xs" onclick="quickSingleSubmit('${escapeHtml(key)}')" title="Auto-submit / package application">
                 <i data-lucide="send"></i>
                 <span>Submit</span>
@@ -855,12 +854,6 @@ function renderTriageTable() {
           </td>
           <td style="text-align: right; width: 90px; min-width: 90px; padding: 0.5rem 0.4rem;">
             <div class="action-stack-vert">
-              ${job.url ? `
-                <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-xs" title="Open original job posting in new tab">
-                  <i data-lucide="external-link"></i>
-                  <span>View</span>
-                </a>
-              ` : ''}
               <button type="button" class="btn btn-secondary btn-xs" onclick="restoreJob('${escapeHtml(key)}')" title="Move back to Active 72h Queue">
                 <i data-lucide="undo-2"></i>
                 <span>Re-Activate</span>
@@ -1683,24 +1676,29 @@ function downloadResume(id) {
   if (!item) return;
 
   if (item.fileBase64) {
+    let dataUri = item.fileBase64;
+    if (!dataUri.startsWith('data:')) {
+      const isDocx = (item.fileName && item.fileName.toLowerCase().endsWith('.docx'));
+      const isPdf = (item.fileName && item.fileName.toLowerCase().endsWith('.pdf'));
+      const mime = isDocx
+        ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        : (isPdf ? 'application/pdf' : 'application/octet-stream');
+      dataUri = `data:${mime};base64,` + item.fileBase64;
+    }
     const a = document.createElement('a');
-    a.href = item.fileBase64;
-    a.download = item.fileName || 'resume.pdf';
+    a.href = dataUri;
+    a.download = item.fileName || 'resume.docx';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
   } else {
-    // Generate text export for seed or text files
-    const content = `Resume Variation: ${item.label}\nSpecialization: ${item.specialization || 'Tech Lead'}\nCandidate: ${applicantProfile.fullName || 'Will Tan'}\nEmail: ${applicantProfile.email || 'will@synopsdigital.com'}\nLocation: ${applicantProfile.location || 'San Francisco, CA'}\nLinkedIn: ${applicantProfile.linkedInUrl || ''}\nGitHub: ${applicantProfile.githubUrl || ''}\nPortfolio: ${applicantProfile.portfolioUrl || ''}\n\nSummary:\n${applicantProfile.coverNote || ''}`;
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
+    // Attempt download via backend endpoint or fallback to candidate summary
     const a = document.createElement('a');
-    a.href = url;
-    a.download = (item.fileName ? item.fileName.replace(/\.pdf$/, '.txt') : 'resume.txt');
+    a.href = `./api/resumes/${encodeURIComponent(item.id)}/download`;
+    a.download = item.fileName || 'resume.docx';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   }
 }
 
