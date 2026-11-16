@@ -4,6 +4,19 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.15.0] - 2026-11-16
+
+### Added
+- **Manual Job Entry & Posting URL Metadata Scanner (`dashboard/api.php`, `server.js`, `dashboard/index.html`, `dashboard/dashboard.js`):**
+  - Built an automated job posting URL scanner supporting Greenhouse, Lever, Ashby, SmartRecruiters, LinkedIn, and arbitrary career websites.
+  - Multi-tier metadata extraction engine parses Greenhouse/Lever APIs, JSON-LD Schema.org `JobPosting` structured payloads, OpenGraph tags (`og:title`, `og:site_name`), HTML title fallbacks, salary regex patterns, and work setup classification (Remote/Hybrid/Onsite).
+  - Added dedicated Manual Import Bar inside the **Applied & Tracking** view (`#manualImportSection`) allowing users to paste any job posting URL, select their assigned tailored resume, and click **Scan & Track**.
+  - Injects the newly created line-item directly into `appliedJobsMap` with status `Applied` and synchronizes to cloud storage (`job_applications.json` via PHP atomic file locking) across all client devices.
+- **Cache-Busting Asset Synchronization (`dashboard/index.html`):**
+  - Updated script reference to `dashboard.js?v=1.15.0&t=20261116e`.
+
+---
+
 ## [1.14.0] - 2026-11-16
 
 ### Changed

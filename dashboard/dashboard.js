@@ -698,6 +698,13 @@ function switchQueueTab(tabName) {
   });
   selectedJobs.clear();
   updateStickyDispatchBar();
+
+  const importSec = document.getElementById('manualImportSection');
+  if (importSec) {
+    importSec.style.display = (tabName === 'applied') ? 'block' : 'none';
+    if (tabName === 'applied') populateManualResumeSelect();
+  }
+
   renderTriageTable();
 }
 
@@ -1668,6 +1675,7 @@ async function handleResumeUpload(e) {
 function renderResumesList() {
   const container = document.getElementById('savedResumesList');
   const bulkSelect = document.getElementById('bulkResumeSelect');
+  populateManualResumeSelect();
   if (!container) return;
 
   if (bulkSelect) {
@@ -1940,4 +1948,154 @@ function toggleTheme() {
   const next = curr === 'dark' ? 'light' : 'dark';
   localStorage.setItem('scrapedeez_theme', next);
   applyTheme(next);
+}
+
+// --------------------------------------------------------------------------
+// Manual Job Entry & Posting URL Scanner
+// --------------------------------------------------------------------------
+
+function populateManualResumeSelect() {
+  const sel = document.getElementById('manualJobResumeSelect');
+  if (!sel) return;
+  if (!Array.isArray(savedResumes) || savedResumes.length === 0) {
+    sel.innerHTML = '<option value="">Default Resume</option>';
+    return;
+  }
+  sel.innerHTML = savedResumes.map((r, i) => `
+    <option value="${r.id}" ${i === 0 ? 'selected' : ''}>${escapeHtml(r.label)}</option>
+  `).join('');
+}
+
+async function importAndTrackJob() {
+  const urlInput = document.getElementById('manualJobUrlInput');
+  const btn = document.getElementById('btnImportTrack');
+  const resumeSel = document.getElementById('manualJobResumeSelect');
+
+  if (!urlInput) return;
+  const targetUrl = urlInput.value.trim();
+  if (!targetUrl) {
+    alert('Please enter or paste a job posting URL.');
+    urlInput.focus();
+    return;
+  }
+
+  // Basic URL validation
+  try {
+    new URL(targetUrl);
+  } catch (e) {
+    alert('Please enter a valid URL beginning with http:// or https://');
+    urlInput.focus();
+    return;
+  }
+
+  const origBtnContent = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" class="spin"></i> <span>Scanning...</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  try {
+    let scannedJob = null;
+
+    // 1. Try PHP API on production / cPanel
+    try {
+      const res = await fetch(`./api.php?action=parse-job-url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: targetUrl })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.job) {
+          scannedJob = data.job;
+        }
+      }
+    } catch (phpErr) {}
+
+    // 2. Try Node.js endpoint if PHP not available
+    if (!scannedJob) {
+      try {
+        const res = await fetch(`./api/jobs/parse-url`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: targetUrl })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.job) {
+            scannedJob = data.job;
+          }
+        }
+      } catch (nodeErr) {}
+    }
+
+    // 3. Client-side heuristic fallback
+    if (!scannedJob) {
+      let host = 'Company';
+      try {
+        const u = new URL(targetUrl);
+        const parts = u.hostname.split('.');
+        host = parts.length >= 2 ? parts[parts.length - 2] : u.hostname;
+        host = host.charAt(0).toUpperCase() + host.slice(1);
+      } catch (e) {}
+
+      scannedJob = {
+        id: 'manual-' + Math.random().toString(36).substring(2, 10),
+        source: 'Manual Import',
+        title: `Opportunity at ${host}`,
+        company: host,
+        location: 'Remote',
+        workType: 'Remote',
+        salary: null,
+        url: targetUrl,
+        matchedKeyword: 'MANUAL ENTRY',
+        date: new Date().toISOString()
+      };
+    }
+
+    const jobKey = scannedJob.id || scannedJob.url;
+    const assignedResumeId = resumeSel ? resumeSel.value : (savedResumes[0]?.id || '');
+    const assignedResumeLabel = getResumeLabel(assignedResumeId);
+    const now = new Date().toISOString();
+
+    // Register in Applied/Tracking map
+    appliedJobsMap[jobKey] = {
+      jobId: jobKey,
+      status: 'Applied',
+      resumeId: assignedResumeId,
+      resumeLabel: assignedResumeLabel,
+      appliedAt: now,
+      notes: 'Manually imported via URL scanner',
+      job: scannedJob
+    };
+
+    // Remove from dismissed if previously hidden
+    delete dismissedJobsMap[jobKey];
+
+    // Save locally and persist to cloud across all devices
+    saveApplicationsState();
+    persistApplicationStatus(jobKey, 'status', {
+      status: 'Applied',
+      resumeId: assignedResumeId,
+      resumeLabel: assignedResumeLabel,
+      appliedAt: now,
+      notes: 'Manually imported via URL scanner',
+      job: scannedJob
+    });
+
+    urlInput.value = '';
+    renderTriageTable();
+    updateStickyDispatchBar();
+    showToast(`🎉 Scanned & tracked: "${scannedJob.title}" at ${scannedJob.company}!`);
+  } catch (err) {
+    console.error('Manual import error:', err);
+    alert('Failed to import job posting: ' + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origBtnContent;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
 }

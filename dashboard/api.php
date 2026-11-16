@@ -267,7 +267,199 @@ switch ($action) {
         echo json_encode($profile ?: new stdClass());
         exit;
 
-    // 5. Dashboard Summary (High-Speed Single Network Roundtrip)
+    // 5. URL Metadata Scanner (Drop Posting URL to Scan & Track)
+    case 'parse-job-url':
+        $targetUrl = '';
+        if ($method === 'POST') {
+            $targetUrl = trim($body['url'] ?? ($_POST['url'] ?? ''));
+        } else {
+            $targetUrl = trim($_GET['url'] ?? '');
+        }
+
+        if (empty($targetUrl) || !filter_var($targetUrl, FILTER_VALIDATE_URL)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Please provide a valid job posting URL.']);
+            exit;
+        }
+
+        $detectedTitle = '';
+        $detectedCompany = '';
+        $detectedLocation = 'Remote';
+        $detectedWorkType = 'Remote';
+        $detectedSalary = null;
+        $detectedSource = 'Direct Manual Import';
+        $detectedDate = gmdate('Y-m-d\TH:i:s\Z');
+
+        // 1. Check for Greenhouse Board API
+        if (preg_match('#boards\.greenhouse\.io/([^/]+)/jobs/([0-9]+)#i', $targetUrl, $ghMatches)) {
+            $ghCompany = $ghMatches[1];
+            $ghJobId = $ghMatches[2];
+            $ghApiUrl = "https://boards-api.greenhouse.io/v1/boards/{$ghCompany}/jobs/{$ghJobId}";
+
+            $ch = curl_init($ghApiUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['User-Agent: Mozilla/5.0']);
+            $ghRes = curl_exec($ch);
+            $ghCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($ghCode === 200 && !empty($ghRes)) {
+                $ghData = @json_decode($ghRes, true);
+                if (is_array($ghData)) {
+                    $detectedTitle = $ghData['title'] ?? '';
+                    $detectedCompany = ucfirst($ghCompany);
+                    $detectedLocation = isset($ghData['location']['name']) ? $ghData['location']['name'] : 'Remote';
+                    $detectedSource = "Greenhouse (" . strtoupper($ghCompany) . ")";
+                    $content = $ghData['content'] ?? '';
+                    if (preg_match('/\$([0-9]{2,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)\s*(?:-|to)\s*\$([0-9]{2,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)/i', $content, $salMatch)) {
+                        $detectedSalary = $salMatch[0];
+                    }
+                }
+            }
+        }
+
+        // 2. Check for Lever Postings API
+        if (empty($detectedTitle) && preg_match('#jobs\.lever\.co/([^/]+)/([a-f0-9-]+)#i', $targetUrl, $levMatches)) {
+            $levCompany = $levMatches[1];
+            $levJobId = $levMatches[2];
+            $levApiUrl = "https://api.lever.co/v0/postings/{$levCompany}/{$levJobId}";
+
+            $ch = curl_init($levApiUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['User-Agent: Mozilla/5.0']);
+            $levRes = curl_exec($ch);
+            $levCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($levCode === 200 && !empty($levRes)) {
+                $levData = @json_decode($levRes, true);
+                if (is_array($levData)) {
+                    $detectedTitle = $levData['text'] ?? '';
+                    $detectedCompany = ucfirst($levCompany);
+                    $detectedLocation = isset($levData['categories']['location']) ? $levData['categories']['location'] : 'Remote';
+                    $detectedSource = "Lever (" . strtoupper($levCompany) . ")";
+                }
+            }
+        }
+
+        // 3. Generic HTML / JSON-LD / OpenGraph Scraper
+        if (empty($detectedTitle)) {
+            $ch = curl_init($targetUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language: en-US,en;q=0.9'
+            ]);
+            $html = curl_exec($ch);
+            curl_close($ch);
+
+            if (!empty($html)) {
+                // A. Parse JSON-LD JobPosting schema
+                if (preg_match_all('#<script[^>]+type=[\'"]application/ld\+json[\'"][^>]*>([\s\S]*?)</script>#i', $html, $scriptMatches)) {
+                    foreach ($scriptMatches[1] as $jsonStr) {
+                        $json = @json_decode(trim($jsonStr), true);
+                        if (is_array($json)) {
+                            $items = isset($json['@graph']) && is_array($json['@graph']) ? $json['@graph'] : [$json];
+                            foreach ($items as $item) {
+                                if (isset($item['@type']) && (strtolower($item['@type']) === 'jobposting' || strtolower($item['@type']) === 'job')) {
+                                    if (!empty($item['title'])) $detectedTitle = $item['title'];
+                                    if (!empty($item['hiringOrganization']['name'])) $detectedCompany = $item['hiringOrganization']['name'];
+                                    if (!empty($item['jobLocation']['address']['addressLocality'])) {
+                                        $detectedLocation = $item['jobLocation']['address']['addressLocality'];
+                                    } elseif (!empty($item['jobLocationType']) && strtolower($item['jobLocationType']) === 'telecommute') {
+                                        $detectedLocation = 'Remote';
+                                    }
+                                    if (!empty($item['datePosted'])) $detectedDate = $item['datePosted'];
+                                    break 2;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // B. Parse OpenGraph if title still empty
+                if (empty($detectedTitle) && preg_match('#<meta[^>]+property=[\'"]og:title[\'"][^>]+content=[\'"](.*?)[\'"]#i', $html, $ogMatch)) {
+                    $detectedTitle = html_entity_decode($ogMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                }
+                if (empty($detectedCompany) && preg_match('#<meta[^>]+property=[\'"]og:site_name[\'"][^>]+content=[\'"](.*?)[\'"]#i', $html, $siteMatch)) {
+                    $detectedCompany = html_entity_decode($siteMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                }
+
+                // C. Parse HTML <title> fallback
+                if (empty($detectedTitle) && preg_match('#<title[^>]*>(.*?)</title>#i', $html, $titleMatch)) {
+                    $cleanTitle = html_entity_decode(strip_tags($titleMatch[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    $parts = preg_split('/\s*[-|–—•·]\s*/u', $cleanTitle);
+                    if (count($parts) > 1) {
+                        $detectedTitle = trim($parts[0]);
+                        if (empty($detectedCompany)) $detectedCompany = trim($parts[1]);
+                    } else {
+                        $detectedTitle = $cleanTitle;
+                    }
+                }
+
+                // D. Extract Salary via regex
+                if (preg_match('/\$([0-9]{2,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?k?)\s*(?:-|to)\s*\$([0-9]{2,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?k?)/i', $html, $salMatch)) {
+                    $detectedSalary = $salMatch[0];
+                }
+            }
+        }
+
+        // Hostname fallback for company
+        if (empty($detectedCompany)) {
+            $host = parse_url($targetUrl, PHP_URL_HOST);
+            $hostParts = explode('.', $host);
+            if (count($hostParts) >= 2) {
+                $detectedCompany = ucfirst($hostParts[count($hostParts) - 2]);
+            } else {
+                $detectedCompany = ucfirst($host ?: 'Company');
+            }
+        }
+
+        if (empty($detectedTitle)) {
+            $detectedTitle = 'Opportunity at ' . $detectedCompany;
+        }
+
+        // Work type classification
+        $combinedText = strtolower($detectedTitle . ' ' . $detectedLocation);
+        if (strpos($combinedText, 'remote') !== false) {
+            $detectedWorkType = 'Remote';
+        } elseif (strpos($combinedText, 'hybrid') !== false) {
+            $detectedWorkType = 'Hybrid';
+        } else {
+            $detectedWorkType = 'Remote';
+        }
+
+        $jobId = 'manual-' . substr(md5($targetUrl), 0, 10);
+        $scannedJob = [
+            'id' => $jobId,
+            'source' => $detectedSource,
+            'title' => trim($detectedTitle),
+            'company' => trim($detectedCompany),
+            'location' => trim($detectedLocation),
+            'workType' => $detectedWorkType,
+            'salary' => $detectedSalary,
+            'url' => $targetUrl,
+            'matchedKeyword' => 'MANUAL IMPORT',
+            'date' => $detectedDate
+        ];
+
+        echo json_encode([
+            'status' => 'success',
+            'job' => $scannedJob
+        ]);
+        exit;
+
+    // 6. Dashboard Summary (High-Speed Single Network Roundtrip)
     case 'summary':
         $apps = sanitizeApplicationsStructure(readJsonFile($appsFile, ['applied' => [], 'dismissed' => []]));
         $profile = readJsonFile($profileFile, null);
@@ -308,7 +500,7 @@ switch ($action) {
             'status' => 'healthy',
             'service' => 'jscrape-persistence-api',
             'timestamp' => gmdate('Y-m-d\TH:i:s\Z'),
-            'actions' => ['applications', 'application-status', 'application-batch-status', 'profile', 'summary']
+            'actions' => ['applications', 'application-status', 'application-batch-status', 'profile', 'summary', 'parse-job-url']
         ]);
         exit;
 }

@@ -2,7 +2,9 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const cron = require('node-cron');
+const axios = require('axios');
 const { runScraperJob } = require('./scraper');
+const { extractSalaryFromText } = require('./salary_extractor');
 const {
   readProfile,
   saveProfile,
@@ -99,7 +101,7 @@ function saveApplications(apps) {
 }
 
 // PHP API Emulation for local Node dev environment
-function handlePhpApi(req, res) {
+async function handlePhpApi(req, res) {
   const action = req.query.action || '';
   const apps = readApplications();
 
@@ -254,11 +256,24 @@ function handlePhpApi(req, res) {
     return res.json(readProfile());
   }
 
+  if (action === 'parse-job-url') {
+    const targetUrl = (req.body && req.body.url) ? req.body.url.trim() : (req.query.url ? req.query.url.trim() : '');
+    if (!targetUrl) {
+      return res.status(400).json({ error: 'Please provide a valid job posting URL.' });
+    }
+    try {
+      const parsedJob = await parseJobUrl(targetUrl);
+      return res.json({ status: 'success', job: parsedJob });
+    } catch (err) {
+      return res.status(500).json({ error: 'Failed to scan job posting URL.', message: err.message });
+    }
+  }
+
   return res.json({
     status: 'healthy',
     service: 'jscrape-persistence-api',
     timestamp: new Date().toISOString(),
-    actions: ['applications', 'application-status', 'application-batch-status', 'profile', 'summary']
+    actions: ['applications', 'application-status', 'application-batch-status', 'profile', 'summary', 'parse-job-url']
   });
 }
 
@@ -426,6 +441,172 @@ app.get('/api/jobs/curated-24h', (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch curated 24-hour postings.', message: err.message });
+  }
+});
+
+// Helper: Parse Job Posting URL metadata (JSON-LD, OpenGraph, ATS APIs)
+async function parseJobUrl(targetUrl) {
+  if (!targetUrl || typeof targetUrl !== 'string') throw new Error('Invalid URL');
+
+  let detectedTitle = '';
+  let detectedCompany = '';
+  let detectedLocation = 'Remote';
+  let detectedWorkType = 'Remote';
+  let detectedSalary = null;
+  let detectedSource = 'Direct Manual Import';
+  let detectedDate = new Date().toISOString();
+
+  // 1. Greenhouse Board API
+  const ghMatch = targetUrl.match(/boards\.greenhouse\.io\/([^/]+)\/jobs\/([0-9]+)/i);
+  if (ghMatch) {
+    const ghCompany = ghMatch[1];
+    const ghJobId = ghMatch[2];
+    try {
+      const apiUrl = `https://boards-api.greenhouse.io/v1/boards/${ghCompany}/jobs/${ghJobId}`;
+      const res = await axios.get(apiUrl, { timeout: 6000, headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (res.data) {
+        detectedTitle = res.data.title || '';
+        detectedCompany = ghCompany.charAt(0).toUpperCase() + ghCompany.slice(1);
+        detectedLocation = res.data.location?.name || 'Remote';
+        detectedSource = `Greenhouse (${ghCompany.toUpperCase()})`;
+        const sal = extractSalaryFromText(res.data.content || '');
+        if (sal) detectedSalary = sal;
+      }
+    } catch (e) {}
+  }
+
+  // 2. Lever Postings API
+  const levMatch = targetUrl.match(/jobs\.lever\.co\/([^/]+)\/([a-f0-9-]+)/i);
+  if (!detectedTitle && levMatch) {
+    const levCompany = levMatch[1];
+    const levJobId = levMatch[2];
+    try {
+      const apiUrl = `https://api.lever.co/v0/postings/${levCompany}/${levJobId}`;
+      const res = await axios.get(apiUrl, { timeout: 6000, headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (res.data) {
+        detectedTitle = res.data.text || '';
+        detectedCompany = levCompany.charAt(0).toUpperCase() + levCompany.slice(1);
+        detectedLocation = res.data.categories?.location || 'Remote';
+        detectedSource = `Lever (${levCompany.toUpperCase()})`;
+      }
+    } catch (e) {}
+  }
+
+  // 3. Generic HTML parser
+  if (!detectedTitle) {
+    try {
+      const res = await axios.get(targetUrl, {
+        timeout: 8000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        }
+      });
+      const html = typeof res.data === 'string' ? res.data : '';
+      if (html) {
+        // A. JSON-LD
+        const jsonLdMatches = html.match(/<script[^>]+type=['"]application\/ld\+json['"][^>]*>([\s\S]*?)<\/script>/gi);
+        if (jsonLdMatches) {
+          for (const m of jsonLdMatches) {
+            try {
+              const rawJson = m.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
+              const parsed = JSON.parse(rawJson);
+              const items = parsed['@graph'] ? parsed['@graph'] : [parsed];
+              for (const it of items) {
+                if (it['@type'] && /jobposting|job/i.test(it['@type'])) {
+                  if (it.title) detectedTitle = it.title;
+                  if (it.hiringOrganization?.name) detectedCompany = it.hiringOrganization.name;
+                  if (it.jobLocation?.address?.addressLocality) detectedLocation = it.jobLocation.address.addressLocality;
+                  else if (it.jobLocationType && /telecommute/i.test(it.jobLocationType)) detectedLocation = 'Remote';
+                  if (it.datePosted) detectedDate = it.datePosted;
+                  break;
+                }
+              }
+            } catch (e) {}
+            if (detectedTitle) break;
+          }
+        }
+
+        // B. OpenGraph
+        if (!detectedTitle) {
+          const ogTitle = html.match(/<meta[^>]+property=['"]og:title['"][^>]+content=['"](.*?)['"]/i);
+          if (ogTitle) detectedTitle = ogTitle[1];
+        }
+        if (!detectedCompany) {
+          const ogSite = html.match(/<meta[^>]+property=['"]og:site_name['"][^>]+content=['"](.*?)['"]/i);
+          if (ogSite) detectedCompany = ogSite[1];
+        }
+
+        // C. Title tag fallback
+        if (!detectedTitle) {
+          const titleTag = html.match(/<title[^>]*>(.*?)<\/title>/i);
+          if (titleTag) {
+            const clean = titleTag[1].replace(/<[^>]+>/g, '').trim();
+            const parts = clean.split(/[-|–—•·]/);
+            if (parts.length > 1) {
+              detectedTitle = parts[0].trim();
+              if (!detectedCompany) detectedCompany = parts[1].trim();
+            } else {
+              detectedTitle = clean;
+            }
+          }
+        }
+
+        // D. Salary regex
+        const sal = extractSalaryFromText(html);
+        if (sal) detectedSalary = sal;
+      }
+    } catch (e) {}
+  }
+
+  // Hostname fallback
+  if (!detectedCompany) {
+    try {
+      const u = new URL(targetUrl);
+      const hostParts = u.hostname.split('.');
+      detectedCompany = hostParts.length >= 2 ? hostParts[hostParts.length - 2] : u.hostname;
+      detectedCompany = detectedCompany.charAt(0).toUpperCase() + detectedCompany.slice(1);
+    } catch (e) {
+      detectedCompany = 'Company';
+    }
+  }
+
+  if (!detectedTitle) {
+    detectedTitle = `Opportunity at ${detectedCompany}`;
+  }
+
+  const combined = (detectedTitle + ' ' + detectedLocation).toLowerCase();
+  if (combined.includes('remote')) detectedWorkType = 'Remote';
+  else if (combined.includes('hybrid')) detectedWorkType = 'Hybrid';
+  else detectedWorkType = 'Remote';
+
+  const hash = Buffer.from(targetUrl).toString('base64').substring(0, 10).replace(/[^a-zA-Z0-9]/g, '');
+  return {
+    id: `manual-${hash}`,
+    source: detectedSource,
+    title: detectedTitle.trim(),
+    company: detectedCompany.trim(),
+    location: detectedLocation.trim(),
+    workType: detectedWorkType,
+    salary: detectedSalary,
+    url: targetUrl,
+    matchedKeyword: 'MANUAL IMPORT',
+    date: detectedDate
+  };
+}
+
+// POST /api/jobs/parse-url (Scan and extract metadata from job posting URL)
+app.post('/api/jobs/parse-url', async (req, res) => {
+  const targetUrl = req.body && req.body.url ? req.body.url.trim() : '';
+  if (!targetUrl) {
+    return res.status(400).json({ error: 'Please provide a valid job posting URL.' });
+  }
+
+  try {
+    const job = await parseJobUrl(targetUrl);
+    res.json({ status: 'success', job });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to scan job URL.', message: err.message });
   }
 });
 
