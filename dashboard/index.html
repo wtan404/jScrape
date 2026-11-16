@@ -118,17 +118,171 @@
       gap: 0.4rem;
     }
 
-    /* Two-Column Setup: Profile / Resumes vs Operations Hub */
+    /* Full-Width Workspace Setup */
     .dash-workspace-grid {
-      display: grid;
-      grid-template-columns: 410px 1fr;
-      gap: 1.8rem;
+      display: block;
+      width: 100%;
     }
 
-    @media (max-width: 1080px) {
-      .dash-workspace-grid {
-        grid-template-columns: 1fr;
-      }
+    /* Pop-up Modals: Profile & Resume Variations */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 3, 14, 0.78);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2500;
+      padding: 1.5rem;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+      animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 620px;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 65px rgba(0, 0, 0, 0.75), 0 0 35px var(--accent-purple-glow-soft);
+      animation: modalScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes modalScaleIn {
+      from { opacity: 0; transform: scale(0.95) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.2rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .modal-header h3 {
+      font-family: var(--font-heading);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.35rem;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border-color);
+      background: rgba(0, 0, 0, 0.18);
+    }
+
+    /* Full-Width Search & CTA Inline Toolbar */
+    .triage-toolbar-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      width: 100%;
+      flex-wrap: wrap;
+    }
+
+    .triage-search-module {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex: 1;
+      min-width: 320px;
+      flex-wrap: wrap;
+    }
+
+    .triage-cta-module {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-shrink: 0;
+    }
+
+    /* Currency Conversion Subtle Badge */
+    .salary-converted-note {
+      font-size: 0.65rem;
+      font-family: var(--font-mono);
+      font-style: italic;
+      color: var(--accent-purple-light);
+      background: rgba(168, 85, 247, 0.12);
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      margin-left: 0.35rem;
+      vertical-align: middle;
+      cursor: help;
+    }
+
+    .hotlist-tag.compact-tag {
+      font-size: 0.68rem;
+      padding: 0.12rem 0.42rem;
+      border-radius: 4px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    /* Vertical Actions Stack */
+    .action-stack-vert {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      align-items: stretch;
+      width: 100%;
+    }
+
+    .action-stack-vert .btn {
+      width: 100%;
+      justify-content: center;
+      padding: 0.25rem 0.4rem;
+      font-size: 0.72rem;
     }
 
     /* Profile & Vault Sidecard */
@@ -512,19 +666,13 @@
       <div class="dash-nav-actions">
         <a href="test-application.html" class="btn btn-secondary btn-sm" title="Mock ATS Test Page & Payload Inspector">
           <i data-lucide="flask-conical"></i>
-          <span>Test Inspector</span>
-        </a>
-        <a href="../" class="btn btn-secondary btn-sm" title="View Public Job Board">
-          <i data-lucide="globe"></i>
-          <span>Public Board</span>
         </a>
         <button class="btn btn-secondary btn-sm theme-toggle-btn" onclick="toggleTheme()" id="btnThemeToggle" aria-label="Toggle Theme">
           <i data-lucide="sun" id="themeIconSun"></i>
           <i data-lucide="moon" id="themeIconMoon" style="display: none;"></i>
         </button>
-        <button class="btn btn-primary btn-sm" onclick="triggerHourlyRescan()" id="btnRescan">
+        <button class="btn btn-primary btn-sm" onclick="triggerHourlyRescan()" id="btnRescan" title="Trigger Re-Scan">
           <i data-lucide="refresh-cw"></i>
-          <span>Re-Scan</span>
         </button>
       </div>
     </div>
@@ -532,33 +680,11 @@
 
   <main class="dashboard-layout">
 
-    <!-- Top Dashboard Header Bar -->
-    <div class="dashboard-header-bar">
-      <div class="dash-title-group">
-        <h1>
-          <span>Application Operations & Auto-Submission Queue</span>
-        </h1>
-        <p style="color: var(--text-muted); font-size: 0.92rem; margin-top: 0.3rem;">
-          Triage fresh roles posted within the last 24 hours, select tailored resumes, and trigger automated API submissions directly into applicant tracking systems.
-        </p>
-      </div>
-      <div style="display: flex; gap: 0.6rem; align-items: center;">
-        <a href="test-application.html" class="btn btn-secondary btn-sm" title="Open Test Application Page & Schema Inspector">
-          <i data-lucide="flask-conical"></i>
-          <span>🧪 Test Schema Inspector</span>
-        </a>
-        <button class="btn btn-secondary btn-sm" onclick="initDashboard(true)">
-          <i data-lucide="refresh-ccw"></i>
-          <span>Refresh Queue</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- 4-Card KPI Overview -->
+    <!-- 4-Card KPI Overview (First Section) -->
     <section class="dash-metrics-grid">
       <div class="dash-metric-card">
         <div class="dash-metric-num" id="metric24hCount" style="color: var(--accent-amber);">0</div>
-        <div class="dash-metric-label"><i data-lucide="flame"></i> 24h Hotlist Positions</div>
+        <div class="dash-metric-label"><i data-lucide="flame"></i> 72h Hotlist Positions</div>
       </div>
       <div class="dash-metric-card">
         <div class="dash-metric-num" id="metricResumesCount" style="color: var(--accent-purple-light);">0</div>
@@ -574,245 +700,263 @@
       </div>
     </section>
 
-    <!-- Main Operational Workspace Grid -->
-    <div class="dash-workspace-grid">
+    <!-- Main Full-Width Operational Center -->
+    <section class="triage-center" style="width: 100%;">
 
-      <!-- LEFT COLUMN: Applicant Profile & Resume Variations Vault -->
-      <aside class="dash-sidecard">
-        
-        <!-- Applicant Profile Card -->
-        <div>
-          <div class="sidecard-section-header">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <h3 style="margin: 0;"><i data-lucide="user-check"></i> Candidate Profile</h3>
-              <span style="font-size: 0.68rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 999px; background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); display: inline-flex; align-items: center; gap: 0.25rem;">
-                <i data-lucide="check" style="width: 11px; height: 11px;"></i> Auto-Populated
-              </span>
-            </div>
-            <button class="btn btn-secondary btn-xs" onclick="saveProfileData()" id="btnSaveProfile">Save Profile</button>
-          </div>
+      <!-- Queue Switcher Tabs -->
+      <div class="queue-tabs-bar">
+        <button type="button" class="queue-tab-btn active" id="tabBtnActive" onclick="switchQueueTab('active')">
+          <i data-lucide="flame"></i>
+          <span>Active 72h Queue</span>
+          <span class="queue-pill-count" id="countTabActive">0</span>
+        </button>
+        <button type="button" class="queue-tab-btn" id="tabBtnApplied" onclick="switchQueueTab('applied')">
+          <i data-lucide="check-circle-2"></i>
+          <span>Applied & Tracking</span>
+          <span class="queue-pill-count count-applied" id="countTabApplied">0</span>
+        </button>
+        <button type="button" class="queue-tab-btn" id="tabBtnDismissed" onclick="switchQueueTab('dismissed')">
+          <i data-lucide="eye-off"></i>
+          <span>Dismissed / Hidden</span>
+          <span class="queue-pill-count count-dismissed" id="countTabDismissed">0</span>
+        </button>
+      </div>
 
-          <!-- Dual Mode Profile Tabs -->
-          <div class="profile-tabs-header">
-            <button type="button" class="profile-tab-btn active" id="profTabBtnCore" onclick="switchProfileTab('core')">
-              Contact Info
-            </button>
-            <button type="button" class="profile-tab-btn" id="profTabBtnResolution" onclick="switchProfileTab('resolution')">
-              Field Resolution (Auto-Fill)
-            </button>
-          </div>
-
-          <form id="profileForm" onsubmit="event.preventDefault(); saveProfileData();">
-            
-            <!-- Tab 1: Core Contact Info -->
-            <div id="profTabCore" class="profile-form-grid">
-              <div class="profile-field">
-                <label for="profFullName">Full Name</label>
-                <input type="text" id="profFullName" placeholder="e.g. Will Tan">
-              </div>
-              <div class="profile-field">
-                <label for="profEmail">Email Address</label>
-                <input type="email" id="profEmail" placeholder="e.g. will@example.com">
-              </div>
-              <div class="profile-field">
-                <label for="profPhone">Phone Number</label>
-                <input type="text" id="profPhone" placeholder="e.g. 415-555-0199">
-              </div>
-              <div class="profile-field">
-                <label for="profLocation">Location</label>
-                <input type="text" id="profLocation" placeholder="e.g. San Francisco, CA">
-              </div>
-              <div class="profile-field">
-                <label for="profLinkedIn">LinkedIn Profile URL</label>
-                <input type="url" id="profLinkedIn" placeholder="https://linkedin.com/in/...">
-              </div>
-              <div class="profile-field">
-                <label for="profGitHub">GitHub URL</label>
-                <input type="url" id="profGitHub" placeholder="https://github.com/...">
-              </div>
-              <div class="profile-field">
-                <label for="profPortfolio">Portfolio / Website</label>
-                <input type="url" id="profPortfolio" placeholder="https://synopsdigital.com">
-              </div>
-              <div class="profile-field">
-                <label for="profCoverNote">Executive Elevator Summary</label>
-                <textarea id="profCoverNote" rows="2" placeholder="Brief summary included in ATS application payloads..."></textarea>
-              </div>
-            </div>
-
-            <!-- Tab 2: Field Resolution Knowledge Base (Divergent Form Fields) -->
-            <div id="profTabResolution" class="profile-form-grid" style="display: none;">
-              <div class="profile-field">
-                <label for="profWorkAuth">Legally Authorized to work in US?</label>
-                <select id="profWorkAuth">
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-              <div class="profile-field">
-                <label for="profSponsorship">Will you require visa sponsorship?</label>
-                <select id="profSponsorship">
-                  <option value="No">No (Will not require sponsorship)</option>
-                  <option value="Yes">Yes (Require sponsorship)</option>
-                </select>
-              </div>
-              <div class="profile-field">
-                <label for="profDesiredSalary">Target Annual Salary ($ USD)</label>
-                <input type="number" id="profDesiredSalary" placeholder="160000" step="5000">
-              </div>
-              <div class="profile-field">
-                <label for="profNoticePeriod">Availability / Notice Period</label>
-                <select id="profNoticePeriod">
-                  <option value="2 Weeks">2 Weeks Notice</option>
-                  <option value="Immediate">Immediate Availability</option>
-                  <option value="1 Month">1 Month Notice</option>
-                </select>
-              </div>
-              <div class="profile-field">
-                <label for="profReferralSource">Source / How did you hear about us?</label>
-                <input type="text" id="profReferralSource" placeholder="Company Career Page">
-              </div>
-              <div class="profile-field">
-                <label for="profEEOC">EEOC Demographic Questionnaires</label>
-                <select id="profEEOC">
-                  <option value="Decline">Decline to Self-Identify (Recommended)</option>
-                  <option value="Standard">Standard Declaration</option>
-                </select>
-              </div>
-            </div>
-
-          </form>
-        </div>
-
-        <!-- Resume Variations Manager Card -->
-        <div>
-          <div class="sidecard-section-header">
-            <h3><i data-lucide="folder-check"></i> Resume Variations</h3>
-          </div>
-          <p style="font-size: 0.78rem; color: var(--text-dim); margin-bottom: 0.8rem;">
-            Upload tailored PDF or Word resumes by specialty. Label is auto-derived from the document name if left empty.
-          </p>
-
-          <!-- Upload Dropzone Form -->
-          <form id="resumeUploadForm" onsubmit="handleResumeUpload(event)" style="margin-bottom: 1.2rem;">
-            <div class="profile-form-grid">
-              <div class="profile-field">
-                <label for="resumeFileInput">Resume Document (.pdf, .doc, .docx) *</label>
-                <input type="file" id="resumeFileInput" accept=".pdf,.doc,.docx" required onchange="handleResumeFileSelected(event)">
-                <div id="fileUploadFeedback" style="font-size: 0.74rem; font-family: var(--font-mono); color: var(--accent-purple-light); margin-top: 0.25rem;"></div>
-              </div>
-              <div class="profile-field">
-                <label for="resumeLabelInput">Variation Label <span style="font-weight: normal; color: var(--text-dim);">(optional, auto-filled)</span></label>
-                <input type="text" id="resumeLabelInput" placeholder="Auto-derived from filename if left blank">
-              </div>
-              <div class="profile-field">
-                <label for="resumeSpecInput">Specialization Tags <span style="font-weight: normal; color: var(--text-dim);">(optional)</span></label>
-                <input type="text" id="resumeSpecInput" placeholder="e.g. AWS, Kubernetes, Terraform">
-              </div>
-              <button type="submit" class="btn btn-primary btn-sm w-100" id="btnUploadResume">
-                <i data-lucide="upload"></i>
-                <span>Upload Variation</span>
-              </button>
-            </div>
-          </form>
-
-          <!-- List of Saved Resumes -->
-          <div id="savedResumesList" style="display: flex; flex-direction: column; gap: 0.6rem;">
-            <!-- Dynamic resume list items -->
-          </div>
-        </div>
-
-      </aside>
-
-      <!-- RIGHT COLUMN: 24h Triage Table & Auto-Submit Pipeline -->
-      <section class="triage-center">
-
-        <!-- Queue Switcher Tabs -->
-        <div class="queue-tabs-bar">
-          <button type="button" class="queue-tab-btn active" id="tabBtnActive" onclick="switchQueueTab('active')">
-            <i data-lucide="flame"></i>
-            <span>Active 24h Queue</span>
-            <span class="queue-pill-count" id="countTabActive">0</span>
-          </button>
-          <button type="button" class="queue-tab-btn" id="tabBtnApplied" onclick="switchQueueTab('applied')">
-            <i data-lucide="check-circle-2"></i>
-            <span>Applied & Tracking</span>
-            <span class="queue-pill-count count-applied" id="countTabApplied">0</span>
-          </button>
-          <button type="button" class="queue-tab-btn" id="tabBtnDismissed" onclick="switchQueueTab('dismissed')">
-            <i data-lucide="eye-off"></i>
-            <span>Dismissed / Hidden</span>
-            <span class="queue-pill-count count-dismissed" id="countTabDismissed">0</span>
-          </button>
-        </div>
-
-        <!-- Triage Controls & Search Filter Bar -->
-        <div class="triage-header-panel">
-          <div class="triage-controls-row">
+      <!-- Triage Controls & Search Filter Bar with Side-by-Side CTAs -->
+      <div class="triage-header-panel">
+        <div class="triage-toolbar-wrap">
+          <div class="triage-search-module">
             <input type="text" id="triageSearchInput" class="triage-search-input" placeholder="Search roles by title, employer, or keyword..." oninput="renderTriageTable()">
 
-            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-              <select id="triageWorkTypeFilter" class="select-control" onchange="renderTriageTable()">
-                <option value="all">All Work Setups</option>
-                <option value="remote">Remote Only</option>
-                <option value="hybrid">Hybrid Only</option>
-                <option value="onsite">Onsite Only</option>
-              </select>
+            <select id="triageWorkTypeFilter" class="select-control" onchange="renderTriageTable()">
+              <option value="all">All Work Setups</option>
+              <option value="remote">Remote Only</option>
+              <option value="hybrid">Hybrid Only</option>
+              <option value="onsite">Onsite Only</option>
+            </select>
 
-              <select id="triageSourceFilter" class="select-control" onchange="renderTriageTable()">
-                <option value="all">All Sources (ATS + Feeds)</option>
-                <option value="ats">ATS Direct (GH / Lever / Ashby)</option>
-                <option value="feeds">Curated Tech Feeds</option>
-              </select>
-            </div>
+            <select id="triageSourceFilter" class="select-control" onchange="renderTriageTable()">
+              <option value="all">All Sources (ATS + Feeds)</option>
+              <option value="ats">ATS Direct (GH / Lever / Ashby)</option>
+              <option value="feeds">Curated Tech Feeds</option>
+            </select>
+          </div>
+
+          <div class="triage-cta-module">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openProfileModal()" id="btnOpenProfileModal" title="Candidate Profile Settings">
+              <i data-lucide="user"></i>
+              <span>Profile</span>
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openResumesModal()" id="btnOpenResumesModal" title="Manage Tailored Resume Variations">
+              <i data-lucide="folder-check"></i>
+              <span>Resume Variations</span>
+            </button>
           </div>
         </div>
+      </div>
 
-        <!-- 24h Triage Table Card -->
-        <div class="triage-table-card">
-          <table class="triage-table">
-            <thead id="triageTableHead">
-              <tr>
-                <th style="width: 40px; text-align: center;">
-                  <input type="checkbox" id="chkSelectAll" class="chk-select-job" onchange="toggleSelectAll(this.checked)" title="Select/Deselect All">
-                </th>
-                <th>Employer & Source</th>
-                <th>Role Title & Match</th>
-                <th>Location & Setup</th>
-                <th>Age</th>
-                <th>Tailored Resume</th>
-                <th style="text-align: right; min-width: 140px;">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="triageTableBody">
-              <tr>
-                <td colspan="7" style="text-align: center; padding: 3rem 1rem;">
-                  <i data-lucide="loader-2" class="spin" style="width: 32px; height: 32px; margin: 0 auto 0.5rem; color: var(--accent-purple);"></i>
-                  <p>Loading 24-hour postings queue...</p>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <!-- 72h Triage Table Card -->
+      <div class="triage-table-card">
+        <table class="triage-table">
+          <thead id="triageTableHead">
+            <tr>
+              <th style="width: 40px; text-align: center;">
+                <input type="checkbox" id="chkSelectAll" class="chk-select-job" onchange="toggleSelectAll(this.checked)" title="Select/Deselect All">
+              </th>
+              <th>Employer & Source</th>
+              <th>Role Title & Match</th>
+              <th>Location & Setup</th>
+              <th>Age</th>
+              <th>Resume</th>
+              <th style="text-align: right; width: 90px; min-width: 90px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="triageTableBody">
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 3rem 1rem;">
+                <i data-lucide="loader-2" class="spin" style="width: 32px; height: 32px; margin: 0 auto 0.5rem; color: var(--accent-purple);"></i>
+                <p>Loading 72-hour postings queue...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Live Submissions & Receipts Log -->
+      <div class="receipts-log-card">
+        <div class="sidecard-section-header">
+          <h3><i data-lucide="send"></i> Live Submissions & Receipts Audit Trail</h3>
+          <span id="receiptsCountBadge" class="tab-count-badge">0 Receipts</span>
         </div>
-
-        <!-- Live Submissions & Receipts Log -->
-        <div class="receipts-log-card">
-          <div class="sidecard-section-header">
-            <h3><i data-lucide="send"></i> Live Submissions & Receipts Audit Trail</h3>
-            <span id="receiptsCountBadge" class="tab-count-badge">0 Receipts</span>
-          </div>
-          <div id="receiptsLogList">
-            <div style="padding: 1.5rem; text-align: center; color: var(--text-muted);">
-              No submissions dispatched yet in this session. Select positions above and click Submit.
-            </div>
+        <div id="receiptsLogList">
+          <div style="padding: 1.5rem; text-align: center; color: var(--text-muted);">
+            No submissions dispatched yet in this session. Select positions above and click Submit.
           </div>
         </div>
+      </div>
 
-      </section>
-
-    </div>
+    </section>
 
   </main>
+
+  <!-- Modal 1: Candidate Profile Modal -->
+  <div class="modal-overlay" id="candidateProfileModal" onclick="handleModalBackdropClick(event, 'candidateProfileModal')">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="margin: 0;"><i data-lucide="user"></i> Profile</h3>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <button type="button" class="btn btn-primary btn-xs" onclick="saveProfileData()" id="btnSaveProfile">Save</button>
+          <button type="button" class="modal-close-btn" onclick="closeProfileModal()" aria-label="Close Profile Modal">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <!-- Dual Mode Profile Tabs -->
+        <div class="profile-tabs-header">
+          <button type="button" class="profile-tab-btn active" id="profTabBtnCore" onclick="switchProfileTab('core')">
+            Contact Info
+          </button>
+          <button type="button" class="profile-tab-btn" id="profTabBtnResolution" onclick="switchProfileTab('resolution')">
+            Field Resolution (Auto-Fill)
+          </button>
+        </div>
+
+        <form id="profileForm" onsubmit="event.preventDefault(); saveProfileData();">
+          
+          <!-- Tab 1: Core Contact Info -->
+          <div id="profTabCore" class="profile-form-grid">
+            <div class="profile-field">
+              <label for="profFullName">Full Name</label>
+              <input type="text" id="profFullName" placeholder="e.g. Will Tan">
+            </div>
+            <div class="profile-field">
+              <label for="profEmail">Email Address</label>
+              <input type="email" id="profEmail" placeholder="e.g. will@example.com">
+            </div>
+            <div class="profile-field">
+              <label for="profPhone">Phone Number</label>
+              <input type="text" id="profPhone" placeholder="e.g. 415-555-0199">
+            </div>
+            <div class="profile-field">
+              <label for="profLocation">Location</label>
+              <input type="text" id="profLocation" placeholder="e.g. San Francisco, CA">
+            </div>
+            <div class="profile-field">
+              <label for="profLinkedIn">LinkedIn Profile URL</label>
+              <input type="url" id="profLinkedIn" placeholder="https://linkedin.com/in/...">
+            </div>
+            <div class="profile-field">
+              <label for="profGitHub">GitHub URL</label>
+              <input type="url" id="profGitHub" placeholder="https://github.com/...">
+            </div>
+            <div class="profile-field">
+              <label for="profPortfolio">Portfolio / Website</label>
+              <input type="url" id="profPortfolio" placeholder="https://synopsdigital.com">
+            </div>
+            <div class="profile-field">
+              <label for="profCoverNote">Executive Elevator Summary</label>
+              <textarea id="profCoverNote" rows="2" placeholder="Brief summary included in ATS application payloads..."></textarea>
+            </div>
+          </div>
+
+          <!-- Tab 2: Field Resolution Knowledge Base -->
+          <div id="profTabResolution" class="profile-form-grid" style="display: none;">
+            <div class="profile-field">
+              <label for="profWorkAuth">Legally Authorized to work in US?</label>
+              <select id="profWorkAuth">
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+            <div class="profile-field">
+              <label for="profSponsorship">Will you require visa sponsorship?</label>
+              <select id="profSponsorship">
+                <option value="No">No (Will not require sponsorship)</option>
+                <option value="Yes">Yes (Require sponsorship)</option>
+              </select>
+            </div>
+            <div class="profile-field">
+              <label for="profDesiredSalary">Target Annual Salary ($ USD)</label>
+              <input type="number" id="profDesiredSalary" placeholder="160000" step="5000">
+            </div>
+            <div class="profile-field">
+              <label for="profNoticePeriod">Availability / Notice Period</label>
+              <select id="profNoticePeriod">
+                <option value="2 Weeks">2 Weeks Notice</option>
+                <option value="Immediate">Immediate Availability</option>
+                <option value="1 Month">1 Month Notice</option>
+              </select>
+            </div>
+            <div class="profile-field">
+              <label for="profReferralSource">Source / How did you hear about us?</label>
+              <input type="text" id="profReferralSource" placeholder="Company Career Page">
+            </div>
+            <div class="profile-field">
+              <label for="profEEOC">EEOC Demographic Questionnaires</label>
+              <select id="profEEOC">
+                <option value="Decline">Decline to Self-Identify (Recommended)</option>
+                <option value="Standard">Standard Declaration</option>
+              </select>
+            </div>
+          </div>
+
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeProfileModal()">Close</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="saveProfileData()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Resume Variations Modal -->
+  <div class="modal-overlay" id="resumeVariationsModal" onclick="handleModalBackdropClick(event, 'resumeVariationsModal')">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="margin: 0;"><i data-lucide="folder-check"></i> Resume Variations</h3>
+        <button type="button" class="modal-close-btn" onclick="closeResumesModal()" aria-label="Close Resume Modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.78rem; color: var(--text-dim); margin-bottom: 0.8rem;">
+          Upload tailored PDF or Word resumes by specialty. Label is auto-derived from the document name if left empty.
+        </p>
+
+        <!-- Upload Dropzone Form -->
+        <form id="resumeUploadForm" onsubmit="handleResumeUpload(event)" style="margin-bottom: 1.2rem;">
+          <div class="profile-form-grid">
+            <div class="profile-field">
+              <label for="resumeFileInput">Resume Document (.pdf, .doc, .docx) *</label>
+              <input type="file" id="resumeFileInput" accept=".pdf,.doc,.docx" required onchange="handleResumeFileSelected(event)">
+              <div id="fileUploadFeedback" style="font-size: 0.74rem; font-family: var(--font-mono); color: var(--accent-purple-light); margin-top: 0.25rem;"></div>
+            </div>
+            <div class="profile-field">
+              <label for="resumeLabelInput">Variation Label <span style="font-weight: normal; color: var(--text-dim);">(optional, auto-filled)</span></label>
+              <input type="text" id="resumeLabelInput" placeholder="Auto-derived from filename if left blank">
+            </div>
+            <div class="profile-field">
+              <label for="resumeSpecInput">Specialization Tags <span style="font-weight: normal; color: var(--text-dim);">(optional)</span></label>
+              <input type="text" id="resumeSpecInput" placeholder="e.g. AWS, Kubernetes, Terraform">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm w-100" id="btnUploadResume">
+              <i data-lucide="upload"></i>
+              <span>Upload Variation</span>
+            </button>
+          </div>
+        </form>
+
+        <!-- List of Saved Resumes -->
+        <div id="savedResumesList" style="display: flex; flex-direction: column; gap: 0.6rem;">
+          <!-- Dynamic resume list items -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeResumesModal()">Close</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Sticky Bottom Dispatch Action Bar (Appears when >= 1 job is checked) -->
   <div class="sticky-dispatch-bar" id="stickyDispatchBar" style="display: none;">
@@ -847,6 +991,6 @@
     </div>
   </div>
 
-  <script src="dashboard.js?v=1.5.0&t=20261115b"></script>
+  <script src="dashboard.js?v=1.8.0&t=20261115c"></script>
 </body>
 </html>

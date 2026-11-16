@@ -4,6 +4,34 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.8.0] - 2026-11-15
+
+### Added
+- **Dedicated Pop-up Modals for Candidate Profile & Resume Variations (`dashboard/index.html`, `dashboard/dashboard.js`):**
+  - Retired the static two-column layout, elevating the PM Command Center to a 100% full-width operational triage workspace.
+  - Housed candidate profile configuration inside `#candidateProfileModal` with dual tabs (`Contact Info` & `Field Resolution`), clean "Profile" title, and simplified "Save" action button.
+  - Housed resume variation dropzone and saved variation management inside `#resumeVariationsModal`.
+  - Added side-by-side CTA triggers in the search header toolbar, spanning the full width of the results table below.
+- **Multi-Currency Normalization & Automated USD Conversion (`dashboard/dashboard.js`, `main.js`, `styles.css`):**
+  - Integrated automatic currency conversion engine (`formatSalaryUSD`) converting GBP (£), EUR (€), CAD (C$), AUD (A$), INR (₹), and CHF to USD at standard exchange rates.
+  - Added subtle `conv.` notation badge on converted salaries to provide transparent exchange auditability.
+- **72-Hour Operational Cutoff Expansion (`dashboard/dashboard.js`, `server.js`, `dashboard/index.html`):**
+  - Expanded active queue window from 24h to 72h (`SEVENTY_TWO_HOURS_MS`), ensuring comprehensive multi-day coverage.
+  - Updated queue badge to `Active 72h Queue` and metric card to `72h Hotlist Positions`.
+
+### Changed
+- **Header & Navigation Streamlining (`dashboard/index.html`):**
+  - Converted Test Inspector and Re-Scan buttons to minimalist icon-only controls.
+  - Removed public board link from the operations header.
+  - Removed top title and hero banner section, elevating KPI tile stats to the top of the viewport.
+- **High-Density Results Table Overhaul (`dashboard/dashboard.js`, `dashboard/index.html`):**
+  - Removed company pillbox styling in column 1; now formatted with clean company title and smaller italicized source/ATS subtitle.
+  - Removed badge icons in column 2; reduced badge padding and font size for high density.
+  - Renamed resume column header to `Resume`.
+  - Stacked action CTA buttons vertically (`View`, `Submit`, `Applied`, `Drop`) into an ultra-narrow 90px column.
+
+---
+
 ## [1.7.0] - 2026-11-15
 
 ### Added

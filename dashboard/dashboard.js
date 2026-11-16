@@ -272,6 +272,131 @@ function getActiveFilteredJobs(applyFilters = true) {
 }
 
 // --------------------------------------------------------------------------
+// Modal Controls: Candidate Profile & Resume Variations
+// --------------------------------------------------------------------------
+
+function openProfileModal(tab = 'core') {
+  const modal = document.getElementById('candidateProfileModal');
+  if (modal) {
+    modal.classList.add('open');
+    switchProfileTab(tab);
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+function closeProfileModal() {
+  const modal = document.getElementById('candidateProfileModal');
+  if (modal) modal.classList.remove('open');
+}
+
+function openResumesModal() {
+  const modal = document.getElementById('resumeVariationsModal');
+  if (modal) {
+    modal.classList.add('open');
+    renderResumesList();
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+function closeResumesModal() {
+  const modal = document.getElementById('resumeVariationsModal');
+  if (modal) modal.classList.remove('open');
+}
+
+function handleModalBackdropClick(event, modalId) {
+  if (event && event.target && event.target.id === modalId) {
+    if (modalId === 'candidateProfileModal') closeProfileModal();
+    if (modalId === 'resumeVariationsModal') closeResumesModal();
+  }
+}
+
+// Global escape key listener to close active pop-up modals
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeProfileModal();
+    closeResumesModal();
+  }
+});
+
+// --------------------------------------------------------------------------
+// Multi-Currency Normalization & USD Auto-Conversion Engine
+// --------------------------------------------------------------------------
+
+function formatSalaryUSD(rawSalary, jobTitle = '') {
+  let raw = (typeof rawSalary === 'object' && rawSalary !== null) ? (rawSalary.salary || '') : (rawSalary || '');
+  raw = String(raw).trim();
+
+  // If empty and jobTitle provided, return estimate in USD
+  if (!raw && jobTitle) {
+    const t = String(jobTitle).toLowerCase();
+    if (t.includes('director') || t.includes('head') || t.includes('vp')) {
+      return { formatted: '$175,000 - $245,000 / yr (est.)', isConverted: false };
+    }
+    if (t.includes('manager') || t.includes('lead')) {
+      return { formatted: '$135,000 - $185,000 / yr (est.)', isConverted: false };
+    }
+    if (t.includes('senior') || t.includes('sr')) {
+      return { formatted: '$120,000 - $165,000 / yr (est.)', isConverted: false };
+    }
+    return { formatted: '$105,000 - $150,000 / yr (est.)', isConverted: false };
+  }
+  if (!raw) return { formatted: '', isConverted: false };
+
+  // Exchange rates for automated USD conversions
+  const rates = {
+    'GBP': 1.28, '£': 1.28,
+    'EUR': 1.08, '€': 1.08,
+    'CAD': 0.74, 'C$': 0.74, 'CA$': 0.74,
+    'AUD': 0.65, 'A$': 0.65, 'AU$': 0.65,
+    'INR': 0.012, '₹': 0.012,
+    'CHF': 1.13
+  };
+
+  let detectedCurrency = null;
+  let rate = 1.0;
+
+  if (/£|GBP/i.test(raw)) { detectedCurrency = 'GBP'; rate = rates.GBP; }
+  else if (/€|EUR/i.test(raw)) { detectedCurrency = 'EUR'; rate = rates.EUR; }
+  else if (/C\$|CA\$|CAD/i.test(raw)) { detectedCurrency = 'CAD'; rate = rates.CAD; }
+  else if (/A\$|AU\$|AUD/i.test(raw)) { detectedCurrency = 'AUD'; rate = rates.AUD; }
+  else if (/₹|INR/i.test(raw)) { detectedCurrency = 'INR'; rate = rates.INR; }
+  else if (/CHF/i.test(raw)) { detectedCurrency = 'CHF'; rate = rates.CHF; }
+
+  // If already in USD or no foreign currency symbol
+  if (!detectedCurrency) {
+    let display = raw;
+    if (/^\d/.test(display)) display = '$' + display;
+    return { formatted: display, isConverted: false };
+  }
+
+  // Extract numeric amounts (ranges like £80k - £100k or €75,000 - €95,000)
+  const nums = raw.match(/\d[\d,]*(?:\.\d+)?k?/gi);
+  if (!nums || nums.length === 0) {
+    return { formatted: raw, isConverted: false };
+  }
+
+  const convertedParts = nums.map(n => {
+    const isK = /k$/i.test(n);
+    let val = parseFloat(n.replace(/,/g, '').replace(/k/i, ''));
+    if (isNaN(val)) return n;
+    if (isK) val *= 1000;
+    const usdVal = Math.round(val * rate);
+    if (usdVal >= 1000) {
+      return '$' + Math.round(usdVal / 1000) + 'k';
+    }
+    return '$' + usdVal.toLocaleString();
+  });
+
+  const convertedRange = convertedParts.join(' - ');
+  const subtleNote = `<span class="salary-converted-note" title="Converted to USD from ${escapeHtml(raw)}">conv.</span>`;
+  return {
+    formatted: `${convertedRange} ${subtleNote}`,
+    isConverted: true,
+    orig: raw
+  };
+}
+
+// --------------------------------------------------------------------------
 // Profile Tabs & Field Resolution Toggles
 // --------------------------------------------------------------------------
 
@@ -295,11 +420,11 @@ function switchProfileTab(tabName) {
 }
 
 // --------------------------------------------------------------------------
-// 24-Hour Hotlist Triage Queue
+// 72-Hour Hotlist Triage Queue
 // --------------------------------------------------------------------------
 
 async function fetch24hQueue() {
-  const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+  const SEVENTY_TWO_HOURS_MS = 72 * 60 * 60 * 1000;
   const now = Date.now();
 
   try {
@@ -319,7 +444,7 @@ async function fetch24hQueue() {
         allCuratedJobs = rawJobs.filter(j => {
           if (!j || !j.date) return false;
           const t = new Date(j.date).getTime();
-          return !isNaN(t) && (now - t) <= TWENTY_FOUR_HOURS_MS;
+          return !isNaN(t) && (now - t) <= SEVENTY_TWO_HOURS_MS;
         });
 
         const totalVerifiedEl = document.getElementById('metricTotalVerified');
@@ -327,7 +452,7 @@ async function fetch24hQueue() {
       }
     }
   } catch (e) {
-    console.warn('24h queue fetch notice:', e);
+    console.warn('72h queue fetch notice:', e);
   }
 
   const countEl = document.getElementById('metric24hCount');
@@ -354,7 +479,7 @@ function renderTriageTable() {
   const wtFilter = document.getElementById('triageWorkTypeFilter')?.value || 'all';
   const srcFilter = document.getElementById('triageSourceFilter')?.value || 'all';
 
-  // 1. ACTIVE 24H QUEUE
+  // 1. ACTIVE 72H QUEUE
   if (currentQueueTab === 'active') {
     if (thead) {
       thead.innerHTML = `
@@ -366,8 +491,8 @@ function renderTriageTable() {
           <th>Role Title & Match</th>
           <th>Location & Setup</th>
           <th>Age</th>
-          <th>Tailored Resume</th>
-          <th style="text-align: right; min-width: 220px;">Actions</th>
+          <th>Resume</th>
+          <th style="text-align: right; width: 90px; min-width: 90px;">Actions</th>
         </tr>
       `;
     }
@@ -379,7 +504,7 @@ function renderTriageTable() {
         <tr>
           <td colspan="7" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
             <i data-lucide="check-circle" style="width: 32px; height: 32px; margin: 0 auto 0.6rem; color: var(--accent-emerald);"></i>
-            <p>No active 24-hour positions matching your filters. All caught up or moved to Tracking!</p>
+            <p>No active positions within 72 hours matching your filters. All caught up or moved to Tracking!</p>
           </td>
         </tr>
       `;
@@ -392,6 +517,7 @@ function renderTriageTable() {
       const isChecked = selectedJobs.has(key);
       const timeAgo = formatTimeAgo(job.date);
       const assignedResumeId = selectedJobs.get(key)?.resumeId || (savedResumes[0] ? savedResumes[0].id : '');
+      const salaryResult = formatSalaryUSD(job.salary, job.title);
 
       return `
         <tr class="${isChecked ? 'selected' : ''}" id="row_${escapeHtml(key)}">
@@ -402,7 +528,7 @@ function renderTriageTable() {
           </td>
           <td>
             <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">${escapeHtml(job.company)}</div>
-            <span class="triage-company-badge">${escapeHtml(job.source || 'ATS')}</span>
+            <div style="font-size: 0.74rem; font-style: italic; color: var(--text-dim); margin-top: 0.15rem;">${escapeHtml(job.source || 'ATS Direct')}</div>
           </td>
           <td>
             <div class="triage-role-title">
@@ -410,14 +536,14 @@ function renderTriageTable() {
                 ${escapeHtml(job.title)}
               </a>
             </div>
-            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
-              ${job.matchedKeyword ? `<span class="hotlist-tag match-tag"><i data-lucide="sparkles"></i> ${escapeHtml(job.matchedKeyword)}</span>` : ''}
-              ${job.salary ? `<span class="hotlist-tag salary-tag"><i data-lucide="dollar-sign"></i> ${escapeHtml(job.salary)}</span>` : ''}
+            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; margin-top: 0.25rem;">
+              ${job.matchedKeyword ? `<span class="hotlist-tag match-tag compact-tag">${escapeHtml(job.matchedKeyword)}</span>` : ''}
+              ${salaryResult.formatted ? `<span class="hotlist-tag salary-tag compact-tag">${salaryResult.formatted}</span>` : ''}
             </div>
           </td>
           <td>
             <div>${escapeHtml(job.location || 'Remote')}</div>
-            <div style="font-size: 0.75rem; color: var(--text-dim);">${escapeHtml(job.workType || 'Remote')}</div>
+            <div style="font-size: 0.74rem; font-style: italic; color: var(--text-dim); margin-top: 0.1rem;">${escapeHtml(job.workType || 'Remote')}</div>
           </td>
           <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-emerald);">
             ${timeAgo}
@@ -432,8 +558,8 @@ function renderTriageTable() {
               `).join('')}
             </select>
           </td>
-          <td style="text-align: right; white-space: nowrap;">
-            <div style="display: inline-flex; gap: 0.35rem; justify-content: flex-end; align-items: center;">
+          <td style="text-align: right; width: 90px; min-width: 90px; padding: 0.5rem 0.4rem;">
+            <div class="action-stack-vert">
               <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-xs" title="Open original job posting in new tab">
                 <i data-lucide="external-link"></i>
                 <span>View</span>
@@ -468,9 +594,9 @@ function renderTriageTable() {
           <th>Employer & Role</th>
           <th>Location & Work Setup</th>
           <th>Date Applied</th>
-          <th>Tailored Resume</th>
+          <th>Resume</th>
           <th>Application Status</th>
-          <th style="text-align: right; min-width: 170px;">Actions</th>
+          <th style="text-align: right; width: 90px; min-width: 90px;">Actions</th>
         </tr>
       `;
     }
@@ -510,15 +636,15 @@ function renderTriageTable() {
         <tr id="row_${escapeHtml(key)}">
           <td>
             <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">${escapeHtml(job.company || 'Company')}</div>
-            <div class="triage-role-title" style="margin-top: 0.2rem;">
-              <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" style="color:var(--text-main); text-decoration:none;" title="Open posting in new tab">
+            <div style="font-size: 0.74rem; font-style: italic; color: var(--text-dim); margin-top: 0.15rem;">
+              <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" style="color:var(--text-dim); text-decoration:none;" title="Open posting in new tab">
                 ${escapeHtml(job.title || 'Job Title')}
               </a>
             </div>
           </td>
           <td>
             <div>${escapeHtml(job.location || 'Remote')}</div>
-            <div style="font-size: 0.75rem; color: var(--text-dim);">${escapeHtml(job.workType || 'Remote')}</div>
+            <div style="font-size: 0.74rem; font-style: italic; color: var(--text-dim); margin-top: 0.1rem;">${escapeHtml(job.workType || 'Remote')}</div>
           </td>
           <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-emerald);">
             ${timeAgo}
@@ -536,20 +662,21 @@ function renderTriageTable() {
               <option value="Rejected" ${item.status === 'Rejected' ? 'selected' : ''}>🔴 Rejected</option>
             </select>
           </td>
-          <td style="text-align: right; white-space: nowrap;">
-            <div style="display: inline-flex; gap: 0.35rem; justify-content: flex-end; align-items: center;">
+          <td style="text-align: right; width: 90px; min-width: 90px; padding: 0.5rem 0.4rem;">
+            <div class="action-stack-vert">
               ${job.url ? `
                 <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-xs" title="Open original job posting in new tab">
                   <i data-lucide="external-link"></i>
                   <span>View</span>
                 </a>
               ` : ''}
-              <button type="button" class="btn btn-secondary btn-xs" onclick="restoreJob('${escapeHtml(key)}')" title="Move back to Active 24h Queue">
+              <button type="button" class="btn btn-secondary btn-xs" onclick="restoreJob('${escapeHtml(key)}')" title="Move back to Active 72h Queue">
                 <i data-lucide="undo-2"></i>
                 <span>Re-Activate</span>
               </button>
               <button type="button" class="btn btn-drop btn-xs" onclick="removeTrackingRecord('${escapeHtml(key)}')" title="Remove from tracking">
                 <i data-lucide="trash-2"></i>
+                <span>Remove</span>
               </button>
             </div>
           </td>
@@ -570,7 +697,7 @@ function renderTriageTable() {
           <th>Location & Source</th>
           <th>Dropped Date</th>
           <th>Drop Reason</th>
-          <th style="text-align: right; min-width: 140px;">Actions</th>
+          <th style="text-align: right; width: 90px; min-width: 90px;">Actions</th>
         </tr>
       `;
     }
@@ -608,15 +735,15 @@ function renderTriageTable() {
         <tr id="row_${escapeHtml(key)}">
           <td>
             <div style="font-weight: 700; color: var(--text-main); font-size: 0.95rem;">${escapeHtml(job.company || 'Company')}</div>
-            <div class="triage-role-title" style="margin-top: 0.2rem;">
-              <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" style="color:var(--text-main); text-decoration:none;" title="Open posting in new tab">
+            <div style="font-size: 0.74rem; font-style: italic; color: var(--text-dim); margin-top: 0.15rem;">
+              <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" style="color:var(--text-dim); text-decoration:none;" title="Open posting in new tab">
                 ${escapeHtml(job.title || 'Job Title')}
               </a>
             </div>
           </td>
           <td>
             <div>${escapeHtml(job.location || 'Remote')}</div>
-            <span class="triage-company-badge">${escapeHtml(job.source || 'ATS')}</span>
+            <div style="font-size: 0.74rem; font-style: italic; color: var(--text-dim); margin-top: 0.15rem;">${escapeHtml(job.source || 'ATS')}</div>
           </td>
           <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dim);">
             ${timeAgo}
@@ -626,18 +753,18 @@ function renderTriageTable() {
               ${escapeHtml(item.reason || 'Irrelevant')}
             </span>
           </td>
-          <td style="text-align: right; white-space: nowrap;">
-            <div style="display: inline-flex; gap: 0.35rem; justify-content: flex-end; align-items: center;">
+          <td style="text-align: right; width: 90px; min-width: 90px; padding: 0.5rem 0.4rem;">
+            <div class="action-stack-vert">
+              <button type="button" class="btn btn-primary btn-xs" onclick="restoreJob('${escapeHtml(key)}')" title="Restore back to Active 72h Queue">
+                <i data-lucide="rotate-ccw"></i>
+                <span>Restore</span>
+              </button>
               ${job.url ? `
                 <a href="${escapeHtml(job.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-xs" title="Open original job posting in new tab">
                   <i data-lucide="external-link"></i>
                   <span>View</span>
                 </a>
               ` : ''}
-              <button type="button" class="btn btn-primary btn-xs" onclick="restoreJob('${escapeHtml(key)}')" title="Restore back to Active 24h Queue">
-                <i data-lucide="rotate-ccw"></i>
-                <span>Restore</span>
-              </button>
             </div>
           </td>
         </tr>
@@ -1118,8 +1245,8 @@ async function saveProfileData() {
   } catch (e) {}
 
   if (btn) btn.textContent = 'Saved!';
-  showToast('✅ Candidate Profile saved successfully');
-  setTimeout(() => { if (btn) btn.textContent = 'Save Profile'; }, 2000);
+  showToast('✅ Profile saved successfully');
+  setTimeout(() => { if (btn) btn.textContent = 'Save'; }, 2000);
 }
 
 function handleResumeFileSelected(e) {

@@ -158,7 +158,7 @@ app.get('/api/jobs', (req, res) => {
   }
 });
 
-// GET /api/jobs/curated-24h (Curated 24-Hour Hotlist)
+// GET /api/jobs/curated-24h (Curated Hotlist, up to 72 hours)
 app.get('/api/jobs/curated-24h', (req, res) => {
   try {
     if (!fs.existsSync(DATA_FILE)) {
@@ -169,14 +169,14 @@ app.get('/api/jobs/curated-24h', (req, res) => {
     const data = JSON.parse(raw);
     const jobs = data.jobs || [];
     const applications = readApplications();
-    const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+    const SEVENTY_TWO_HOURS_MS = 72 * 60 * 60 * 1000;
     const now = Date.now();
 
     const curated = jobs.filter(job => {
       if (!job || !job.date) return false;
       const jobTime = new Date(job.date).getTime();
       if (isNaN(jobTime)) return false;
-      return (now - jobTime) <= TWENTY_FOUR_HOURS_MS;
+      return (now - jobTime) <= SEVENTY_TWO_HOURS_MS;
     }).map(job => {
       const key = job.id || job.url;
       const appRecord = applications[key] || { status: 'unreviewed', resumeId: null, updatedAt: null, notes: '' };

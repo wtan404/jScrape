@@ -1004,7 +1004,40 @@ function getDistanceMiles(lat1, lon1, lat2, lon2) {
 }
 
 function formatSalary(job) {
-  if (job.salary) return job.salary;
+  if (job.salary) {
+    let raw = String(job.salary).trim();
+    const rates = {
+      'GBP': 1.28, '£': 1.28,
+      'EUR': 1.08, '€': 1.08,
+      'CAD': 0.74, 'C$': 0.74, 'CA$': 0.74,
+      'AUD': 0.65, 'A$': 0.65, 'AU$': 0.65,
+      'INR': 0.012, '₹': 0.012,
+      'CHF': 1.13
+    };
+    let rate = null;
+    if (/£|GBP/i.test(raw)) rate = rates.GBP;
+    else if (/€|EUR/i.test(raw)) rate = rates.EUR;
+    else if (/C\$|CA\$|CAD/i.test(raw)) rate = rates.CAD;
+    else if (/A\$|AU\$|AUD/i.test(raw)) rate = rates.AUD;
+    else if (/₹|INR/i.test(raw)) rate = rates.INR;
+    else if (/CHF/i.test(raw)) rate = rates.CHF;
+
+    if (rate) {
+      const nums = raw.match(/\d[\d,]*(?:\.\d+)?k?/gi);
+      if (nums && nums.length > 0) {
+        const converted = nums.map(n => {
+          const isK = /k$/i.test(n);
+          let val = parseFloat(n.replace(/,/g, '').replace(/k/i, ''));
+          if (isNaN(val)) return n;
+          if (isK) val *= 1000;
+          const usdVal = Math.round(val * rate);
+          return usdVal >= 1000 ? '$' + Math.round(usdVal / 1000) + 'k' : '$' + usdVal.toLocaleString();
+        }).join(' - ');
+        return `${converted} <span class="salary-converted-note" title="Converted to USD from ${escapeHtml(raw)}">conv.</span>`;
+      }
+    }
+    return raw;
+  }
   
   const text = (job.title + ' ' + (job.description || '')).toLowerCase();
   const match = text.match(/\$(\d{2,3}(?:,\d{3})*|\d{2,3}k)\s*(?:-|to)?\s*\$?(\d{2,3}(?:,\d{3})*|\d{2,3}k)?/i);

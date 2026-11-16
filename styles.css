@@ -1464,6 +1464,28 @@ body {
   font-weight: 600;
 }
 
+.hotlist-tag.compact-tag {
+  font-size: 0.68rem;
+  padding: 0.12rem 0.42rem;
+  border-radius: 4px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.salary-converted-note {
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  font-style: italic;
+  color: var(--accent-purple-light);
+  background: rgba(168, 85, 247, 0.12);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  margin-left: 0.35rem;
+  vertical-align: middle;
+  cursor: help;
+}
+
 /* Hotlist Action Bar */
 .hotlist-action-bar {
   display: flex;
