@@ -406,6 +406,26 @@
       font-size: 0.72rem;
     }
 
+    .action-sub-row {
+      display: flex;
+      gap: 0.25rem;
+      width: 100%;
+    }
+
+    .action-sub-row .btn {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 0.28rem 0.15rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .action-sub-row .btn i {
+      width: 13px;
+      height: 13px;
+    }
+
     /* Profile & Vault Sidecard */
     .dash-sidecard {
       background: var(--bg-card);
@@ -700,6 +720,18 @@
     .btn-drop:hover {
       background: rgba(239, 68, 68, 0.2);
       border-color: #ef4444;
+      color: #ffffff;
+    }
+
+    .btn-uninterested {
+      background: rgba(245, 158, 11, 0.12);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-uninterested:hover {
+      background: rgba(245, 158, 11, 0.25);
+      border-color: #f59e0b;
       color: #ffffff;
     }
 
@@ -1124,6 +1156,6 @@
     </div>
   </div>
 
-  <script src="dashboard.js?v=1.9.0&t=20261115d"></script>
+  <script src="dashboard.js?v=1.13.0&t=20261116c"></script>
 </body>
 </html>

@@ -758,14 +758,17 @@ function renderTriageTable() {
                 <i data-lucide="send"></i>
                 <span>Submit</span>
               </button>
-              <button type="button" class="btn btn-applied btn-xs" onclick="markJobAsApplied('${escapeHtml(key)}')" title="Mark as already filled out / applied">
-                <i data-lucide="check"></i>
-                <span>Applied</span>
-              </button>
-              <button type="button" class="btn btn-drop btn-xs" onclick="dismissJob('${escapeHtml(key)}')" title="Drop / Hide as irrelevant">
-                <i data-lucide="eye-off"></i>
-                <span>Drop</span>
-              </button>
+              <div class="action-sub-row">
+                <button type="button" class="btn btn-applied btn-xs" onclick="markJobAsApplied('${escapeHtml(key)}')" title="Mark as Applied (Already filled out)">
+                  <i data-lucide="check"></i>
+                </button>
+                <button type="button" class="btn btn-drop btn-xs" onclick="dismissJob('${escapeHtml(key)}', 'Irrelevant')" title="Drop: Irrelevant / Out of Scope">
+                  <i data-lucide="eye-off"></i>
+                </button>
+                <button type="button" class="btn btn-uninterested btn-xs" onclick="dismissJob('${escapeHtml(key)}', 'Uninterested')" title="Drop: Uninterested / Pass">
+                  <i data-lucide="thumbs-down"></i>
+                </button>
+              </div>
             </div>
           </td>
         </tr>
@@ -933,7 +936,7 @@ function renderTriageTable() {
             ${timeAgo}
           </td>
           <td>
-            <span style="font-family: var(--font-mono); font-size: 0.74rem; color: #f87171; background: rgba(239, 68, 68, 0.1); padding: 0.2rem 0.5rem; border-radius: 4px;">
+            <span style="font-family: var(--font-mono); font-size: 0.74rem; color: ${item.reason === 'Uninterested' ? '#fbbf24' : '#f87171'}; background: ${item.reason === 'Uninterested' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(239, 68, 68, 0.1)'}; border: 1px solid ${item.reason === 'Uninterested' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(239, 68, 68, 0.25)'}; padding: 0.2rem 0.5rem; border-radius: 4px;">
               ${escapeHtml(item.reason || 'Irrelevant')}
             </span>
           </td>
@@ -996,16 +999,18 @@ function markJobAsApplied(key) {
   updateStickyDispatchBar();
 }
 
-function dismissJob(key) {
+function dismissJob(key, reason = 'Irrelevant') {
   const job = allCuratedJobs.find(j => (j.id || j.url) === key) || (appliedJobsMap[key] && appliedJobsMap[key].job);
   if (!job) return;
 
   const now = new Date().toISOString();
+  const cleanReason = (reason === 'Uninterested') ? 'Uninterested' : 'Irrelevant';
+
   dismissedJobsMap[key] = {
     jobId: key,
     job: { ...job },
     dismissedAt: now,
-    reason: 'Irrelevant'
+    reason: cleanReason
   };
 
   delete appliedJobsMap[key];
@@ -1015,11 +1020,12 @@ function dismissJob(key) {
   // Async server persistence across all devices
   persistApplicationStatus(key, 'dismiss', {
     job: { ...job },
-    reason: 'Irrelevant',
+    reason: cleanReason,
     dismissedAt: now
   });
 
-  showToast(`🚫 Dropped "${job.title}" as irrelevant.`);
+  const toastIcon = cleanReason === 'Uninterested' ? '👎' : '🚫';
+  showToast(`${toastIcon} Dropped "${job.title}" (${cleanReason}).`);
   renderTriageTable();
   updateStickyDispatchBar();
 }

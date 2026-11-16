@@ -4,6 +4,24 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.13.0] - 2026-11-16
+
+### Changed
+- **Results Table CTA Stack Redesign (`dashboard/dashboard.js`, `dashboard/index.html`):**
+  - Reorganized the Active 72h Queue action column into an ergonomic 2-row layout:
+    - Row 1: Full-width primary `Submit` button (`<i data-lucide="send"></i> <span>Submit</span>`).
+    - Row 2: Compact 3-button sub-row (`.action-sub-row`) featuring icon-only controls aligned to their respective operations:
+      - **Applied** (`.btn-applied`): Emerald green with `<i data-lucide="check"></i>`, allowing instant marking of completed submissions.
+      - **Drop (Irrelevant)** (`.btn-drop`): Ruby red with `<i data-lucide="eye-off"></i>`, categorizing the drop as out-of-scope / irrelevant.
+      - **Drop (Uninterested)** (`.btn-uninterested`): Warm amber with `<i data-lucide="thumbs-down"></i>`, categorizing the drop as an explicit candidate pass.
+- **Drop Categorization & Telemetry (`dashboard/dashboard.js`):**
+  - Upgraded `dismissJob(key, reason)` to persist distinct drop reasons (`Irrelevant` vs. `Uninterested`) to both cloud storage and local session state.
+  - Formatted Dismissed Queue entries with color-coded reason badges (amber for `Uninterested`, crimson for `Irrelevant`).
+- **Cache-Busting Asset Synchronization (`dashboard/index.html`):**
+  - Updated script reference to `dashboard.js?v=1.13.0&t=20261116c`, preventing stale browser caches across all client devices.
+
+---
+
 ## [1.12.0] - 2026-11-16
 
 ### Added
