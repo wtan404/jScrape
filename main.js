@@ -837,15 +837,15 @@ async function runClientSideScraper() {
   const results = await Promise.all(promises);
   const flatResults = results.flat();
 
-  // Merge with existing cached jobs, deduplicate, filter < 30 days
-  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+  // Merge with existing cached jobs, deduplicate, filter < 14 days (2 weeks max)
+  const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
   const now = Date.now();
   const merged = [];
   const seen = new Set();
 
   for (const job of [...flatResults, ...allJobsData]) {
     const jobTime = new Date(job.date || now).getTime();
-    if (!isNaN(jobTime) && (now - jobTime) > THIRTY_DAYS_MS) continue;
+    if (!isNaN(jobTime) && (now - jobTime) > FOURTEEN_DAYS_MS) continue;
 
     const key = (job.title + '|' + job.company).toLowerCase();
     if (seen.has(key)) continue;

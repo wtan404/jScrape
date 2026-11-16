@@ -41,6 +41,9 @@ const DEFAULT_SEED_RESUMES = [
 ];
 
 let allCuratedJobs = [];
+let allHotlist72hJobs = [];
+let allArchive14dJobs = [];
+let currentTimeHorizon = '72h'; // '72h' | '14d'
 let savedResumes = [];
 let applicantProfile = { ...CANONICAL_DEFAULT_PROFILE };
 let submissionLogs = [];
@@ -614,43 +617,77 @@ function switchProfileTab(tabName) {
 }
 
 // --------------------------------------------------------------------------
-// 72-Hour Hotlist Triage Queue
+// 72-Hour Hotlist & 14-Day Archive Triage Queue
 // --------------------------------------------------------------------------
 
 async function fetch24hQueue() {
   const SEVENTY_TWO_HOURS_MS = 72 * 60 * 60 * 1000;
+  const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
   const now = Date.now();
 
   try {
-    const res = await fetch(`./api/jobs/curated-24h?t=${Date.now()}`);
-    let data = null;
-    try {
-      if (res.ok) data = await res.json();
-    } catch (e) {}
+    const statRes = await fetch(`../jobs_data.json?t=${Date.now()}`);
+    if (statRes.ok) {
+      const fullData = await statRes.json();
+      const rawJobs = fullData.jobs || [];
 
-    if (data && Array.isArray(data.jobs)) {
-      allCuratedJobs = data.jobs;
+      // Filter to maximum 14 days retention (2 weeks max archive)
+      allArchive14dJobs = rawJobs.filter(j => {
+        if (!j || !j.date) return false;
+        const t = new Date(j.date).getTime();
+        return !isNaN(t) && (now - t) <= FOURTEEN_DAYS_MS;
+      });
+
+      // Filter to 72h hotlist
+      allHotlist72hJobs = allArchive14dJobs.filter(j => {
+        const t = new Date(j.date).getTime();
+        return (now - t) <= SEVENTY_TWO_HOURS_MS;
+      });
+
+      allCuratedJobs = (currentTimeHorizon === '14d') ? allArchive14dJobs : allHotlist72hJobs;
+
+      const totalVerifiedEl = document.getElementById('metricTotalVerified');
+      if (totalVerifiedEl) totalVerifiedEl.textContent = allArchive14dJobs.length.toLocaleString();
     } else {
-      const statRes = await fetch(`../jobs_data.json?t=${Date.now()}`);
-      if (statRes.ok) {
-        const fullData = await statRes.json();
-        const rawJobs = fullData.jobs || [];
-        allCuratedJobs = rawJobs.filter(j => {
-          if (!j || !j.date) return false;
-          const t = new Date(j.date).getTime();
-          return !isNaN(t) && (now - t) <= SEVENTY_TWO_HOURS_MS;
-        });
-
-        const totalVerifiedEl = document.getElementById('metricTotalVerified');
-        if (totalVerifiedEl) totalVerifiedEl.textContent = rawJobs.length.toLocaleString();
+      const res = await fetch(`./api/jobs/curated-24h?t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.jobs)) {
+          allHotlist72hJobs = data.jobs;
+          allArchive14dJobs = data.jobs;
+          allCuratedJobs = data.jobs;
+        }
       }
     }
   } catch (e) {
-    console.warn('72h queue fetch notice:', e);
+    console.warn('Triage queue fetch notice:', e);
   }
 
   const countEl = document.getElementById('metric24hCount');
   if (countEl) countEl.textContent = allCuratedJobs.length;
+}
+
+function switchTimeHorizon(horizon) {
+  currentTimeHorizon = horizon || '72h';
+  allCuratedJobs = (currentTimeHorizon === '14d') ? allArchive14dJobs : allHotlist72hJobs;
+
+  const tabLabel = document.getElementById('tabLabelActive');
+  if (tabLabel) {
+    tabLabel.textContent = (currentTimeHorizon === '14d') ? 'Active 14d Archive' : 'Active 72h Queue';
+  }
+
+  const kpiLabel = document.getElementById('metricHotlistLabel');
+  if (kpiLabel) {
+    kpiLabel.innerHTML = (currentTimeHorizon === '14d')
+      ? '<i data-lucide="archive"></i> 14d Active View Roles'
+      : '<i data-lucide="flame"></i> 72h Hotlist Positions';
+    if (window.lucide) lucide.createIcons();
+  }
+
+  selectedJobs.clear();
+  updateStickyDispatchBar();
+  renderTriageTable();
+  updateQueueBadgeCounts();
 }
 
 function switchQueueTab(tabName) {

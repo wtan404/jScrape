@@ -15,15 +15,18 @@ const EXPIRED_MARKERS = [
   'job not found'
 ];
 
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000; // 14 days (2 weeks max retention)
 
-// Check if date is within 30 days
-function isWithin30Days(dateStr) {
+// Check if date is within 14 days (2 weeks max)
+function isWithin14Days(dateStr) {
   if (!dateStr) return true; // Keep if unknown date to avoid accidental loss
   const jobDate = new Date(dateStr);
   if (isNaN(jobDate.getTime())) return true;
-  return (Date.now() - jobDate.getTime()) <= THIRTY_DAYS_MS;
+  return (Date.now() - jobDate.getTime()) <= FOURTEEN_DAYS_MS;
 }
+
+// Backward-compatible alias
+const isWithin30Days = isWithin14Days;
 
 // Verify if a single job posting URL is still active
 async function verifyJobLink(jobUrl) {
@@ -55,18 +58,18 @@ async function verifyJobLink(jobUrl) {
   }
 }
 
-// Verify a batch of existing jobs: Prunes dead links AND jobs older than 30 days
+// Verify a batch of existing jobs: Prunes dead links AND jobs older than 14 days (2 weeks max)
 async function verifyAndPruneJobs(existingJobs = []) {
   if (!existingJobs.length) return [];
 
-  console.log(`[Verifier] Re-verifying ${existingJobs.length} existing jobs (pruning dead links & postings > 30 days old)...`);
+  console.log(`[Verifier] Re-verifying ${existingJobs.length} existing jobs (pruning dead links & postings > 14 days old)...`);
   
-  // 1. Filter out jobs older than 30 days
-  const recentJobs = existingJobs.filter(job => isWithin30Days(job.date));
+  // 1. Filter out jobs older than 14 days
+  const recentJobs = existingJobs.filter(job => isWithin14Days(job.date));
   const agePrunedCount = existingJobs.length - recentJobs.length;
 
   if (agePrunedCount > 0) {
-    console.log(`[Verifier] Auto-pruned ${agePrunedCount} jobs older than 30 days.`);
+    console.log(`[Verifier] Auto-pruned ${agePrunedCount} jobs older than 14 days.`);
   }
 
   // 2. Verify link availability
@@ -81,4 +84,4 @@ async function verifyAndPruneJobs(existingJobs = []) {
   return activeJobs;
 }
 
-module.exports = { verifyJobLink, verifyAndPruneJobs, isWithin30Days };
+module.exports = { verifyJobLink, verifyAndPruneJobs, isWithin14Days, isWithin30Days };

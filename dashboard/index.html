@@ -832,7 +832,7 @@
     <section class="dash-metrics-grid">
       <div class="dash-metric-card">
         <div class="dash-metric-num" id="metric24hCount" style="color: var(--accent-amber);">0</div>
-        <div class="dash-metric-label"><i data-lucide="flame"></i> 72h Hotlist Positions</div>
+        <div class="dash-metric-label" id="metricHotlistLabel"><i data-lucide="flame"></i> 72h Hotlist Positions</div>
       </div>
       <div class="dash-metric-card">
         <div class="dash-metric-num" id="metricResumesCount" style="color: var(--accent-purple-light);">0</div>
@@ -844,30 +844,42 @@
       </div>
       <div class="dash-metric-card">
         <div class="dash-metric-num" id="metricTotalVerified" style="color: var(--accent-violet);">0</div>
-        <div class="dash-metric-label"><i data-lucide="database"></i> Total Active Verified Roles</div>
+        <div class="dash-metric-label"><i data-lucide="database"></i> 14-Day Verified Roles</div>
       </div>
     </section>
 
     <!-- Main Full-Width Operational Center -->
     <section class="triage-center" style="width: 100%;">
 
-      <!-- Queue Switcher Tabs -->
-      <div class="queue-tabs-bar">
-        <button type="button" class="queue-tab-btn active" id="tabBtnActive" onclick="switchQueueTab('active')">
-          <i data-lucide="flame"></i>
-          <span>Active 72h Queue</span>
-          <span class="queue-pill-count" id="countTabActive">0</span>
-        </button>
-        <button type="button" class="queue-tab-btn" id="tabBtnApplied" onclick="switchQueueTab('applied')">
-          <i data-lucide="check-circle-2"></i>
-          <span>Applied & Tracking</span>
-          <span class="queue-pill-count count-applied" id="countTabApplied">0</span>
-        </button>
-        <button type="button" class="queue-tab-btn" id="tabBtnDismissed" onclick="switchQueueTab('dismissed')">
-          <i data-lucide="eye-off"></i>
-          <span>Dismissed / Hidden</span>
-          <span class="queue-pill-count count-dismissed" id="countTabDismissed">0</span>
-        </button>
+      <!-- Queue Switcher Tabs & Time Horizon Selector -->
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
+        <div class="queue-tabs-bar" style="flex: 1; min-width: 320px; margin-bottom: 0;">
+          <button type="button" class="queue-tab-btn active" id="tabBtnActive" onclick="switchQueueTab('active')">
+            <i data-lucide="flame"></i>
+            <span id="tabLabelActive">Active 72h Queue</span>
+            <span class="queue-pill-count" id="countTabActive">0</span>
+          </button>
+          <button type="button" class="queue-tab-btn" id="tabBtnApplied" onclick="switchQueueTab('applied')">
+            <i data-lucide="check-circle-2"></i>
+            <span>Applied & Tracking</span>
+            <span class="queue-pill-count count-applied" id="countTabApplied">0</span>
+          </button>
+          <button type="button" class="queue-tab-btn" id="tabBtnDismissed" onclick="switchQueueTab('dismissed')">
+            <i data-lucide="eye-off"></i>
+            <span>Dismissed / Hidden</span>
+            <span class="queue-pill-count count-dismissed" id="countTabDismissed">0</span>
+          </button>
+        </div>
+
+        <!-- Time Horizon Scope Selector -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.4rem 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+          <i data-lucide="clock" style="width: 14px; height: 14px; color: var(--accent-purple-light);"></i>
+          <span style="font-size: 0.76rem; color: var(--text-dim); font-weight: 600;">Time Horizon:</span>
+          <select id="triageTimeHorizon" class="select-control" style="padding: 0.2rem 0.5rem; font-size: 0.78rem; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-main); font-weight: 600;" onchange="switchTimeHorizon(this.value)" title="Switch between 72h fresh hotlist and full 14-day archive">
+            <option value="72h" selected>72h Hotlist</option>
+            <option value="14d">Full 14-Day Archive (2 Weeks)</option>
+          </select>
+        </div>
       </div>
 
       <!-- Triage Controls Row: Search Box & Separate CTA Container Side by Side -->
@@ -1156,6 +1168,6 @@
     </div>
   </div>
 
-  <script src="dashboard.js?v=1.13.0&t=20261116c"></script>
+  <script src="dashboard.js?v=1.14.0&t=20261116d"></script>
 </body>
 </html>

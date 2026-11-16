@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { scrapeAllATSCompanies } = require('./ats_scraper');
 const { scrapeGoogleJobs } = require('./google_jobs_scraper');
-const { verifyAndPruneJobs, isWithin30Days } = require('./verifier');
+const { verifyAndPruneJobs, isWithin14Days, isWithin30Days } = require('./verifier');
 const { classifyWorkType } = require('./geo_helper');
 const { extractSalaryFromText } = require('./salary_extractor');
 
@@ -296,7 +296,7 @@ async function scrapeJobicy(targetTitles = PREDEFINED_ROLES, keywords = PREDEFIN
 
 // Master Pipeline Run & Re-Verification
 async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey = process.env.SERPAPI_KEY, customTitles = [], customKeywords = [], customAshby = [], customSmartRecruiters = []) {
-  console.log('[Scrapedeez] Launching Pipeline for Active Criteria (< 30 days old)...');
+  console.log('[Scrapedeez] Launching Pipeline for Active Criteria (< 14 days old, 2 weeks max)...');
 
   // Load config if available
   let cfg = {};
@@ -365,7 +365,7 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
   const outputData = {
     lastScraped: new Date().toISOString(),
     totalMatches: mergedJobs.length,
-    maxAgeDays: 30,
+    maxAgeDays: 14,
     targetCriteria: targetTitles,
     keywords: keywords,
     jobs: mergedJobs
@@ -377,7 +377,7 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
     console.error('[Scrapedeez] Error writing jobs_data.json:', err.message);
   }
 
-  console.log(`[Scrapedeez] Rescan Complete. ${mergedJobs.length} active verified jobs (< 30 days old) stored.`);
+  console.log(`[Scrapedeez] Rescan Complete. ${mergedJobs.length} active verified jobs (< 14 days old) stored.`);
   return mergedJobs;
 }
 

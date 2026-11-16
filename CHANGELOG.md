@@ -4,6 +4,25 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.14.0] - 2026-11-16
+
+### Changed
+- **14-Day Maximum Archive Retention Policy (`verifier.js`, `scraper.js`, `main.js`):**
+  - Reduced the system-wide maximum job retention policy from 30 days down to 14 days (2 weeks max).
+  - Updated `verifier.js` pruning engine (`verifyAndPruneJobs`) and date validation (`isWithin14Days`) to automatically discard any posting older than 14 days from `jobs_data.json`.
+  - Updated scraper pipeline output schema to `maxAgeDays: 14`.
+  - Aligned public search board (`main.js`) client cache merging to filter against `FOURTEEN_DAYS_MS`.
+- **Dashboard Time Horizon Scope Selector (`dashboard/index.html`, `dashboard/dashboard.js`):**
+  - Added an interactive **Time Horizon** scope control directly alongside the queue navigation tabs, allowing users to toggle between:
+    - `72h Hotlist` *(Default / Rapid triage mode)*
+    - `Full 14-Day Archive (2 Weeks)` *(Comprehensive view of all verified roles up to 14 days old)*
+  - Updated KPI Card 4 to display `<i data-lucide="database"></i> 14-Day Verified Roles`.
+  - Dynamically updates active view metrics (`#metric24hCount`, `#metricHotlistLabel`) and table headers when toggling horizons.
+- **Cache-Busting Asset Synchronization (`dashboard/index.html`):**
+  - Updated script reference to `dashboard.js?v=1.14.0&t=20261116d`.
+
+---
+
 ## [1.13.0] - 2026-11-16
 
 ### Changed
