@@ -221,9 +221,45 @@ async function syncApplicationsFromServer(serverData = null) {
         if (!serverDismissed[k]) hasLocalUnsynced = true;
       });
 
-      // Merge: server state is primary multi-device authority
-      appliedJobsMap = { ...appliedJobsMap, ...serverApplied };
-      dismissedJobsMap = { ...dismissedJobsMap, ...serverDismissed };
+      // Two-way reconciliation preserving latest timestamps for Applied, Saved, and Dismissed
+      const allKeys = new Set([
+        ...Object.keys(appliedJobsMap),
+        ...Object.keys(dismissedJobsMap),
+        ...Object.keys(serverApplied),
+        ...Object.keys(serverDismissed)
+      ]);
+
+      const mergedApplied = {};
+      const mergedDismissed = {};
+
+      allKeys.forEach(k => {
+        const localApp = appliedJobsMap[k];
+        const serverApp = serverApplied[k];
+        const localDis = dismissedJobsMap[k];
+        const serverDis = serverDismissed[k];
+
+        const bestApp = (localApp && serverApp)
+          ? ((new Date(localApp.updatedAt || localApp.appliedAt || 0).getTime()) >= (new Date(serverApp.updatedAt || serverApp.appliedAt || 0).getTime()) ? localApp : serverApp)
+          : (localApp || serverApp);
+
+        const bestDis = (localDis && serverDis)
+          ? ((new Date(localDis.updatedAt || localDis.dismissedAt || 0).getTime()) >= (new Date(serverDis.updatedAt || serverDis.dismissedAt || 0).getTime()) ? localDis : serverDis)
+          : (localDis || serverDis);
+
+        if (bestApp && bestDis) {
+          const tApp = new Date(bestApp.updatedAt || bestApp.appliedAt || 0).getTime();
+          const tDis = new Date(bestDis.updatedAt || bestDis.dismissedAt || 0).getTime();
+          if (tApp >= tDis) mergedApplied[k] = bestApp;
+          else mergedDismissed[k] = bestDis;
+        } else if (bestApp) {
+          mergedApplied[k] = bestApp;
+        } else if (bestDis) {
+          mergedDismissed[k] = bestDis;
+        }
+      });
+
+      appliedJobsMap = mergedApplied;
+      dismissedJobsMap = mergedDismissed;
 
       try {
         localStorage.setItem('scrapedeez_job_applications', JSON.stringify({
@@ -354,10 +390,26 @@ function updateQueueBadgeCounts() {
   if (kpiSubs) kpiSubs.textContent = appliedCount;
 }
 
+const DASH_EXCLUDED_ROLE_PATTERNS = [
+  /\b(product manager|group product manager|principal product manager|director of product|vp of product|head of product|product owner|product marketing)\b/i,
+  /\b(human resources|talent acquisition|recruiter|recruiting|people ops|people operations|people partner|talent partner|people lead|people specialist)\b/i,
+  /\b(accounting|accountant|finance|financial analyst|controller|payroll|accounts payable|accounts receivable|audit|tax|billing)\b/i
+];
+
+function isDashExcludedRole(title = '', extra = '') {
+  const combined = (title + ' ' + extra).toLowerCase();
+  if (combined.includes('technical program manager') || combined.includes('tpm') || combined.includes('it program manager') || combined.includes('infrastructure program manager')) {
+    return false;
+  }
+  return DASH_EXCLUDED_ROLE_PATTERNS.some(rx => rx.test(combined));
+}
+
 function getActiveFilteredJobs(applyFilters = true) {
   let list = allCuratedJobs.filter(job => {
     const key = job.id || job.url;
     if (appliedJobsMap[key] || dismissedJobsMap[key]) return false;
+    // Exclude HR, Finance, and non-technical Product Managers (strict IT focus)
+    if (isDashExcludedRole(job.title || '', (job.company || '') + ' ' + (job.matchedKeyword || ''))) return false;
     return true;
   });
 

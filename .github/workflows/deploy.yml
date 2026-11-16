@@ -73,6 +73,10 @@ jobs:
           touch tmp/restart.txt
           chmod +x scripts/*.sh tests/*.sh 2>/dev/null || true
 
+      - name: 🔀 Reconcile & Merge Live Upstream Application Statuses
+        run: |
+          node scripts/merge_applications.js --upstream-url="${{ steps.set-target.outputs.url }}" || true
+
       - name: 📂 Sync files via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:

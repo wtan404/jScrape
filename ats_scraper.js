@@ -31,6 +31,22 @@ const BROWSER_HEADERS = {
   'Accept-Language': 'en-US,en;q=0.9'
 };
 
+// Negative Filter Guardrails: Strict IT focus, excluding non-technical Product Managers, HR, and Finance
+const EXCLUDED_ROLE_PATTERNS = [
+  /\b(product manager|group product manager|principal product manager|director of product|vp of product|head of product|product owner|product marketing)\b/i,
+  /\b(human resources|talent acquisition|recruiter|recruiting|people ops|people operations|people partner|talent partner|people lead|people specialist)\b/i,
+  /\b(accounting|accountant|finance|financial analyst|controller|payroll|accounts payable|accounts receivable|audit|tax|billing)\b/i
+];
+
+function isExcludedRole(title = '', extra = '') {
+  const combined = (title + ' ' + extra).toLowerCase();
+  // Exception: Technical Program Managers and IT Program Managers are explicitly retained
+  if (combined.includes('technical program manager') || combined.includes('tpm') || combined.includes('it program manager') || combined.includes('infrastructure program manager')) {
+    return false;
+  }
+  return EXCLUDED_ROLE_PATTERNS.some(rx => rx.test(combined));
+}
+
 // Scrape Greenhouse Board Safely
 async function scrapeGreenhouseCompany(company, targetTitles = [], keywords = []) {
   try {
@@ -46,6 +62,8 @@ async function scrapeGreenhouseCompany(company, targetTitles = [], keywords = []
     const matches = [];
 
     for (const job of jobs) {
+      if (isExcludedRole(job.title || '')) continue;
+
       const title = (job.title || '').toLowerCase();
       const content = (job.content || '').toLowerCase();
       const location = job.location ? job.location.name : 'Remote / Various';
@@ -90,6 +108,9 @@ async function scrapeLeverCompany(company, targetTitles = [], keywords = []) {
     const matches = [];
 
     for (const job of jobs) {
+      const category = job.categories ? (job.categories.team || job.categories.department || '') : '';
+      if (isExcludedRole(job.text || '', category)) continue;
+
       const title = (job.text || '').toLowerCase();
       const description = (job.descriptionPlain || '').toLowerCase();
       const location = job.categories ? job.categories.location : 'Remote';
@@ -136,6 +157,9 @@ async function scrapeAshbyCompany(company, targetTitles = [], keywords = []) {
 
     for (const job of jobs) {
       if (!job || !job.isListed) continue;
+      const dept = job.department || '';
+      if (isExcludedRole(job.title || '', dept)) continue;
+
       const title = (job.title || '').toLowerCase();
       const content = (job.descriptionPlain || job.descriptionHtml || '').toLowerCase();
       const location = job.location || (job.address && job.address.postalAddress ? job.address.postalAddress.addressCountry : 'Remote');
@@ -197,8 +221,10 @@ async function scrapeSmartRecruitersCompany(company, targetTitles = [], keywords
     const matches = [];
 
     for (const job of jobs) {
-      const title = (job.name || '').toLowerCase();
       const dept = (job.department && job.department.label ? job.department.label : '').toLowerCase();
+      if (isExcludedRole(job.name || '', dept)) continue;
+
+      const title = (job.name || '').toLowerCase();
       const location = job.location ? (job.location.fullLocation || job.location.city || 'Remote') : 'Remote';
 
       const matchedTerm = searchTerms.find(term => title.includes(term) || dept.includes(term));

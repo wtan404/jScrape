@@ -8,21 +8,55 @@ const { classifyWorkType } = require('./geo_helper');
 const { extractSalaryFromText } = require('./salary_extractor');
 
 const PREDEFINED_ROLES = [
-  'Manager of IT',
-  'IT Manager',
+  'Staff Engineer',
+  'Technical Program Manager',
+  'Staff Technical Program Manager',
+  'Lead Technical Program Manager',
+  'Website Operations',
   'Web Operations',
   'WebOps Manager',
-  'Website Development',
+  'Web Manager',
+  'Website Manager',
+  'Web Engineering Manager',
+  'Forward Deploy Manager',
+  'Forward Deployed Engineer',
+  'Forward Deployed Software Engineer',
+  'Release Manager',
+  'Release Engineer',
+  'Release Engineering Manager',
   'DevOps Manager',
   'DevOps Lead',
-  'Director of IT',
-  'Web Engineering Manager'
+  'Director of DevOps',
+  'DevOps Engineer',
+  'Infrastructure Manager',
+  'Site Reliability Manager',
+  'Manager of IT',
+  'IT Manager',
+  'Director of IT'
 ];
 
 const PREDEFINED_KEYWORDS = [
-  'devops', 'webops', 'web development', 'infrastructure', 
-  'cloud', 'terraform', 'kubernetes', 'change control', 'it management'
+  'staff engineer', 'technical program manager', 'tpm',
+  'web operations', 'website operations', 'webops', 'web manager',
+  'forward deploy', 'forward deployed', 'release manager', 'release engineering',
+  'devops manager', 'devops', 'site reliability', 'sre', 'infrastructure', 'it management'
 ];
+
+// Negative Filter Guardrails: Strict IT focus, excluding non-technical Product Managers, HR, and Finance
+const EXCLUDED_ROLE_PATTERNS = [
+  /\b(product manager|group product manager|principal product manager|director of product|vp of product|head of product|product owner|product marketing)\b/i,
+  /\b(human resources|talent acquisition|recruiter|recruiting|people ops|people operations|people partner|talent partner|people lead|people specialist)\b/i,
+  /\b(accounting|accountant|finance|financial analyst|controller|payroll|accounts payable|accounts receivable|audit|tax|billing)\b/i
+];
+
+function isExcludedRole(title = '', extra = '') {
+  const combined = (title + ' ' + extra).toLowerCase();
+  // Exception: Technical Program Managers and IT Program Managers are explicitly retained
+  if (combined.includes('technical program manager') || combined.includes('tpm') || combined.includes('it program manager') || combined.includes('infrastructure program manager')) {
+    return false;
+  }
+  return EXCLUDED_ROLE_PATTERNS.some(rx => rx.test(combined));
+}
 
 const BROWSER_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
@@ -43,6 +77,7 @@ async function scrapeRemoteOK(targetTitles = PREDEFINED_ROLES, keywords = PREDEF
 
     for (const job of jobs) {
       if (!job || typeof job !== 'object') continue;
+      if (isExcludedRole(job.position || '', job.description || '')) continue;
       const dateStr = job.date ? new Date(job.date).toISOString() : new Date().toISOString();
       
       if (!isWithin30Days(dateStr)) continue;
@@ -101,6 +136,8 @@ async function scrapeWeWorkRemotely(targetTitles = PREDEFINED_ROLES, keywords = 
       const company = parts.length > 1 ? parts[0].trim() : 'Unknown';
       const title = parts.length > 1 ? parts.slice(1).join(':').trim() : rawTitle;
 
+      if (isExcludedRole(title, rawTitle)) continue;
+
       const matchedRole = searchRoles.find(r => title.toLowerCase().includes(r.toLowerCase()));
       const hasKeyword = searchKeywords.some(k => title.toLowerCase().includes(k.toLowerCase()));
 
@@ -146,6 +183,8 @@ async function scrapeRemotive(targetTitles = PREDEFINED_ROLES, keywords = PREDEF
         for (const job of response.data.jobs) {
           if (!job || seen.has(job.id)) continue;
           seen.add(job.id);
+
+          if (isExcludedRole(job.title || '', job.description || '')) continue;
 
           const dateStr = job.publication_date ? new Date(job.publication_date).toISOString() : new Date().toISOString();
           if (!isWithin30Days(dateStr)) continue;
@@ -197,6 +236,8 @@ async function scrapeJobicy(targetTitles = PREDEFINED_ROLES, keywords = PREDEFIN
         for (const job of response.data.jobs) {
           if (!job || seen.has(job.id)) continue;
           seen.add(job.id);
+
+          if (isExcludedRole(job.jobTitle || '', (job.jobExcerpt || '') + ' ' + (job.jobDescription || ''))) continue;
 
           const dateStr = job.pubDate ? new Date(job.pubDate).toISOString() : new Date().toISOString();
           if (!isWithin30Days(dateStr)) continue;

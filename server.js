@@ -267,13 +267,26 @@ function readConfig() {
   const defaultConfig = {
     minSalary: 120000,
     targetTitles: [
-      'Manager of IT', 'IT Manager', 'Web Operations', 'WebOps Manager',
-      'Website Development', 'DevOps Manager', 'DevOps Lead', 'Director of IT',
-      'Web Engineering Manager', 'Software Engineering Manager'
+      'Staff Engineer', 'Technical Program Manager', 'Staff Technical Program Manager',
+      'Website Operations', 'Web Operations', 'WebOps Manager', 'Web Manager',
+      'Website Manager', 'Web Engineering Manager', 'Forward Deploy Manager',
+      'Forward Deployed Engineer', 'Release Manager', 'Release Engineer',
+      'Release Engineering Manager', 'DevOps Manager', 'DevOps Lead',
+      'Director of DevOps', 'DevOps Engineer', 'Infrastructure Manager',
+      'Site Reliability Manager', 'Manager of IT', 'IT Manager', 'Director of IT'
     ],
     keywords: [
-      'devops', 'webops', 'web development', 'infrastructure',
-      'cloud', 'terraform', 'kubernetes', 'change control', 'it management'
+      'staff engineer', 'technical program manager', 'tpm', 'web operations',
+      'website operations', 'webops', 'web manager', 'forward deploy',
+      'forward deployed', 'release manager', 'release engineering', 'devops manager',
+      'devops', 'site reliability', 'sre', 'infrastructure', 'it management'
+    ],
+    excludedKeywords: [
+      'product manager', 'product management', 'product owner', 'product marketing',
+      'group product manager', 'director of product', 'human resources',
+      'talent acquisition', 'recruiter', 'recruiting', 'people operations',
+      'people partner', 'accounting', 'accountant', 'finance', 'financial analyst',
+      'controller', 'payroll', 'accounts payable', 'accounts receivable'
     ],
     greenhouseCompanies: [
       'webflow', 'squarespace', 'contentful', 'fastly', 'klaviyo', 'braze', 'circleci',

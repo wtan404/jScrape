@@ -4,6 +4,26 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.11.0] - 2026-11-16
+
+### Added
+- **Upstream Deployment Status Merging Architecture (`scripts/merge_applications.js`, `.github/workflows/deploy.yml`, `package.json`):**
+  - Engineered bidirectional timestamp-reconciled synchronization engine preventing upstream deployments from overwriting candidate pipeline states.
+  - Automatically unions and merges `Saved`, `Applied`, `Interviewing`, `Offer`, `Rejected`, and `Dismissed` (Dropped) job records between upstream remote servers and incoming deployment builds.
+  - Integrated pre-deploy reconciliation step into GitHub Actions workflow (`.github/workflows/deploy.yml`).
+  - Added `npm run sync:upstream` CLI command in `package.json` for one-command bidirectional synchronization.
+- **IT Role Specialization & Negative Filter Guardrails (`config.json`, `scraper.js`, `ats_scraper.js`, `dashboard/dashboard.js`, `server.js`):**
+  - Statically targeted core IT engineering and operations leadership titles: `Staff Engineer`, `Technical Program Manager` (TPM), `Website Operations` / `Web Operations` / `WebOps Manager`, `Web Manager` / `Website Manager`, `Forward Deploy Manager` / `Forward Deployed Engineer`, `Release Manager` / `Release Engineer`, `DevOps Manager` / `DevOps Lead`, `Infrastructure Manager`, and `Site Reliability Manager`.
+  - Implemented strict negative filtering rules across Greenhouse, Lever, Ashby, SmartRecruiters, RemoteOK, Remotive, Jobicy, and the dashboard feed, automatically dropping non-technical Product Managers (`Product Manager`, `Product Owner`, `Product Marketing`), HR / Talent Acquisition (`Human Resources`, `Recruiter`, `People Operations`), and Finance / Accounting (`Finance`, `Accounting`, `Controller`, `Payroll`).
+- **Command Center 2-Row 2/3 : 1/3 Search Toolbar Overhaul (`dashboard/index.html`, `dashboard/styles.css`):**
+  - Redesigned header controls into two separate inline card containers side-by-side: `.triage-search-panel` (Left) and `.triage-cta-panel` (Right).
+  - Built a 2-row, 2/3 : 1/3 grid inside the search box:
+    - Left side (2/3 width): Search input on Row 1; Sources dropdown on Row 2 directly underneath at the exact same width.
+    - Right side (1/3 width): Manual numeric salary input (`<input type="number">`) with leading currency indicator (`$`) on Row 1; Work Setups dropdown on Row 2 underneath.
+  - Housed Profile and Resume Variations CTA buttons in a distinct dedicated container side-by-side with the search module.
+
+---
+
 ## [1.10.0] - 2026-11-16
 
 ### Added
