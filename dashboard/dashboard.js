@@ -2,6 +2,10 @@
    Scrapedeez — PM Operations Command Center & Automated Submitter
    ========================================================================== */
 
+// Environment-aware path resolver for root (./) vs /dashboard/ (../) execution
+const isDashboardSubdir = /\/dashboard(?:\/|$|\/index\.html)/i.test(window.location.pathname);
+const BASE_DATA_PATH = isDashboardSubdir ? '../' : './';
+
 const CANONICAL_DEFAULT_PROFILE = {
   fullName: 'William Tan',
   email: 'wtan.web404@gmail.com',
@@ -308,7 +312,7 @@ async function syncApplicationsFromServer(serverData = null) {
     }
     if (!data) {
       try {
-        const res = await fetch(`../job_applications.json?t=${Date.now()}`);
+        const res = await fetch(`${BASE_DATA_PATH}job_applications.json?t=${Date.now()}`);
         if (res.ok) data = await res.json();
       } catch (e) {}
     }
@@ -736,7 +740,7 @@ async function fetch24hQueue() {
   const now = Date.now();
 
   try {
-    const statRes = await fetch(`../jobs_data.json?t=${Date.now()}`);
+    const statRes = await fetch(`${BASE_DATA_PATH}jobs_data.json?t=${Date.now()}`);
     if (statRes.ok) {
       const fullData = await statRes.json();
       const rawJobs = fullData.jobs || [];
@@ -1939,7 +1943,7 @@ async function loadProfileFallback() {
 
   if (!loaded) {
     try {
-      const res = await fetch(`../profile.json?t=${Date.now()}`);
+      const res = await fetch(`${BASE_DATA_PATH}profile.json?t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
         if (data && data.fullName) loaded = data;
@@ -1963,7 +1967,7 @@ async function loadProfileFallback() {
   // Tier 3: Direct static fetch of applicant_profile.json
   if (!loaded) {
     try {
-      const res = await fetch(`../applicant_profile.json?t=${Date.now()}`);
+      const res = await fetch(`${BASE_DATA_PATH}applicant_profile.json?t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
         if (data && data.fullName) {

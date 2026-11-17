@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Scrapedeez — Automated Job Scraper & Link Verifier</title>
+  <meta name="description" content="Automated hourly job scraper & link verifier for IT Management, WebOps & DevOps roles.">
+  <meta name="theme-color" content="#0c0a17" id="metaThemeColor">
+
+  <!-- Instant Anti-FOUC Theme Initialization -->
+  <script>
+    (function() {
+      try {
+        var savedTheme = localStorage.getItem('scrapedeez_theme');
+        var theme = savedTheme ? savedTheme : 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+        var meta = document.getElementById('metaThemeColor');
+        if (meta) meta.setAttribute('content', theme === 'light' ? '#f6f5fb' : '#0c0a17');
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- Subdomain Enforcement -->
+  <script>
+    if (window.location.hostname === 'synopsdigital.com' || window.location.hostname === 'www.synopsdigital.com') {
+      window.location.replace('https://j.synopsdigital.com/');
+    }
+  </script>
+
+  <!-- Cache Control Headers -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <link rel="stylesheet" href="styles.css?v=8.1">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="container header-wrap">
+      <div class="brand">
+        <img src="synops_logo.jpg" alt="Synops Logo" class="brand-logo-img">
+        <span class="brand-title">SCRAPE<span class="highlight">DEEZ</span></span>
+      </div>
+
+      <div class="header-actions">
+        <a href="./" class="btn btn-review-hub btn-sm" title="Open PM Operations Dashboard & Auto-Submitter">
+          <i data-lucide="layout-dashboard"></i>
+          <span>PM Dashboard</span>
+          <span class="hub-badge-count" id="header24hBadge">0</span>
+        </a>
+        <button class="btn btn-secondary btn-sm theme-toggle-btn" onclick="toggleTheme()" id="btnThemeToggle" aria-label="Toggle theme (Dark / Light)" title="Toggle Dark/Light Mode">
+          <i data-lucide="sun" id="themeIconSun"></i>
+          <i data-lucide="moon" id="themeIconMoon" style="display: none;"></i>
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="triggerScrapeNow()" id="btnScrape">
+          <i data-lucide="refresh-cw"></i>
+          <span>Re-Scan</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container main-layout">
+
+    <!-- Search Criteria, Min Salary & Interactive Keywords Box -->
+    <section class="active-profile-card">
+      <div class="profile-card-header">
+        <div class="profile-info">
+          <span class="profile-label">JOB PREFERENCES</span>
+          <div class="profile-name-row">
+            <h2>Search Criteria & Target Roles</h2>
+          </div>
+        </div>
+
+        <!-- Minimum Acceptable Salary Criteria Container -->
+        <div class="profile-salary-criteria" id="profileSalaryCriteriaContainer">
+          <!-- Dynamic Min Salary Badge/Input -->
+        </div>
+      </div>
+
+      <!-- Active Keywords & Role Tags with Inline Edit Button -->
+      <div class="profile-keywords-wrap" id="profileKeywordsContainer">
+        <div class="kw-header">
+          <div class="kw-title-row">
+            <span class="kw-label">Target Job Titles & Search Keywords:</span>
+            <button class="btn btn-secondary btn-xs" onclick="startShopifyTagEdit()" id="btnEditCriteria">
+              <i data-lucide="edit-3"></i>
+              <span>Edit Keywords</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Rendered Tags List -->
+        <div class="kw-tags-list" id="activeKeywordsList">
+          <!-- Dynamic Tags -->
+        </div>
+
+        <!-- Shopify-Style Tag Input & Save Bar (Hidden until Edit Mode Active) -->
+        <div class="shopify-tag-input-bar" id="shopifyTagInputBar" style="display: none;">
+          <div class="shopify-input-wrap">
+            <i data-lucide="plus" class="add-tag-icon"></i>
+            <input type="text" id="shopifyTagInput" placeholder="Type keyword & press Enter..." onkeydown="handleShopifyTagInput(event)">
+          </div>
+          <div class="shopify-actions">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="cancelShopifyTagEdit()">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="saveShopifyTags()" id="btnSaveTags">
+              <i data-lucide="save"></i>
+              <span>Save & Re-Scan</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Telemetry & Location Controls Row (3 Cards) -->
+    <section class="summary-bar">
+      <!-- Box 1: Active Verified Postings -->
+      <div class="summary-card">
+        <div class="summary-metric" id="totalMatchesCount">0</div>
+        <div class="summary-label">Active Verified Postings (&lt; 30 Days)</div>
+      </div>
+
+      <!-- Box 2: Live Last Scan Status Badge -->
+      <div class="summary-card timer-card">
+        <div class="summary-label mb-2">Last Scan Status:</div>
+        <div class="cron-status" id="elapsedTimerBadge" title="Time elapsed since last scan & verification">
+          <span class="pulse-dot"></span>
+          <span id="elapsedTimerText">Refreshed just now</span>
+        </div>
+      </div>
+
+      <!-- Box 3: 2-Row Filter Box Layout -->
+      <div class="summary-card geo-card">
+        <div class="geo-controls-wrap">
+          <!-- Row 1: Zip & Distance Range -->
+          <div class="geo-row-1">
+            <div class="geo-group">
+              <label for="zipInput"><i data-lucide="map-pin"></i> Zip Code: <span id="geoFeedbackPill" class="geo-feedback-pill"></span></label>
+              <input type="text" id="zipInput" placeholder="US Zip..." maxlength="5" oninput="handleZipInput()">
+            </div>
+
+            <div class="geo-group">
+              <label for="radiusSelect"><i data-lucide="compass"></i> Radius:</label>
+              <select id="radiusSelect" onchange="filterJobs()">
+                <option value="any">Any Distance</option>
+                <option value="25">25 Miles</option>
+                <option value="50">50 Miles</option>
+                <option value="100">100 Miles</option>
+                <option value="250">250 Miles</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Row 2: Work Setup Checkboxes & Apply Button (Bottom Right) -->
+          <div class="geo-row-2">
+            <div class="geo-group setup-checkboxes-group">
+              <label><i data-lucide="briefcase"></i> Work Setup:</label>
+              <div class="setup-checkboxes">
+                <label class="chk-pill">
+                  <input type="checkbox" id="chkRemote" checked onchange="filterJobs()">
+                  <span>🟢 Remote</span>
+                </label>
+                <label class="chk-pill">
+                  <input type="checkbox" id="chkHybrid" checked onchange="filterJobs()">
+                  <span>🔵 Hybrid</span>
+                </label>
+                <label class="chk-pill">
+                  <input type="checkbox" id="chkOnsite" checked onchange="filterJobs()">
+                  <span>🟠 Onsite</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="geo-group geo-btn-group">
+              <button type="button" class="btn btn-primary btn-xs" onclick="filterJobs()" id="btnApplyGeoFilters">
+                <i data-lucide="filter"></i>
+                <span>Apply Filters</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Search, Source & Sort Controls Row -->
+    <section class="controls-row">
+      <div class="search-box">
+        <i data-lucide="search"></i>
+        <input type="text" id="searchInput" placeholder="Filter active verified results by company, location, or keyword..." oninput="filterJobs()">
+      </div>
+
+      <div class="sort-and-source">
+        <!-- Sort By Control (Time Posted, Salary, Distance) -->
+        <select id="sortSelect" class="select-control" onchange="filterJobs()">
+          <option value="time">Sort: Time Posted (Newest First)</option>
+          <option value="distance">Sort: Distance (Closest First)</option>
+          <option value="salary">Sort: Salary (Highest First)</option>
+        </select>
+
+        <select id="sourceSelect" class="select-control" onchange="filterJobs()">
+          <option value="all">All Sources (ATS + Google + Tech Feeds)</option>
+          <option value="new">Newly Identified Only</option>
+          <option value="ats">ATS Boards (Greenhouse / Lever / Ashby / SR)</option>
+          <option value="feeds">Tech Feeds (RemoteOK, WWR, Remotive, Jobicy)</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Jobs Results Feed Grid -->
+    <section class="jobs-section">
+      <div class="jobs-list" id="jobsList">
+        <div class="loading-state">
+          <i data-lucide="loader-2" class="spin"></i>
+          <p>Verifying active job postings (&lt; 30 days old) & running scraper pipeline...</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <div class="container footer-wrap">
+      <p>&copy; <span id="year">2026</span> Scrapedeez Hourly Job Engine. Auto-Pruning Link Verification & IT Management Tracker.</p>
+    </div>
+  </footer>
+
+  <script src="zip3_centroids.js?v=1.0"></script>
+  <script src="main.js?v=10.0"></script>
+</body>
+</html>

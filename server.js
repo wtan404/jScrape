@@ -292,11 +292,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// Dedicated /dashboard path handlers
-app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
+// Dedicated /dashboard route handlers: redirect to canonical root dashboard
 app.get(['/dashboard', '/dashboard/'], (req, res) => {
-  res.sendFile(path.join(__dirname, 'dashboard', 'index.html'));
+  res.redirect(301, '/');
 });
+app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
 
 app.use(express.static(__dirname));
 

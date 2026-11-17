@@ -4,6 +4,30 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.17.0] - 2026-11-16
+
+### Added
+- **Promoted PM Operations Dashboard to Primary Website Index (`index.html`, `dashboard.js`):**
+  - Replaced the primary website landing page at root (`index.html`) with the full PM Operations Command Center interface.
+  - Enabled immediate access to the 14-day retention hotlist, multi-queue triage (Active List, Applied & Tracking, Dismissed / Hidden), tailored resume assignment, automated application submission engine, and manual URL metadata scanner directly from the root domain (`https://j.synopsdigital.com/`).
+- **Legacy Search Criteria Archival (`search.html`):**
+  - Archived the original keyword criteria editing and public listing board to `search.html`.
+  - Added dedicated "Search Config" navigation button in the dashboard header linking to `search.html`, ensuring continuous access to Shopify-tag keyword editing and profile search preferences.
+- **Environment & Path-Aware Multi-Context Data Fetching (`dashboard.js`, `dashboard/dashboard.js`):**
+  - Implemented dynamic path resolver (`BASE_DATA_PATH = isDashboardSubdir ? '../' : './'`) to automatically resolve static JSON feeds (`jobs_data.json`, `job_applications.json`, `profile.json`, `applicant_profile.json`) regardless of whether the dashboard is loaded from root (`/`) or subdirectory (`/dashboard/`).
+  - Added brand logo (`synops_logo.jpg`) to the dashboard header for visual alignment and automated CI/CD asset crawler validation.
+
+### Changed
+- **Subdirectory Redirection & Route Canonicalization (`server.js`, `dashboard.html`, `dashboard/index.html`):**
+  - Updated `dashboard.html` to redirect directly to the primary root (`./`).
+  - Configured `dashboard/index.html` with instant client-side redirection to canonical root (`../`).
+  - Configured Express route handler in `server.js` to issue HTTP 301 Permanent Redirects from `/dashboard` and `/dashboard/` to `/`.
+- **Deployment Manifest & Version Bump (`.cpanel.yml`, `package.json`):**
+  - Added `dashboard.js` and `search.html` to `.cpanel.yml` deployment tasks.
+  - Bumped project version to `v1.17.0`.
+
+---
+
 ## [1.16.0] - 2026-11-16
 
 ### Added

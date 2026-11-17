@@ -4,6 +4,8 @@ deployment:
     - export DEPLOYPATH=/home/synopsdi/public_html/list/
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/cp -R index.html $DEPLOYPATH
+    - /bin/cp -R search.html $DEPLOYPATH
+    - /bin/cp -R dashboard.js $DEPLOYPATH
     - /bin/cp -R main.js $DEPLOYPATH
     - /bin/cp -R dashboard.html $DEPLOYPATH
     - /bin/mkdir -p $DEPLOYPATH/dashboard
