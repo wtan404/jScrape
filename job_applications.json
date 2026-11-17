@@ -1,4 +1,1064 @@
 {
-  "applied": {},
-  "dismissed": {}
+  "applied": {
+    "gh-cockroachlabs-8383567": {
+      "jobId": "gh-cockroachlabs-8383567",
+      "job": {
+        "id": "gh-cockroachlabs-8383567",
+        "source": "Greenhouse (COCKROACHLABS)",
+        "title": "Escalation Engineer",
+        "company": "Cockroachlabs",
+        "location": "Remote, United States",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://www.cockroachlabs.com/careers/job/?gh_jid=8383567",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T12:00:24-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:18:14.611Z"
+      },
+      "status": "Applied",
+      "resumeId": "res_it_corp_lead",
+      "resumeLabel": "Corporate / IT Lead & Operations",
+      "notes": "Marked via PM Operations Dashboard",
+      "appliedAt": "2026-11-16T19:36:50.913Z",
+      "updatedAt": "2026-11-16T19:36:51Z"
+    },
+    "gh-pinterest-8328631": {
+      "jobId": "gh-pinterest-8328631",
+      "job": {
+        "id": "gh-pinterest-8328631",
+        "source": "Greenhouse (PINTEREST)",
+        "title": "Staff Technical Program Manager",
+        "company": "Pinterest",
+        "location": "San Francisco, CA, US; Remote, US",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://www.pinterestcareers.com/jobs/?gh_jid=8328631",
+        "matchedKeyword": "TECHNICAL PROGRAM MANAGER",
+        "date": "2026-11-16T11:40:05-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:18:14.612Z"
+      },
+      "status": "Applied",
+      "resumeId": "res_it_corp_lead",
+      "resumeLabel": "Corporate / IT Lead & Operations",
+      "notes": "Marked via PM Operations Dashboard",
+      "appliedAt": "2026-11-16T19:38:14.978Z",
+      "updatedAt": "2026-11-16T19:38:15Z"
+    },
+    "wwr-aHR0cHM6Ly": {
+      "jobId": "wwr-aHR0cHM6Ly",
+      "job": {
+        "id": "wwr-aHR0cHM6Ly",
+        "source": "WeWorkRemotely Feed",
+        "title": "Senior DevOps Engineer",
+        "company": "EPAM Systems",
+        "location": "Remote",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://weworkremotely.com/remote-jobs/epam-systems-senior-devops-engineer",
+        "matchedKeyword": "DEVOPS ENGINEER",
+        "date": "2026-11-16T18:32:34.000Z",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:53:09.819Z"
+      },
+      "status": "Applied",
+      "resumeId": "res_it_corp_lead",
+      "resumeLabel": "Corporate / IT Lead & Operations",
+      "notes": "Batch application recorded via Command Center",
+      "appliedAt": "2026-11-16T20:04:07Z",
+      "updatedAt": "2026-11-16T20:04:07Z"
+    },
+    "gh-vercel-6230763004": {
+      "jobId": "gh-vercel-6230763004",
+      "job": {
+        "id": "gh-vercel-6230763004",
+        "source": "Greenhouse (VERCEL)",
+        "title": "Customer Support Engineer",
+        "company": "Vercel",
+        "location": "Remote - Australia",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://job-boards.greenhouse.io/vercel/jobs/6230763004",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T11:38:18-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:53:09.818Z"
+      },
+      "status": "Applied",
+      "resumeId": "res_it_corp_lead",
+      "resumeLabel": "Corporate / IT Lead & Operations",
+      "notes": "Marked via PM Operations Dashboard",
+      "appliedAt": "2026-11-16T20:16:11.580Z",
+      "updatedAt": "2026-11-16T20:16:12Z"
+    },
+    "gh-affirm-8199159003": {
+      "jobId": "gh-affirm-8199159003",
+      "job": {
+        "id": "gh-affirm-8199159003",
+        "source": "Greenhouse (AFFIRM)",
+        "title": "Senior Technical Program Manager",
+        "company": "Affirm",
+        "location": "Remote Canada",
+        "workType": "Remote",
+        "salary": "$128k - $188k",
+        "url": "https://job-boards.greenhouse.io/affirm/jobs/8199159003",
+        "matchedKeyword": "TECHNICAL PROGRAM MANAGER",
+        "date": "2026-11-13T13:58:32-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T21:27:54.190Z"
+      },
+      "status": "Applied",
+      "resumeId": "res_it_corp_lead",
+      "resumeLabel": "Corporate / IT Lead & Operations",
+      "notes": "Marked via PM Operations Dashboard",
+      "appliedAt": "2026-11-16T22:02:14.748Z",
+      "updatedAt": "2026-11-16T22:02:14Z"
+    },
+    "jobicy-162424": {
+      "jobId": "jobicy-162424",
+      "job": {
+        "id": "jobicy-162424",
+        "source": "Jobicy Feed",
+        "title": "Engineering Lead, Clinical Operations",
+        "company": "Clover Health",
+        "location": "USA",
+        "workType": "Onsite",
+        "url": "https://jobicy.com/jobs/162424-engineering-lead-clinical-operations",
+        "salary": "$223k - $290k",
+        "matchedKeyword": "SEARCH MATCH",
+        "date": "2026-11-15T12:40:38.000Z",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.298Z"
+      },
+      "status": "Applied",
+      "resumeId": "res_seed_devops",
+      "resumeLabel": "DevOps & Cloud Infrastructure Lead",
+      "appliedAt": "2026-11-16T05:17:25.357Z",
+      "notes": "Marked via PM Operations Dashboard"
+    },
+    "gh-samsara-8179593": {
+      "jobId": "gh-samsara-8179593",
+      "job": {
+        "id": "gh-samsara-8179593",
+        "source": "Greenhouse (SAMSARA)",
+        "title": "Senior Web Program Manager",
+        "company": "Samsara",
+        "location": "Remote - US",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://www.samsara.com/company/careers/roles/8179593?gh_jid=8179593",
+        "matchedKeyword": "WEBSITE DEVELOPMENT",
+        "date": "2026-11-15T21:02:14-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.283Z"
+      },
+      "status": "Applied",
+      "resumeId": "res_seed_devops",
+      "resumeLabel": "DevOps & Cloud Infrastructure Lead",
+      "appliedAt": "2026-11-16T05:35:52.624Z",
+      "notes": "Marked via PM Operations Dashboard"
+    },
+    "gh-affirm-8199157003": {
+      "jobId": "gh-affirm-8199157003",
+      "job": {
+        "id": "gh-affirm-8199157003",
+        "source": "Greenhouse (AFFIRM)",
+        "title": "Senior Technical Program Manager",
+        "company": "Affirm",
+        "location": "Remote US",
+        "workType": "Remote",
+        "salary": "$165k - $225k",
+        "url": "https://job-boards.greenhouse.io/affirm/jobs/8199157003",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-13T13:58:30-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.295Z"
+      },
+      "status": "Applied",
+      "resumeId": "res_seed_devops",
+      "resumeLabel": "DevOps & Cloud Infrastructure Lead",
+      "appliedAt": "2026-11-16T05:40:35.059Z",
+      "notes": "Marked via PM Operations Dashboard"
+    }
+  },
+  "dismissed": {
+    "gh-samsara-8288505": {
+      "jobId": "gh-samsara-8288505",
+      "job": {
+        "id": "gh-samsara-8288505",
+        "source": "Greenhouse (SAMSARA)",
+        "title": "People Partner",
+        "company": "Samsara",
+        "location": "Remote - Canada",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://www.samsara.com/company/careers/roles/8288505?gh_jid=8288505",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T11:17:18-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T16:34:31.643Z"
+      },
+      "dismissedAt": "2026-11-16T17:14:13.726Z",
+      "reason": "Irrelevant"
+    },
+    "gh-carta-7805379003": {
+      "jobId": "gh-carta-7805379003",
+      "job": {
+        "id": "gh-carta-7805379003",
+        "source": "Greenhouse (CARTA)",
+        "title": "Legal Director, Contracts ",
+        "company": "Carta",
+        "location": "Denver, CO; Sandy, UT; Seattle, WA; Hamilton Township, NJ; Toronto, CA",
+        "workType": "Onsite",
+        "salary": "$171k - $214k",
+        "url": "https://job-boards.greenhouse.io/carta/jobs/7805379003",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T11:15:44-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T16:34:31.643Z"
+      },
+      "dismissedAt": "2026-11-16T17:14:18.561Z",
+      "reason": "Irrelevant"
+    },
+    "gh-vercel-5752956004": {
+      "jobId": "gh-vercel-5752956004",
+      "job": {
+        "id": "gh-vercel-5752956004",
+        "source": "Greenhouse (VERCEL)",
+        "title": "Account Executive-Startups, EMEA (French or German Speaker)",
+        "company": "Vercel",
+        "location": "Hybrid - London",
+        "workType": "Hybrid",
+        "salary": null,
+        "url": "https://job-boards.greenhouse.io/vercel/jobs/5752956004",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T10:57:43-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T16:34:31.648Z"
+      },
+      "dismissedAt": "2026-11-16T17:14:28.865Z",
+      "reason": "Irrelevant"
+    },
+    "gh-vercel-6231864004": {
+      "jobId": "gh-vercel-6231864004",
+      "job": {
+        "id": "gh-vercel-6231864004",
+        "source": "Greenhouse (VERCEL)",
+        "title": "Account Executive, Commercial",
+        "company": "Vercel",
+        "location": "Remote - Germany",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://job-boards.greenhouse.io/vercel/jobs/6231864004",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T10:51:27-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T16:34:31.648Z"
+      },
+      "dismissedAt": "2026-11-16T17:14:37.905Z",
+      "reason": "Irrelevant"
+    },
+    "gh-carta-8046185003": {
+      "jobId": "gh-carta-8046185003",
+      "job": {
+        "id": "gh-carta-8046185003",
+        "source": "Greenhouse (CARTA)",
+        "title": "Loan Operations Manager",
+        "company": "Carta",
+        "location": "San Francisco, CA; New York, NY; Sandy, UT; Seattle, WA; Hamilton, NJ; Dallas, TX",
+        "workType": "Onsite",
+        "salary": "$154k - $217k",
+        "url": "https://job-boards.greenhouse.io/carta/jobs/8046185003",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T10:46:30-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T16:34:31.643Z"
+      },
+      "dismissedAt": "2026-11-16T17:14:41.309Z",
+      "reason": "Irrelevant"
+    },
+    "gh-vercel-6222271004": {
+      "jobId": "gh-vercel-6222271004",
+      "job": {
+        "id": "gh-vercel-6222271004",
+        "source": "Greenhouse (VERCEL)",
+        "title": "Senior Deal Desk Analyst, EMEA",
+        "company": "Vercel",
+        "location": "Hybrid - London",
+        "workType": "Hybrid",
+        "salary": "£65k - £85k",
+        "url": "https://job-boards.greenhouse.io/vercel/jobs/6222271004",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T11:20:59-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T16:34:31.648Z"
+      },
+      "dismissedAt": "2026-11-16T17:36:51.164Z",
+      "reason": "Irrelevant"
+    },
+    "gh-vercel-5999792004": {
+      "jobId": "gh-vercel-5999792004",
+      "job": {
+        "id": "gh-vercel-5999792004",
+        "source": "Greenhouse (VERCEL)",
+        "title": "Account Executive, Majors",
+        "company": "Vercel",
+        "location": "Hybrid - London",
+        "workType": "Hybrid",
+        "salary": "$200k - $270k",
+        "url": "https://job-boards.greenhouse.io/vercel/jobs/5999792004",
+        "matchedKeyword": "WEB DEVELOPMENT",
+        "date": "2026-11-16T11:12:32-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T16:34:31.648Z"
+      },
+      "dismissedAt": "2026-11-16T17:38:11.681Z",
+      "reason": "Irrelevant"
+    },
+    "gh-stripe-8368652": {
+      "jobId": "gh-stripe-8368652",
+      "job": {
+        "id": "gh-stripe-8368652",
+        "source": "Greenhouse (STRIPE)",
+        "title": "Technical Account Manager, Spanish Speaking",
+        "company": "Stripe",
+        "location": "Madrid, Spain",
+        "workType": "Onsite",
+        "salary": null,
+        "url": "https://stripe.com/jobs/search?gh_jid=8368652",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T11:05:44-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T16:34:31.651Z"
+      },
+      "dismissedAt": "2026-11-16T17:38:18.515Z",
+      "reason": "Irrelevant"
+    },
+    "gh-bitwarden-8202682003": {
+      "jobId": "gh-bitwarden-8202682003",
+      "job": {
+        "id": "gh-bitwarden-8202682003",
+        "source": "Greenhouse (BITWARDEN)",
+        "title": "Public Sector - Account Executive",
+        "company": "Bitwarden",
+        "location": "Remote, U.S.",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://bitwarden.com/careers/8202682003/?gh_jid=8202682003",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T13:40:19-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:18:14.611Z"
+      },
+      "reason": "Irrelevant",
+      "dismissedAt": "2026-11-16T19:36:41.544Z",
+      "updatedAt": "2026-11-16T19:36:41Z"
+    },
+    "gh-stripe-8175661": {
+      "jobId": "gh-stripe-8175661",
+      "job": {
+        "id": "gh-stripe-8175661",
+        "source": "Greenhouse (STRIPE)",
+        "title": "Partner Marketing Manager, Online & Regional Events",
+        "company": "Stripe",
+        "location": "Seattle or San Francisco or Chicago or New York City or US-Remote",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://stripe.com/jobs/search?gh_jid=8175661",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T12:10:45-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:18:14.612Z"
+      },
+      "reason": "Irrelevant",
+      "dismissedAt": "2026-11-16T19:36:48.551Z",
+      "updatedAt": "2026-11-16T19:36:48Z"
+    },
+    "gh-cloudflare-8368421": {
+      "jobId": "gh-cloudflare-8368421",
+      "job": {
+        "id": "gh-cloudflare-8368421",
+        "source": "Greenhouse (CLOUDFLARE)",
+        "title": "Senior Linux Engineer",
+        "company": "Cloudflare",
+        "location": "Hybrid",
+        "workType": "Hybrid",
+        "salary": null,
+        "url": "https://boards.greenhouse.io/cloudflare/jobs/8368421?gh_jid=8368421",
+        "matchedKeyword": "RELEASE ENGINEER",
+        "date": "2026-11-16T11:40:14-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:18:14.611Z"
+      },
+      "reason": "Irrelevant",
+      "dismissedAt": "2026-11-16T19:36:55.548Z",
+      "updatedAt": "2026-11-16T19:36:55Z"
+    },
+    "gh-vercel-5557835004": {
+      "jobId": "gh-vercel-5557835004",
+      "job": {
+        "id": "gh-vercel-5557835004",
+        "source": "Greenhouse (VERCEL)",
+        "title": "Business Development Representative, UK&I",
+        "company": "Vercel",
+        "location": "Hybrid - London",
+        "workType": "Hybrid",
+        "salary": null,
+        "url": "https://job-boards.greenhouse.io/vercel/jobs/5557835004",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T11:01:56-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:18:14.611Z"
+      },
+      "reason": "Irrelevant",
+      "dismissedAt": "2026-11-16T19:38:24.664Z",
+      "updatedAt": "2026-11-16T19:38:24Z"
+    },
+    "gh-cloudflare-8184838": {
+      "jobId": "gh-cloudflare-8184838",
+      "job": {
+        "id": "gh-cloudflare-8184838",
+        "source": "Greenhouse (CLOUDFLARE)",
+        "title": "Senior Software Engineer, Distributed Systems",
+        "company": "Cloudflare",
+        "location": "Hybrid",
+        "workType": "Hybrid",
+        "salary": "€66k - €91k",
+        "url": "https://boards.greenhouse.io/cloudflare/jobs/8184838?gh_jid=8184838",
+        "matchedKeyword": "SRE",
+        "date": "2026-11-16T08:14:29-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:18:14.611Z"
+      },
+      "reason": "Irrelevant",
+      "dismissedAt": "2026-11-16T19:38:48.650Z",
+      "updatedAt": "2026-11-16T19:38:48Z"
+    },
+    "gh-datadog-5511968": {
+      "jobId": "gh-datadog-5511968",
+      "job": {
+        "id": "gh-datadog-5511968",
+        "source": "Greenhouse (DATADOG)",
+        "title": "Strategic Account Executive (DACH)",
+        "company": "Datadog",
+        "location": "Austria, Remote ; Germany, Remote; Poland, Remote",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://careers.datadoghq.com/detail/5511968/?gh_jid=5511968",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-15T06:00:36-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:18:14.611Z"
+      },
+      "reason": "Irrelevant",
+      "dismissedAt": "2026-11-16T19:40:20.781Z",
+      "updatedAt": "2026-11-16T19:40:21Z"
+    },
+    "ashby-openai-103402a5-6391-4cf9-8a87-634695303f04": {
+      "jobId": "ashby-openai-103402a5-6391-4cf9-8a87-634695303f04",
+      "job": {
+        "id": "ashby-openai-103402a5-6391-4cf9-8a87-634695303f04",
+        "source": "Ashby (OPENAI)",
+        "title": "Head of India Policy, Global Affairs",
+        "company": "Openai",
+        "location": "Delhi, India",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://jobs.ashbyhq.com/openai/103402a5-6391-4cf9-8a87-634695303f04/application",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T09:06:20.405+00:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:18:14.612Z"
+      },
+      "reason": "Irrelevant",
+      "dismissedAt": "2026-11-16T19:52:24.823Z",
+      "updatedAt": "2026-11-16T19:52:25Z"
+    },
+    "gh-datadog-7244867": {
+      "jobId": "gh-datadog-7244867",
+      "job": {
+        "id": "gh-datadog-7244867",
+        "source": "Greenhouse (DATADOG)",
+        "title": "Major Account Manager (UK)",
+        "company": "Datadog",
+        "location": "United Kingdom, Remote",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://careers.datadoghq.com/detail/7244867/?gh_jid=7244867",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T03:17:05-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:18:14.611Z"
+      },
+      "reason": "Irrelevant",
+      "dismissedAt": "2026-11-16T19:59:12.675Z",
+      "updatedAt": "2026-11-16T19:59:13Z"
+    },
+    "gh-cloudflare-8223319": {
+      "jobId": "gh-cloudflare-8223319",
+      "job": {
+        "id": "gh-cloudflare-8223319",
+        "source": "Greenhouse (CLOUDFLARE)",
+        "title": "Principal Customer Engineer - Toronto Canada",
+        "company": "Cloudflare",
+        "location": "Hybrid",
+        "workType": "Hybrid",
+        "salary": "$214k - $336k",
+        "url": "https://boards.greenhouse.io/cloudflare/jobs/8223319?gh_jid=8223319",
+        "matchedKeyword": "FORWARD DEPLOYED ENGINEER",
+        "date": "2026-11-16T12:40:00-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:53:09.817Z"
+      },
+      "reason": "Uninterested",
+      "dismissedAt": "2026-11-16T19:59:37.329Z",
+      "updatedAt": "2026-11-16T19:59:37Z"
+    },
+    "gh-stripe-8382000": {
+      "jobId": "gh-stripe-8382000",
+      "job": {
+        "id": "gh-stripe-8382000",
+        "source": "Greenhouse (STRIPE)",
+        "title": "Head of Enterprise Sales, West",
+        "company": "Stripe",
+        "location": "San Francisco, Seattle, Chicago or Remote",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://stripe.com/jobs/search?gh_jid=8382000",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T12:28:20-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:53:09.818Z"
+      },
+      "reason": "Irrelevant",
+      "dismissedAt": "2026-11-16T20:00:07.366Z",
+      "updatedAt": "2026-11-16T20:00:07Z"
+    },
+    "gh-cloudflare-8223359": {
+      "jobId": "gh-cloudflare-8223359",
+      "job": {
+        "id": "gh-cloudflare-8223359",
+        "source": "Greenhouse (CLOUDFLARE)",
+        "title": "Senior Customer Engineer - Toronto Canada",
+        "company": "Cloudflare",
+        "location": "Hybrid",
+        "workType": "Hybrid",
+        "salary": "$189k - $297k",
+        "url": "https://boards.greenhouse.io/cloudflare/jobs/8223359?gh_jid=8223359",
+        "matchedKeyword": "FORWARD DEPLOYED ENGINEER",
+        "date": "2026-11-16T12:45:36-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:53:09.818Z"
+      },
+      "reason": "Uninterested",
+      "dismissedAt": "2026-11-16T20:00:13.933Z",
+      "updatedAt": "2026-11-16T20:00:13Z"
+    },
+    "gh-cloudflare-8226556": {
+      "jobId": "gh-cloudflare-8226556",
+      "job": {
+        "id": "gh-cloudflare-8226556",
+        "source": "Greenhouse (CLOUDFLARE)",
+        "title": "Senior Customer Engineer - Toronto, Canada",
+        "company": "Cloudflare",
+        "location": "Hybrid",
+        "workType": "Hybrid",
+        "salary": "$189k - $297k",
+        "url": "https://boards.greenhouse.io/cloudflare/jobs/8226556?gh_jid=8226556",
+        "matchedKeyword": "FORWARD DEPLOYED ENGINEER",
+        "date": "2026-11-16T12:46:38-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:53:09.818Z"
+      },
+      "reason": "Uninterested",
+      "dismissedAt": "2026-11-16T20:00:15.509Z",
+      "updatedAt": "2026-11-16T20:00:15Z"
+    },
+    "gh-stripe-8382002": {
+      "jobId": "gh-stripe-8382002",
+      "job": {
+        "id": "gh-stripe-8382002",
+        "source": "Greenhouse (STRIPE)",
+        "title": "Head of Enterprise Sales, Marketplaces",
+        "company": "Stripe",
+        "location": "US-Chicago, US-Seattle, US-San Francisco, US-Remote",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://stripe.com/jobs/search?gh_jid=8382002",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-13T15:39:50-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:53:09.818Z"
+      },
+      "reason": "Irrelevant",
+      "dismissedAt": "2026-11-16T20:00:26.289Z",
+      "updatedAt": "2026-11-16T20:00:26Z"
+    },
+    "gh-cloudflare-8179387": {
+      "jobId": "gh-cloudflare-8179387",
+      "job": {
+        "id": "gh-cloudflare-8179387",
+        "source": "Greenhouse (CLOUDFLARE)",
+        "title": "Principal Solutions Architect, APJC (Developer Platform) - Mandarin Speaking",
+        "company": "Cloudflare",
+        "location": "Hybrid",
+        "workType": "Hybrid",
+        "salary": null,
+        "url": "https://boards.greenhouse.io/cloudflare/jobs/8179387?gh_jid=8179387",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-14T02:15:15-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:53:09.817Z"
+      },
+      "reason": "Uninterested",
+      "dismissedAt": "2026-11-16T20:00:59.192Z",
+      "updatedAt": "2026-11-16T20:00:59Z"
+    },
+    "gh-datadog-5742916": {
+      "jobId": "gh-datadog-5742916",
+      "job": {
+        "id": "gh-datadog-5742916",
+        "source": "Greenhouse (DATADOG)",
+        "title": "Strategic Account Executive (Italy)",
+        "company": "Datadog",
+        "location": "Italy, Remote",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://careers.datadoghq.com/detail/5742916/?gh_jid=5742916",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T03:16:44-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:53:09.818Z"
+      },
+      "reason": "Uninterested",
+      "dismissedAt": "2026-11-16T20:01:01.838Z",
+      "updatedAt": "2026-11-16T20:01:01Z"
+    },
+    "gh-cloudflare-8169689": {
+      "jobId": "gh-cloudflare-8169689",
+      "job": {
+        "id": "gh-cloudflare-8169689",
+        "source": "Greenhouse (CLOUDFLARE)",
+        "title": "Senior Solutions Architect, APJC (Developer Platform) - India Market",
+        "company": "Cloudflare",
+        "location": "Hybrid",
+        "workType": "Hybrid",
+        "salary": null,
+        "url": "https://boards.greenhouse.io/cloudflare/jobs/8169689?gh_jid=8169689",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-14T02:43:52-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:53:09.818Z"
+      },
+      "reason": "Uninterested",
+      "dismissedAt": "2026-11-16T20:01:05.334Z",
+      "updatedAt": "2026-11-16T20:01:05Z"
+    },
+    "gh-cloudflare-8383781": {
+      "jobId": "gh-cloudflare-8383781",
+      "job": {
+        "id": "gh-cloudflare-8383781",
+        "source": "Greenhouse (CLOUDFLARE)",
+        "title": "Director, Growth Sales (AI & Digital Natives)",
+        "company": "Cloudflare",
+        "location": "Hybrid",
+        "workType": "Hybrid",
+        "salary": "$378k - $496k",
+        "url": "https://boards.greenhouse.io/cloudflare/jobs/8383781?gh_jid=8383781",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-13T18:08:31-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T19:53:09.817Z"
+      },
+      "reason": "Irrelevant",
+      "dismissedAt": "2026-11-16T20:03:32.013Z",
+      "updatedAt": "2026-11-16T20:03:32Z"
+    },
+    "gh-cloudflare-8223736": {
+      "jobId": "gh-cloudflare-8223736",
+      "job": {
+        "id": "gh-cloudflare-8223736",
+        "source": "Greenhouse (CLOUDFLARE)",
+        "title": "Senior Customer Engineer - Vancouver, BC",
+        "company": "Cloudflare",
+        "location": "Hybrid",
+        "workType": "Hybrid",
+        "salary": "$189k - $297k",
+        "url": "https://boards.greenhouse.io/cloudflare/jobs/8223736?gh_jid=8223736",
+        "matchedKeyword": "FORWARD DEPLOYED ENGINEER",
+        "date": "2026-11-16T12:48:17-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T20:23:33.650Z"
+      },
+      "reason": "Irrelevant",
+      "dismissedAt": "2026-11-16T20:48:28.129Z",
+      "updatedAt": "2026-11-16T20:48:28Z"
+    },
+    "gh-cloudflare-7774167": {
+      "jobId": "gh-cloudflare-7774167",
+      "job": {
+        "id": "gh-cloudflare-7774167",
+        "source": "Greenhouse (CLOUDFLARE)",
+        "title": "People Team: Software Engineer Intern (Winter 2027)",
+        "company": "Cloudflare",
+        "location": "Hybrid",
+        "workType": "Hybrid",
+        "salary": null,
+        "url": "https://boards.greenhouse.io/cloudflare/jobs/7774167?gh_jid=7774167",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-13T16:47:45-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T20:23:33.650Z"
+      },
+      "reason": "Irrelevant",
+      "dismissedAt": "2026-11-16T20:48:49.480Z",
+      "updatedAt": "2026-11-16T20:48:49Z"
+    },
+    "gh-cloudflare-8109303": {
+      "jobId": "gh-cloudflare-8109303",
+      "job": {
+        "id": "gh-cloudflare-8109303",
+        "source": "Greenhouse (CLOUDFLARE)",
+        "title": "Senior Territory Account Executive- OH",
+        "company": "Cloudflare",
+        "location": "Hybrid",
+        "workType": "Hybrid",
+        "salary": null,
+        "url": "https://boards.greenhouse.io/cloudflare/jobs/8109303?gh_jid=8109303",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T15:29:29-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T21:27:54.188Z"
+      },
+      "reason": "Irrelevant",
+      "dismissedAt": "2026-11-16T22:00:52.404Z",
+      "updatedAt": "2026-11-16T22:00:51Z"
+    },
+    "gh-reddit-8189899": {
+      "jobId": "gh-reddit-8189899",
+      "job": {
+        "id": "gh-reddit-8189899",
+        "source": "Greenhouse (REDDIT)",
+        "title": "Global Indirect Tax Manager",
+        "company": "Reddit",
+        "location": "Remote - Ireland",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://job-boards.greenhouse.io/reddit/jobs/8189899",
+        "matchedKeyword": "COMPLIANCE",
+        "date": "2026-11-15T07:15:25-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.290Z"
+      },
+      "dismissedAt": "2026-11-16T05:18:13.699Z",
+      "reason": "Irrelevant"
+    },
+    "jobicy-162350": {
+      "jobId": "jobicy-162350",
+      "job": {
+        "id": "jobicy-162350",
+        "source": "Jobicy Feed",
+        "title": "Director of Product, Clover R&D",
+        "company": "Clover Health",
+        "location": "USA",
+        "workType": "Onsite",
+        "url": "https://jobicy.com/jobs/162350-director-of-product-clover-rd",
+        "salary": "$207k - $270k",
+        "matchedKeyword": "SEARCH MATCH",
+        "date": "2026-11-15T10:41:18.000Z",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.298Z"
+      },
+      "dismissedAt": "2026-11-16T05:18:23.233Z",
+      "reason": "Irrelevant"
+    },
+    "ashby-openai-1ea4eda8-b420-4391-bb58-cd21e189a863": {
+      "jobId": "ashby-openai-1ea4eda8-b420-4391-bb58-cd21e189a863",
+      "job": {
+        "id": "ashby-openai-1ea4eda8-b420-4391-bb58-cd21e189a863",
+        "source": "Ashby (OPENAI)",
+        "title": "Enterprise Sales Manager, Healthcare & Life Sciences",
+        "company": "Openai",
+        "location": "San Francisco",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://jobs.ashbyhq.com/openai/1ea4eda8-b420-4391-bb58-cd21e189a863/application",
+        "matchedKeyword": "CLOUD",
+        "date": "2026-11-14T05:08:19.885+00:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.297Z"
+      },
+      "dismissedAt": "2026-11-16T05:19:55.825Z",
+      "reason": "Irrelevant"
+    },
+    "gh-stripe-8334556": {
+      "jobId": "gh-stripe-8334556",
+      "job": {
+        "id": "gh-stripe-8334556",
+        "source": "Greenhouse (STRIPE)",
+        "title": "Policy Lead, AI Infrastructure",
+        "company": "Stripe",
+        "location": "US-Remote",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://stripe.com/jobs/search?gh_jid=8334556",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-13T13:15:30-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.289Z"
+      },
+      "dismissedAt": "2026-11-16T05:21:03.819Z",
+      "reason": "Irrelevant"
+    },
+    "gh-reddit-8359289": {
+      "jobId": "gh-reddit-8359289",
+      "job": {
+        "id": "gh-reddit-8359289",
+        "source": "Greenhouse (REDDIT)",
+        "title": "Senior Product Manager, Finance Technology (Procure-to-Pay & Record-to-Report)",
+        "company": "Reddit",
+        "location": "Remote - United States",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://job-boards.greenhouse.io/reddit/jobs/8359289",
+        "matchedKeyword": "CHANGE MANAGEMENT",
+        "date": "2026-11-15T07:15:28-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.290Z"
+      },
+      "dismissedAt": "2026-11-16T05:37:22.434Z",
+      "reason": "Irrelevant"
+    },
+    "gh-reddit-8186566": {
+      "jobId": "gh-reddit-8186566",
+      "job": {
+        "id": "gh-reddit-8186566",
+        "source": "Greenhouse (REDDIT)",
+        "title": "Global Indirect Tax Manager ",
+        "company": "Reddit",
+        "location": "Remote - United States",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://job-boards.greenhouse.io/reddit/jobs/8186566",
+        "matchedKeyword": "COMPLIANCE",
+        "date": "2026-11-15T07:15:25-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.290Z"
+      },
+      "dismissedAt": "2026-11-16T05:37:27.391Z",
+      "reason": "Irrelevant"
+    },
+    "ashby-openai-10c7fcdc-1f07-41e3-8e37-4d930898a648": {
+      "jobId": "ashby-openai-10c7fcdc-1f07-41e3-8e37-4d930898a648",
+      "job": {
+        "id": "ashby-openai-10c7fcdc-1f07-41e3-8e37-4d930898a648",
+        "source": "Ashby (OPENAI)",
+        "title": "Growth Product Marketing Manager",
+        "company": "Openai",
+        "location": "San Francisco",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://jobs.ashbyhq.com/openai/10c7fcdc-1f07-41e3-8e37-4d930898a648/application",
+        "matchedKeyword": "COMPLIANCE",
+        "date": "2026-11-14T00:27:33.473+00:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.296Z"
+      },
+      "dismissedAt": "2026-11-16T05:37:54.329Z",
+      "reason": "Irrelevant"
+    },
+    "gh-fastly-8184616": {
+      "jobId": "gh-fastly-8184616",
+      "job": {
+        "id": "gh-fastly-8184616",
+        "source": "Greenhouse (FASTLY)",
+        "title": "Strategic Sales Account Manager",
+        "company": "Fastly",
+        "location": "India (Remote)",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://www.fastly.com/about/jobs/apply?gh_jid=8184616",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-13T04:07:24-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.279Z"
+      },
+      "dismissedAt": "2026-11-16T05:41:50.190Z",
+      "reason": "Irrelevant"
+    },
+    "ashby-openai-fd14915c-7d0f-4ede-a88a-31093211a656": {
+      "jobId": "ashby-openai-fd14915c-7d0f-4ede-a88a-31093211a656",
+      "job": {
+        "id": "ashby-openai-fd14915c-7d0f-4ede-a88a-31093211a656",
+        "source": "Ashby (OPENAI)",
+        "title": "Customer Success Manager, Ads Solutions",
+        "company": "Openai",
+        "location": "Munich, Germany",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://jobs.ashbyhq.com/openai/fd14915c-7d0f-4ede-a88a-31093211a656/application",
+        "matchedKeyword": "COMPLIANCE",
+        "date": "2026-11-13T09:55:58.182+00:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.296Z"
+      },
+      "dismissedAt": "2026-11-16T05:43:16.107Z",
+      "reason": "Irrelevant"
+    },
+    "gh-samsara-8353156": {
+      "jobId": "gh-samsara-8353156",
+      "job": {
+        "id": "gh-samsara-8353156",
+        "source": "Greenhouse (SAMSARA)",
+        "title": "Customer Success Account Manager, Mid-Market",
+        "company": "Samsara",
+        "location": "Remote - UK",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://www.samsara.com/company/careers/roles/8353156?gh_jid=8353156",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-13T03:36:15-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.282Z"
+      },
+      "dismissedAt": "2026-11-16T05:43:21.569Z",
+      "reason": "Irrelevant"
+    },
+    "gh-samsara-8359294": {
+      "jobId": "gh-samsara-8359294",
+      "job": {
+        "id": "gh-samsara-8359294",
+        "source": "Greenhouse (SAMSARA)",
+        "title": "Customer Success Account Manager, Digital - French",
+        "company": "Samsara",
+        "location": "Remote - France",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://www.samsara.com/company/careers/roles/8359294?gh_jid=8359294",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-13T03:34:16-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.282Z"
+      },
+      "dismissedAt": "2026-11-16T05:43:28.254Z",
+      "reason": "Irrelevant"
+    },
+    "gh-gitlab-8926653002": {
+      "jobId": "gh-gitlab-8926653002",
+      "job": {
+        "id": "gh-gitlab-8926653002",
+        "source": "Greenhouse (GITLAB)",
+        "title": "Renewals Manager - Italy/ Spain",
+        "company": "Gitlab",
+        "location": "Remote",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://job-boards.greenhouse.io/gitlab/jobs/8926653002",
+        "matchedKeyword": "COMPLIANCE",
+        "date": "2026-11-13T08:11:49-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.287Z"
+      },
+      "dismissedAt": "2026-11-16T05:43:38.308Z",
+      "reason": "Irrelevant"
+    },
+    "gh-twilio-8306461": {
+      "jobId": "gh-twilio-8306461",
+      "job": {
+        "id": "gh-twilio-8306461",
+        "source": "Greenhouse (TWILIO)",
+        "title": "Senior Field Marketing Manager - DACH",
+        "company": "Twilio",
+        "location": "Remote - United Kingdom",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://job-boards.greenhouse.io/twilio/jobs/8306461",
+        "matchedKeyword": "COMPLIANCE",
+        "date": "2026-11-13T10:24:43-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.282Z"
+      },
+      "dismissedAt": "2026-11-16T05:43:41.961Z",
+      "reason": "Irrelevant"
+    },
+    "gh-bitwarden-8040215003": {
+      "jobId": "gh-bitwarden-8040215003",
+      "job": {
+        "id": "gh-bitwarden-8040215003",
+        "source": "Greenhouse (BITWARDEN)",
+        "title": "Product Manager - Platform",
+        "company": "Bitwarden",
+        "location": "Remote US",
+        "workType": "Remote",
+        "salary": "$150k - $160k",
+        "url": "https://bitwarden.com/careers/8040215003/?gh_jid=8040215003",
+        "matchedKeyword": "CLOUD",
+        "date": "2026-11-13T07:37:33-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.283Z"
+      },
+      "dismissedAt": "2026-11-16T05:43:42.639Z",
+      "reason": "Irrelevant"
+    },
+    "gh-twilio-8208337": {
+      "jobId": "gh-twilio-8208337",
+      "job": {
+        "id": "gh-twilio-8208337",
+        "source": "Greenhouse (TWILIO)",
+        "title": "Principal Executive Communications Manager, Chief Product & Technology Officer",
+        "company": "Twilio",
+        "location": "Remote - US",
+        "workType": "Remote",
+        "salary": "$142k - $177k",
+        "url": "https://job-boards.greenhouse.io/twilio/jobs/8208337",
+        "matchedKeyword": "CHANGE MANAGEMENT",
+        "date": "2026-11-13T11:08:42-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T05:09:02.281Z"
+      },
+      "dismissedAt": "2026-11-16T05:43:50.326Z",
+      "reason": "Irrelevant"
+    },
+    "gh-cloudflare-8207864": {
+      "jobId": "gh-cloudflare-8207864",
+      "job": {
+        "id": "gh-cloudflare-8207864",
+        "source": "Greenhouse (CLOUDFLARE)",
+        "title": "System Engineer - Network Systems",
+        "company": "Cloudflare",
+        "location": "Hybrid",
+        "workType": "Hybrid",
+        "salary": "€45k - €62k",
+        "url": "https://boards.greenhouse.io/cloudflare/jobs/8207864?gh_jid=8207864",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-16T11:55:56-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T21:27:54.189Z"
+      },
+      "reason": "Uninterested",
+      "dismissedAt": "2026-11-17T05:41:20.679Z",
+      "updatedAt": "2026-11-17T05:41:21Z"
+    },
+    "gh-instacart-8383333": {
+      "jobId": "gh-instacart-8383333",
+      "job": {
+        "id": "gh-instacart-8383333",
+        "source": "Greenhouse (INSTACART)",
+        "title": "Security Incident Manager",
+        "company": "Instacart",
+        "location": "Canada - Remote (ON, AB, BC, or NS Only)",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://instacart.careers/job/?gh_jid=8383333",
+        "matchedKeyword": "TPM",
+        "date": "2026-11-12T12:03:36-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-16T21:27:54.190Z"
+      },
+      "reason": "Uninterested",
+      "dismissedAt": "2026-11-17T05:41:56.607Z",
+      "updatedAt": "2026-11-17T05:41:56Z"
+    }
+  }
 }
