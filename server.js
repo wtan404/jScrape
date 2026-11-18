@@ -496,8 +496,31 @@ async function parseJobUrl(targetUrl) {
     } catch (e) {}
   }
 
-  // 3. Generic HTML parser
-  if (!detectedTitle) {
+  // 3. LinkedIn URL Recognition & Slug Parsing
+  const isLinkedIn = /linkedin\.com/i.test(targetUrl);
+  if (isLinkedIn) {
+    detectedSource = 'LinkedIn';
+    try {
+      const u = new URL(targetUrl);
+      const pathParts = u.pathname.split('/').filter(Boolean);
+      const viewIdx = pathParts.indexOf('view');
+      if (viewIdx !== -1 && pathParts[viewIdx + 1]) {
+        const slug = pathParts[viewIdx + 1].replace(/-[0-9]{6,}$/, '');
+        if (slug.includes('-at-')) {
+          const [roleSlug, companySlug] = slug.split('-at-');
+          if (roleSlug) {
+            detectedTitle = roleSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          }
+          if (companySlug) {
+            detectedCompany = companySlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 4. Generic HTML parser (OpenGraph / JSON-LD / Meta)
+  if (!detectedTitle || !detectedCompany || isLinkedIn) {
     try {
       const res = await axios.get(targetUrl, {
         timeout: 8000,
@@ -520,7 +543,9 @@ async function parseJobUrl(targetUrl) {
               for (const it of items) {
                 if (it['@type'] && /jobposting|job/i.test(it['@type'])) {
                   if (it.title) detectedTitle = it.title;
-                  if (it.hiringOrganization?.name) detectedCompany = it.hiringOrganization.name;
+                  if (it.hiringOrganization?.name && !/^(linkedin|indeed|glassdoor|ziprecruiter)$/i.test(it.hiringOrganization.name.trim())) {
+                    detectedCompany = it.hiringOrganization.name;
+                  }
                   if (it.jobLocation?.address?.addressLocality) detectedLocation = it.jobLocation.address.addressLocality;
                   else if (it.jobLocationType && /telecommute/i.test(it.jobLocationType)) detectedLocation = 'Remote';
                   if (it.datePosted) detectedDate = it.datePosted;
@@ -528,7 +553,7 @@ async function parseJobUrl(targetUrl) {
                 }
               }
             } catch (e) {}
-            if (detectedTitle) break;
+            if (detectedTitle && detectedCompany) break;
           }
         }
 
@@ -539,21 +564,16 @@ async function parseJobUrl(targetUrl) {
         }
         if (!detectedCompany) {
           const ogSite = html.match(/<meta[^>]+property=['"]og:site_name['"][^>]+content=['"](.*?)['"]/i);
-          if (ogSite) detectedCompany = ogSite[1];
+          if (ogSite && !/^(linkedin|indeed|glassdoor|ziprecruiter)$/i.test(ogSite[1].trim())) {
+            detectedCompany = ogSite[1];
+          }
         }
 
         // C. Title tag fallback
         if (!detectedTitle) {
           const titleTag = html.match(/<title[^>]*>(.*?)<\/title>/i);
           if (titleTag) {
-            const clean = titleTag[1].replace(/<[^>]+>/g, '').trim();
-            const parts = clean.split(/[-|–—•·]/);
-            if (parts.length > 1) {
-              detectedTitle = parts[0].trim();
-              if (!detectedCompany) detectedCompany = parts[1].trim();
-            } else {
-              detectedTitle = clean;
-            }
+            detectedTitle = titleTag[1].replace(/<[^>]+>/g, '').trim();
           }
         }
 
@@ -564,13 +584,35 @@ async function parseJobUrl(targetUrl) {
     } catch (e) {}
   }
 
+  // Deconstruct compound titles: "<Role> at <Company> - <Location> | LinkedIn"
+  if (detectedTitle) {
+    // Strip platform suffixes
+    detectedTitle = detectedTitle.replace(/\s*[-|–—•·]\s*LinkedIn.*$/i, '').trim();
+
+    const atMatch = detectedTitle.match(/^(.+?)\s+(?:at|@)\s+([^-–—|•·]+?)(?:\s*[-–—|•·]\s*(.+))?$/i);
+    if (atMatch) {
+      detectedTitle = atMatch[1].trim();
+      const extractedCompany = atMatch[2].trim();
+      if (!detectedCompany || /^(linkedin|indeed|glassdoor|ziprecruiter|company)$/i.test(detectedCompany.trim())) {
+        detectedCompany = extractedCompany;
+      }
+      if ((!detectedLocation || detectedLocation === 'Remote') && atMatch[3]) {
+        detectedLocation = atMatch[3].trim();
+      }
+    }
+  }
+
   // Hostname fallback
-  if (!detectedCompany) {
+  if (!detectedCompany || /^(linkedin|indeed|glassdoor|ziprecruiter)$/i.test(detectedCompany.trim())) {
     try {
       const u = new URL(targetUrl);
       const hostParts = u.hostname.split('.');
-      detectedCompany = hostParts.length >= 2 ? hostParts[hostParts.length - 2] : u.hostname;
-      detectedCompany = detectedCompany.charAt(0).toUpperCase() + detectedCompany.slice(1);
+      const candidate = hostParts.length >= 2 ? hostParts[hostParts.length - 2] : u.hostname;
+      if (!/^(linkedin|indeed|glassdoor|ziprecruiter)$/i.test(candidate)) {
+        detectedCompany = candidate.charAt(0).toUpperCase() + candidate.slice(1);
+      } else {
+        detectedCompany = 'Company';
+      }
     } catch (e) {
       detectedCompany = 'Company';
     }

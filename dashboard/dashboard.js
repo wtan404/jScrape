@@ -172,6 +172,71 @@ function formatJobLocationAndWorkType(job) {
   return { location: loc, workType: wt };
 }
 
+function sanitizeJobMetadata(job) {
+  if (!job) return job;
+  let title = (job.title || '').trim();
+  let company = (job.company || '').trim();
+  let location = (job.location || '').trim();
+  let source = job.source || 'ATS Direct';
+
+  // Strip platform branding suffixes e.g. " | LinkedIn", " - LinkedIn"
+  title = title.replace(/\s*[-|–—•·]\s*LinkedIn.*$/i, '').trim();
+
+  // If company is a generic platform name, clear for deconstruction
+  const isPlatformCompany = /^(linkedin|indeed|glassdoor|ziprecruiter)$/i.test(company);
+
+  // Deconstruct compound title: "<Role> at <Company> - <Location>"
+  const atMatch = title.match(/^(.+?)\s+(?:at|@)\s+([^-–—|•·]+?)(?:\s*[-–—|•·]\s*(.+))?$/i);
+  if (atMatch) {
+    title = atMatch[1].trim();
+    const extractedComp = atMatch[2].trim();
+    if (isPlatformCompany || !company || company === 'Company') {
+      company = extractedComp;
+    }
+    if ((!location || location === 'Remote') && atMatch[3]) {
+      location = atMatch[3].trim();
+    }
+  } else if (isPlatformCompany) {
+    company = 'Company';
+  }
+
+  // LinkedIn URL slug fallback if company is still Company or LinkedIn
+  if ((!company || company === 'Company' || isPlatformCompany) && job.url && /linkedin\.com/i.test(job.url)) {
+    try {
+      const u = new URL(job.url);
+      const pathParts = u.pathname.split('/').filter(Boolean);
+      const viewIdx = pathParts.indexOf('view');
+      if (viewIdx !== -1 && pathParts[viewIdx + 1]) {
+        const slug = pathParts[viewIdx + 1].replace(/-[0-9]{6,}$/, '');
+        if (slug.includes('-at-')) {
+          const [roleSlug, companySlug] = slug.split('-at-');
+          if ((!title || title.startsWith('Opportunity at')) && roleSlug) {
+            title = roleSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          }
+          if (companySlug) {
+            company = companySlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (/linkedin\.com/i.test(job.url || '')) {
+    source = 'LinkedIn';
+  }
+
+  const locResolved = formatJobLocationAndWorkType({ location, workType: job.workType, title });
+
+  return {
+    ...job,
+    title: title || job.title || 'Job Title',
+    company: company || job.company || 'Company',
+    location: locResolved.location,
+    workType: locResolved.workType,
+    source
+  };
+}
+
 // --------------------------------------------------------------------------
 // 25-Item Pagination Controls & Filter Handlers
 // --------------------------------------------------------------------------
@@ -262,6 +327,11 @@ function loadApplicationsState() {
       if (parsed && typeof parsed === 'object') {
         if (parsed.applied && typeof parsed.applied === 'object') {
           appliedJobsMap = { ...parsed.applied };
+          Object.keys(appliedJobsMap).forEach(k => {
+            if (appliedJobsMap[k] && appliedJobsMap[k].job) {
+              appliedJobsMap[k].job = sanitizeJobMetadata(appliedJobsMap[k].job);
+            }
+          });
         }
         if (parsed.dismissed && typeof parsed.dismissed === 'object') {
           dismissedJobsMap = { ...parsed.dismissed };
@@ -368,6 +438,11 @@ async function syncApplicationsFromServer(serverData = null) {
       });
 
       appliedJobsMap = mergedApplied;
+      Object.keys(appliedJobsMap).forEach(k => {
+        if (appliedJobsMap[k] && appliedJobsMap[k].job) {
+          appliedJobsMap[k].job = sanitizeJobMetadata(appliedJobsMap[k].job);
+        }
+      });
       dismissedJobsMap = mergedDismissed;
 
       try {
@@ -1011,7 +1086,7 @@ function renderTriageTable() {
 
     tbody.innerHTML = pagedApplied.map(item => {
       const key = item.jobId;
-      const job = item.job || {};
+      const job = sanitizeJobMetadata(item.job || {});
       const timeAgo = formatTimeAgo(item.appliedAt);
       const appliedDate = item.appliedAt ? new Date(item.appliedAt).toLocaleDateString() : 'Recently';
       const { location: locDisplay, workType: wtDisplay } = formatJobLocationAndWorkType(job);
@@ -2191,24 +2266,49 @@ async function importAndTrackJob() {
     // 3. Client-side heuristic fallback
     if (!scannedJob) {
       let host = 'Company';
+      let title = '';
+      let company = '';
+      const isLinkedIn = /linkedin\.com/i.test(targetUrl);
+
       try {
         const u = new URL(targetUrl);
         const parts = u.hostname.split('.');
         host = parts.length >= 2 ? parts[parts.length - 2] : u.hostname;
-        host = host.charAt(0).toUpperCase() + host.slice(1);
+        if (!/^(linkedin|indeed|glassdoor|ziprecruiter)$/i.test(host)) {
+          company = host.charAt(0).toUpperCase() + host.slice(1);
+        } else {
+          company = 'Company';
+        }
+
+        // Try extracting slug for LinkedIn
+        if (isLinkedIn) {
+          const pathParts = u.pathname.split('/').filter(Boolean);
+          const viewIdx = pathParts.indexOf('view');
+          if (viewIdx !== -1 && pathParts[viewIdx + 1]) {
+            const slug = pathParts[viewIdx + 1].replace(/-[0-9]{6,}$/, '');
+            if (slug.includes('-at-')) {
+              const [roleSlug, companySlug] = slug.split('-at-');
+              if (roleSlug) title = roleSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+              if (companySlug) company = companySlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            }
+          }
+        }
       } catch (e) {}
+
+      if (!title) title = `Opportunity at ${company || 'Company'}`;
+      if (!company) company = 'Company';
 
       const resolvedLoc = formatJobLocationAndWorkType({
         location: 'Remote',
         workType: 'Remote',
-        title: `Opportunity at ${host}`
+        title
       });
 
       scannedJob = {
         id: 'manual-' + Math.random().toString(36).substring(2, 10),
-        source: 'Manual Import',
-        title: `Opportunity at ${host}`,
-        company: host,
+        source: isLinkedIn ? 'LinkedIn' : 'Manual Import',
+        title,
+        company,
         location: resolvedLoc.location,
         workType: resolvedLoc.workType,
         salary: null,
@@ -2217,6 +2317,8 @@ async function importAndTrackJob() {
         date: new Date().toISOString()
       };
     }
+
+    scannedJob = sanitizeJobMetadata(scannedJob);
 
     const jobKey = scannedJob.id || scannedJob.url;
     const assignedResumeId = resumeSel ? resumeSel.value : (savedResumes[0]?.id || '');

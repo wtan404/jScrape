@@ -351,8 +351,27 @@ switch ($action) {
             }
         }
 
-        // 3. Generic HTML / JSON-LD / OpenGraph Scraper
-        if (empty($detectedTitle)) {
+        // 3. LinkedIn URL Recognition & Slug Parsing
+        $isLinkedIn = (bool)preg_match('#linkedin\.com#i', $targetUrl);
+        if ($isLinkedIn) {
+            $detectedSource = 'LinkedIn';
+            $path = parse_url($targetUrl, PHP_URL_PATH);
+            if ($path && preg_match('#/jobs/view/([a-z0-9-]+)#i', $path, $slugMatch)) {
+                $slug = preg_replace('/-[0-9]{6,}$/', '', $slugMatch[1]);
+                if (strpos($slug, '-at-') !== false) {
+                    list($roleSlug, $companySlug) = explode('-at-', $slug, 2);
+                    if (!empty($roleSlug)) {
+                        $detectedTitle = ucwords(str_replace('-', ' ', $roleSlug));
+                    }
+                    if (!empty($companySlug)) {
+                        $detectedCompany = ucwords(str_replace('-', ' ', $companySlug));
+                    }
+                }
+            }
+        }
+
+        // 4. Generic HTML / JSON-LD / OpenGraph Scraper
+        if (empty($detectedTitle) || empty($detectedCompany) || $isLinkedIn) {
             $ch = curl_init($targetUrl);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 8);
@@ -377,7 +396,9 @@ switch ($action) {
                             foreach ($items as $item) {
                                 if (isset($item['@type']) && (strtolower($item['@type']) === 'jobposting' || strtolower($item['@type']) === 'job')) {
                                     if (!empty($item['title'])) $detectedTitle = $item['title'];
-                                    if (!empty($item['hiringOrganization']['name'])) $detectedCompany = $item['hiringOrganization']['name'];
+                                    if (!empty($item['hiringOrganization']['name']) && !preg_match('/^(linkedin|indeed|glassdoor|ziprecruiter)$/i', trim($item['hiringOrganization']['name']))) {
+                                        $detectedCompany = $item['hiringOrganization']['name'];
+                                    }
                                     if (!empty($item['jobLocation']['address']['addressLocality'])) {
                                         $detectedLocation = $item['jobLocation']['address']['addressLocality'];
                                     } elseif (!empty($item['jobLocationType']) && strtolower($item['jobLocationType']) === 'telecommute') {
@@ -396,19 +417,16 @@ switch ($action) {
                     $detectedTitle = html_entity_decode($ogMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
                 }
                 if (empty($detectedCompany) && preg_match('#<meta[^>]+property=[\'"]og:site_name[\'"][^>]+content=[\'"](.*?)[\'"]#i', $html, $siteMatch)) {
-                    $detectedCompany = html_entity_decode($siteMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    $cand = html_entity_decode($siteMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    if (!preg_match('/^(linkedin|indeed|glassdoor|ziprecruiter)$/i', trim($cand))) {
+                        $detectedCompany = $cand;
+                    }
                 }
 
                 // C. Parse HTML <title> fallback
                 if (empty($detectedTitle) && preg_match('#<title[^>]*>(.*?)</title>#i', $html, $titleMatch)) {
                     $cleanTitle = html_entity_decode(strip_tags($titleMatch[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                    $parts = preg_split('/\s*[-|–—•·]\s*/u', $cleanTitle);
-                    if (count($parts) > 1) {
-                        $detectedTitle = trim($parts[0]);
-                        if (empty($detectedCompany)) $detectedCompany = trim($parts[1]);
-                    } else {
-                        $detectedTitle = $cleanTitle;
-                    }
+                    $detectedTitle = $cleanTitle;
                 }
 
                 // D. Extract Salary via regex
@@ -418,14 +436,30 @@ switch ($action) {
             }
         }
 
+        // Deconstruct compound titles: "<Role> at <Company> - <Location> | LinkedIn"
+        if (!empty($detectedTitle)) {
+            $detectedTitle = preg_replace('/\s*[-|–—•·]\s*LinkedIn.*$/i', '', $detectedTitle);
+            if (preg_match('/^(.+?)\s+(?:at|@)\s+([^-–—|•·]+?)(?:\s*[-–—|•·]\s*(.+))?$/i', $detectedTitle, $atMatches)) {
+                $detectedTitle = trim($atMatches[1]);
+                $extractedComp = trim($atMatches[2]);
+                if (empty($detectedCompany) || preg_match('/^(linkedin|indeed|glassdoor|ziprecruiter|company)$/i', trim($detectedCompany))) {
+                    $detectedCompany = $extractedComp;
+                }
+                if ((empty($detectedLocation) || $detectedLocation === 'Remote') && !empty($atMatches[3])) {
+                    $detectedLocation = trim($atMatches[3]);
+                }
+            }
+        }
+
         // Hostname fallback for company
-        if (empty($detectedCompany)) {
+        if (empty($detectedCompany) || preg_match('/^(linkedin|indeed|glassdoor|ziprecruiter)$/i', trim($detectedCompany))) {
             $host = parse_url($targetUrl, PHP_URL_HOST);
             $hostParts = explode('.', $host);
-            if (count($hostParts) >= 2) {
-                $detectedCompany = ucfirst($hostParts[count($hostParts) - 2]);
+            $cand = count($hostParts) >= 2 ? $hostParts[count($hostParts) - 2] : ($host ?: 'Company');
+            if (!preg_match('/^(linkedin|indeed|glassdoor|ziprecruiter)$/i', $cand)) {
+                $detectedCompany = ucfirst($cand);
             } else {
-                $detectedCompany = ucfirst($host ?: 'Company');
+                $detectedCompany = 'Company';
             }
         }
 

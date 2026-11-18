@@ -4,6 +4,21 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.18.0] - 2026-11-18
+
+### Fixed
+- **LinkedIn Manual Submission & Metadata Decomposition (`server.js`, `dashboard/api.php`, `dashboard.js`, `dashboard/dashboard.js`):**
+  - Resolved an issue where importing LinkedIn job postings caused the employer header to be recorded as `"LinkedIn"` and the role subtitle as a compound string (`"<Role Title> at <Company> - <Location>"`).
+  - Implemented dedicated compound regex decompilers across Node.js (`server.js`) and PHP (`dashboard/api.php`) parsers to strip platform branding (`| LinkedIn`, `- LinkedIn`) and cleanly separate `<Role Title>` as the job title, `<Company>` as the hiring employer, and `<Location>` for the location and work setup engine.
+  - Blacklisted `"LinkedIn"`, `"Indeed"`, `"Glassdoor"`, and `"ZipRecruiter"` from being assigned as the hiring employer name.
+  - Integrated URL slug decomposition (`/jobs/view/<role-slug>-at-<company-slug>-<id>/`) as a fallback to extract clean Title and Company even when network access to LinkedIn guest HTML is blocked by anti-scraping walls.
+- **Client-Side Scanner & Retroactive Data Sanitization (`dashboard.js`, `dashboard/dashboard.js`):**
+  - Updated client-side fallback in `importAndTrackJob()` to support LinkedIn slug parsing and compound string resolution.
+  - Added retroactive sanitization in `sanitizeJobMetadata()`, `loadApplicationsState()`, and `syncApplicationsFromServer()`:
+    - Automatically cleanses previously tracked applications in memory, `localStorage`, and upstream feeds where `company === 'LinkedIn'` and `title` contains compound `" at "`, instantly healing legacy records to render with proper employer headers and role subtitles.
+
+---
+
 ## [1.17.0] - 2026-11-16
 
 ### Added
