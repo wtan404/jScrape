@@ -125,7 +125,53 @@ function mergeStates(localData, remoteData) {
     }
   });
 
+  // Automatically heal and sanitize tracked metadata across both environments
+  Object.keys(merged.applied).forEach(k => {
+    if (merged.applied[k] && merged.applied[k].job) {
+      merged.applied[k].job = sanitizeJobMetadata(merged.applied[k].job);
+    }
+  });
+
   return merged;
+}
+
+function sanitizeJobMetadata(job) {
+  if (!job) return job;
+  let title = (job.title || '').trim();
+  let company = (job.company || '').trim();
+  let location = (job.location || '').trim();
+  let source = job.source || 'ATS Direct';
+
+  title = title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#039;/g, "'").trim();
+  title = title.replace(/\s*[-|–—•·]\s*LinkedIn(?:\s+Jobs)?.*$/i, '').trim();
+
+  const isPlatformCompany = /^(linkedin|indeed|glassdoor|ziprecruiter)$/i.test(company);
+
+  const atMatch = title.match(/^(.+?)\s+(?:at|@)\s+([^-–—|•·]+?)(?:\s*[-–—|•·]\s*(.+))?$/i);
+  if (atMatch) {
+    title = atMatch[1].trim();
+    const extractedComp = atMatch[2].trim();
+    if (isPlatformCompany || !company || company === 'Company') {
+      company = extractedComp;
+    }
+    if ((!location || location === 'Remote') && atMatch[3]) {
+      location = atMatch[3].trim();
+    }
+  } else if (isPlatformCompany) {
+    company = 'Company';
+  }
+
+  if (/linkedin\.com/i.test(job.url || '')) {
+    source = 'LinkedIn';
+  }
+
+  return {
+    ...job,
+    title: title || job.title,
+    company: company || job.company,
+    location: location || job.location,
+    source
+  };
 }
 
 function fetchRemote(url, user, pass) {

@@ -85,12 +85,12 @@
         "isNew": true,
         "verifiedAt": "2026-11-16T19:53:09.818Z"
       },
-      "status": "Applied",
+      "status": "Rejected",
       "resumeId": "res_it_corp_lead",
       "resumeLabel": "Corporate / IT Lead & Operations",
       "notes": "Marked via PM Operations Dashboard",
       "appliedAt": "2026-11-16T20:16:11.580Z",
-      "updatedAt": "2026-11-16T20:16:12Z"
+      "updatedAt": "2026-11-17T23:35:23Z"
     },
     "gh-affirm-8199159003": {
       "jobId": "gh-affirm-8199159003",
@@ -153,11 +153,12 @@
         "isNew": true,
         "verifiedAt": "2026-11-16T05:09:02.283Z"
       },
-      "status": "Applied",
+      "status": "Rejected",
       "resumeId": "res_seed_devops",
       "resumeLabel": "DevOps & Cloud Infrastructure Lead",
       "appliedAt": "2026-11-16T05:35:52.624Z",
-      "notes": "Marked via PM Operations Dashboard"
+      "notes": "Marked via PM Operations Dashboard",
+      "updatedAt": "2026-11-17T17:00:16Z"
     },
     "gh-affirm-8199157003": {
       "jobId": "gh-affirm-8199157003",
@@ -180,6 +181,135 @@
       "resumeLabel": "DevOps & Cloud Infrastructure Lead",
       "appliedAt": "2026-11-16T05:40:35.059Z",
       "notes": "Marked via PM Operations Dashboard"
+    },
+    "gh-pinterest-8369211": {
+      "jobId": "gh-pinterest-8369211",
+      "job": {
+        "id": "gh-pinterest-8369211",
+        "source": "Greenhouse (PINTEREST)",
+        "title": "Technical Program Manager II",
+        "company": "Pinterest",
+        "location": "San Francisco, CA, US; Remote, US",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://www.pinterestcareers.com/jobs/?gh_jid=8369211",
+        "matchedKeyword": "TECHNICAL PROGRAM MANAGER",
+        "date": "2026-11-16T21:56:07-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-17T05:44:26.420Z"
+      },
+      "status": "Applied",
+      "resumeId": "res_it_corp_lead",
+      "resumeLabel": "Corporate / IT Lead & Operations",
+      "notes": "Marked via PM Operations Dashboard",
+      "appliedAt": "2026-11-17T16:31:07.099Z",
+      "updatedAt": "2026-11-17T16:31:09Z"
+    },
+    "manual-ca8193071e": {
+      "jobId": "manual-ca8193071e",
+      "status": "Applied",
+      "resumeId": "res_it_corp_lead",
+      "resumeLabel": "Corporate / IT Lead & Operations",
+      "appliedAt": "2026-11-17T19:42:35.588Z",
+      "notes": "Manually imported via URL scanner",
+      "job": {
+        "id": "manual-ca8193071e",
+        "source": "LinkedIn",
+        "title": "Release Manager",
+        "company": "WellHive",
+        "location": "United States",
+        "workType": "Remote",
+        "salary": "$130,000.00\n            -\n            $155,000.00",
+        "url": "https://www.linkedin.com/jobs/view/4485026097/",
+        "matchedKeyword": "MANUAL IMPORT",
+        "date": "2026-11-17T19:42:34Z"
+      }
+    },
+    "manual-8bdf5b2594": {
+      "jobId": "manual-8bdf5b2594",
+      "status": "Applied",
+      "resumeId": "res_it_corp_lead",
+      "resumeLabel": "Corporate / IT Lead & Operations",
+      "appliedAt": "2026-11-17T16:39:20.379Z",
+      "notes": "Manually imported via URL scanner",
+      "job": {
+        "id": "manual-8bdf5b2594",
+        "source": "LinkedIn",
+        "title": "Sr Technical Program Manager",
+        "company": "OncoHealth",
+        "location": "United States",
+        "workType": "Hybrid",
+        "salary": "$185,000.00\n            -\n            $225,000.00",
+        "url": "https://www.linkedin.com/jobs/view/4476936022/?alternateChannel=search&eBP=NOT_ELIGIBLE_FOR_CHARGING&refId=0xzabPFSFy7CSiO6fHSDeA%3D%3D&trackingId=ywocs8ekedho3t6ldGIQlQ%3D%3D",
+        "matchedKeyword": "MANUAL IMPORT",
+        "date": "2026-11-17T16:39:21Z"
+      }
+    },
+    "manual-6e9e4c2d5f": {
+      "jobId": "manual-6e9e4c2d5f",
+      "status": "Applied",
+      "resumeId": "res_it_corp_lead",
+      "resumeLabel": "Corporate / IT Lead & Operations",
+      "appliedAt": "2026-11-17T16:51:58.980Z",
+      "notes": "Manually imported via URL scanner",
+      "job": {
+        "id": "manual-6e9e4c2d5f",
+        "source": "LinkedIn",
+        "title": "Engineering Manager, Platform & DevOps",
+        "company": "HopSkipDrive",
+        "location": "limited, US",
+        "workType": "Hybrid",
+        "salary": "$180,000.00 - $205.00",
+        "url": "https://www.linkedin.com/jobs/view/4474475401/",
+        "matchedKeyword": "MANUAL IMPORT",
+        "date": "2026-11-17T16:52:00Z"
+      }
+    },
+    "gh-affirm-8197742003": {
+      "jobId": "gh-affirm-8197742003",
+      "job": {
+        "id": "gh-affirm-8197742003",
+        "source": "Greenhouse (AFFIRM)",
+        "title": "Manager, Software Engineering (Code Standards)",
+        "company": "Affirm",
+        "location": "Remote US",
+        "workType": "Remote",
+        "salary": "$230k - $290k",
+        "url": "https://job-boards.greenhouse.io/affirm/jobs/8197742003",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-17T12:42:54-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-17T20:13:59.694Z"
+      },
+      "status": "Applied",
+      "resumeId": "res_it_corp_lead",
+      "resumeLabel": "Corporate / IT Lead & Operations",
+      "notes": "Marked via PM Operations Dashboard",
+      "appliedAt": "2026-11-17T23:44:38.697Z",
+      "updatedAt": "2026-11-17T23:44:39Z"
+    },
+    "gh-lattice-8906493002": {
+      "jobId": "gh-lattice-8906493002",
+      "job": {
+        "id": "gh-lattice-8906493002",
+        "source": "Greenhouse (LATTICE)",
+        "title": "Engineering Manager, Integrations",
+        "company": "Lattice",
+        "location": "Remote - US",
+        "workType": "Remote",
+        "salary": "$188k - $235k",
+        "url": "https://lattice.com/job?gh_jid=8906493002",
+        "matchedKeyword": "TPM",
+        "date": "2026-11-17T11:44:11-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-17T20:13:59.693Z"
+      },
+      "status": "Applied",
+      "resumeId": "res_it_corp_lead",
+      "resumeLabel": "Corporate / IT Lead & Operations",
+      "notes": "Marked via PM Operations Dashboard",
+      "appliedAt": "2026-11-17T23:46:40.832Z",
+      "updatedAt": "2026-11-17T23:46:41Z"
     }
   },
   "dismissed": {
@@ -1059,6 +1189,46 @@
       "reason": "Uninterested",
       "dismissedAt": "2026-11-17T05:41:56.607Z",
       "updatedAt": "2026-11-17T05:41:56Z"
+    },
+    "gh-toast-8368740": {
+      "jobId": "gh-toast-8368740",
+      "job": {
+        "id": "gh-toast-8368740",
+        "source": "Greenhouse (TOAST)",
+        "title": "Principal Machine Learning Engineer, Vision AI",
+        "company": "Toast",
+        "location": "Remote, US",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://careers.toasttab.com/jobs?gh_jid=8368740",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-13T21:21:48-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-17T20:13:59.693Z"
+      },
+      "reason": "Irrelevant",
+      "dismissedAt": "2026-11-17T23:47:26.362Z",
+      "updatedAt": "2026-11-17T23:47:26Z"
+    },
+    "gh-cloudflare-8395178": {
+      "jobId": "gh-cloudflare-8395178",
+      "job": {
+        "id": "gh-cloudflare-8395178",
+        "source": "Greenhouse (CLOUDFLARE)",
+        "title": "Technical Account Manager",
+        "company": "Cloudflare",
+        "location": "Hybrid",
+        "workType": "Hybrid",
+        "salary": null,
+        "url": "https://boards.greenhouse.io/cloudflare/jobs/8395178?gh_jid=8395178",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-17T21:16:41-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-18T05:09:53.760Z"
+      },
+      "reason": "Uninterested",
+      "dismissedAt": "2026-11-18T16:52:58.541Z",
+      "updatedAt": "2026-11-18T16:52:59Z"
     }
   }
 }

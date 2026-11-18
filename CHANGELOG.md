@@ -4,6 +4,17 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.18.1] - 2026-11-18
+
+### Fixed
+- **Legacy Tracked Records Sanitization & Upstream Database Healing (`scripts/merge_applications.js`, `dashboard.js`, `dashboard/dashboard.js`, `job_applications.json`):**
+  - Remediated all 3 existing legacy LinkedIn job records in the production database and repository (`manual-ca8193071e`, `manual-8bdf5b2594`, and `manual-6e9e4c2d5f`).
+  - Successfully decoupled employer names (`WellHive`, `OncoHealth`, and `HopSkipDrive`) from compound subtitles, stripped platform suffixes (`| LinkedIn Jobs`), resolved HTML entities (`&amp;` &rarr; `&`), and assigned proper location/work-type classifications.
+  - Upgraded bidirectional sync engine (`scripts/merge_applications.js`) with integrated metadata sanitization to automatically normalize legacy entries during reconciliation.
+  - Synchronized and verified cleaned application records directly across the live production API (`https://j.synopsdigital.com`).
+
+---
+
 ## [1.18.0] - 2026-11-18
 
 ### Fixed

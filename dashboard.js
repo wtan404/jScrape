@@ -179,8 +179,11 @@ function sanitizeJobMetadata(job) {
   let location = (job.location || '').trim();
   let source = job.source || 'ATS Direct';
 
-  // Strip platform branding suffixes e.g. " | LinkedIn", " - LinkedIn"
-  title = title.replace(/\s*[-|–—•·]\s*LinkedIn.*$/i, '').trim();
+  // Decode HTML entities (e.g. &amp; -> &)
+  title = title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#039;/g, "'").trim();
+
+  // Strip platform branding suffixes e.g. " | LinkedIn", " | LinkedIn Jobs", " - LinkedIn"
+  title = title.replace(/\s*[-|–—•·]\s*LinkedIn(?:\s+Jobs)?.*$/i, '').trim();
 
   // If company is a generic platform name, clear for deconstruction
   const isPlatformCompany = /^(linkedin|indeed|glassdoor|ziprecruiter)$/i.test(company);
