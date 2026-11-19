@@ -294,9 +294,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Dedicated /dashboard route handlers: redirect to canonical root dashboard
+// Dedicated /dashboard route handlers: serve the Funnel Analytics Dashboard
 app.get(['/dashboard', '/dashboard/'], (req, res) => {
-  res.redirect(301, '/');
+  res.sendFile(path.join(__dirname, 'dashboard.html'));
+});
+app.get('/dashboard.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
 

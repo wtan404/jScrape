@@ -4,6 +4,15 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.20.1] - 2026-11-19
+
+### Fixed
+- **Resolved `/dashboard` Canonical Redirect Loop (`server.js`):**
+  - Removed legacy HTTP 301 redirect in `server.js` that previously redirected requests to `/dashboard` back to root `/`.
+  - Replaced with direct `res.sendFile()` dispatching to serve the standalone `dashboard.html` across `/dashboard`, `/dashboard/`, and `/dashboard.html`.
+
+---
+
 ## [1.20.0] - 2026-11-19
 
 ### Added
