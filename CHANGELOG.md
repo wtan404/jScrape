@@ -4,6 +4,31 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.20.0] - 2026-11-19
+
+### Added
+- **Dedicated Application Funnel & Analytics Dashboard (`dashboard.html`, `dashboard/index.html`, `dashboard_analytics.js`):**
+  - Converted the legacy redirect stubs at `/dashboard` into a standalone, full-screen conversion intelligence dashboard.
+  - Features real-time executive KPI cards: Total Applied, Awaiting Response, In Review, Interviewing, Offer Extended, No Response, and Total Rejected.
+  - Integrated interactive Sankey topology diagram rendering multi-stage candidate progression with dark obsidian amethyst styling and dynamic tooltips.
+  - Added full applications ledger table with inline status dropdown for instant simulation and pipeline routing.
+  - Linked Triage Center (`index.html`) directly to the dedicated dashboard via header "Funnel Analytics" action.
+- **Response-Driven Status Taxonomy & Granular Exit Routing (`dashboard.js`, `dashboard/dashboard.js`, `dashboard_analytics.js`, `server.js`, `dashboard/api.php`):**
+  - Introduced `In Review` as a distinct active screening status following initial submission.
+  - Deprecated `Archived` in favor of `No Response` (auto-aging terminal state).
+  - Implemented granular rejection exit tracking (`direct`, `post_review`, `post_interview`, `no_response`) and automated `stageHistory` milestone auditing on every application.
+  - Sankey Routing Engine:
+    - Step 1 (Source) &rarr; Step 2 (Scope / Title).
+    - Unanswered applications (`Applied`) remain parked at Step 2 without premature progression.
+    - Step 3 branches into `In Review` or `No Response`.
+    - `Interviewing` branches into `Offer Extended`, active in-flight rounds, or `Rejected: Post-Interview`.
+    - `Rejected` is positioned as the final terminal exit sink on the far right.
+- **Automated 20-Day Inactivity Aging Engine:**
+  - Evaluates all `Applied` applications on startup and sync.
+  - Automatically transitions roles older than 20 days without employer updates to `No Response` &rarr; `Rejected`.
+
+---
+
 ## [1.19.1] - 2026-11-19
 
 ### Added

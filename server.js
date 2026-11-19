@@ -186,6 +186,8 @@ async function handlePhpApi(req, res) {
       if (apps.applied[jobId]) {
         apps.applied[jobId].status = status || apps.applied[jobId].status;
         apps.applied[jobId].updatedAt = now;
+        if (req.body.rejectionStage !== undefined) apps.applied[jobId].rejectionStage = req.body.rejectionStage;
+        if (req.body.stageHistory) apps.applied[jobId].stageHistory = req.body.stageHistory;
         if (notes) apps.applied[jobId].notes = notes;
       }
     } else if (op === 'remove_tracking') {
@@ -860,6 +862,8 @@ app.post('/api/jobs/application-status', (req, res) => {
       if (apps.applied[jobId]) {
         apps.applied[jobId].status = status || apps.applied[jobId].status;
         apps.applied[jobId].updatedAt = now;
+        if (req.body.rejectionStage !== undefined) apps.applied[jobId].rejectionStage = req.body.rejectionStage;
+        if (req.body.stageHistory) apps.applied[jobId].stageHistory = req.body.stageHistory;
         if (notes) apps.applied[jobId].notes = notes;
       }
     } else { // applied

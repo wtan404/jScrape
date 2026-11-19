@@ -398,6 +398,41 @@ function loadApplicationsState() {
       }
     });
   }
+
+  applyTwentyDayAging();
+}
+
+function applyTwentyDayAging() {
+  const now = Date.now();
+  const TWENTY_DAYS_MS = 20 * 24 * 60 * 60 * 1000;
+  let changed = false;
+
+  Object.entries(appliedJobsMap).forEach(([k, item]) => {
+    if (item && item.status === 'Applied') {
+      const d = item.appliedAt || item.date || item.updatedAt;
+      if (d && (now - new Date(d).getTime() >= TWENTY_DAYS_MS)) {
+        item.status = 'No Response';
+        item.rejectionStage = 'no_response';
+        item.updatedAt = new Date().toISOString();
+        item.stageHistory = item.stageHistory || [];
+        item.stageHistory.push({
+          stage: 'No Response',
+          timestamp: item.updatedAt,
+          note: 'Auto-transitioned after 20 days of inactivity'
+        });
+        changed = true;
+        persistApplicationStatus(k, 'update_status', {
+          status: 'No Response',
+          rejectionStage: 'no_response',
+          stageHistory: item.stageHistory
+        });
+      }
+    }
+  });
+
+  if (changed) {
+    saveApplicationsState();
+  }
 }
 
 async function syncApplicationsFromServer(serverData = null) {
@@ -1137,6 +1172,18 @@ function renderTriageTable() {
       const appliedDate = item.appliedAt ? new Date(item.appliedAt).toLocaleDateString() : 'Recently';
       const { location: locDisplay, workType: wtDisplay } = formatJobLocationAndWorkType(job);
 
+      const curStatus = item.status || 'Applied';
+      const curRej = item.rejectionStage || '';
+      let selBadge = curStatus;
+      if (curStatus === 'Rejected') {
+        if (curRej === 'post_interview') selBadge = 'Rejected: Post-Interview';
+        else if (curRej === 'post_review') selBadge = 'Rejected: Post-Review';
+        else if (curRej === 'no_response') selBadge = 'No Response';
+        else selBadge = 'Rejected: Direct';
+      } else if (curStatus === 'Archived') {
+        selBadge = 'No Response';
+      }
+
       return `
         <tr id="row_${escapeHtml(key)}">
           <td>
@@ -1160,11 +1207,18 @@ function renderTriageTable() {
           </td>
           <td>
             <select class="status-select-badge" onchange="updateAppliedStatus('${escapeHtml(key)}', this.value)">
-              <option value="Applied" ${item.status === 'Applied' ? 'selected' : ''}>🟢 Applied</option>
-              <option value="Interviewing" ${item.status === 'Interviewing' ? 'selected' : ''}>🔵 Interviewing</option>
-              <option value="Offer" ${item.status === 'Offer' ? 'selected' : ''}>⭐ Offer</option>
-              <option value="Archived" ${item.status === 'Archived' ? 'selected' : ''}>⚪ Archived</option>
-              <option value="Rejected" ${item.status === 'Rejected' ? 'selected' : ''}>🔴 Rejected</option>
+              <optgroup label="Active Funnel">
+                <option value="Applied" ${selBadge === 'Applied' ? 'selected' : ''}>🟢 Applied (Awaiting Response)</option>
+                <option value="In Review" ${selBadge === 'In Review' ? 'selected' : ''}>🟣 In Review</option>
+                <option value="Interviewing" ${selBadge === 'Interviewing' ? 'selected' : ''}>🔵 Interviewing</option>
+                <option value="Offer" ${selBadge === 'Offer' ? 'selected' : ''}>⭐ Offer Extended</option>
+              </optgroup>
+              <optgroup label="Terminal Exits">
+                <option value="No Response" ${selBadge === 'No Response' ? 'selected' : ''}>⚪ No Response (>20d)</option>
+                <option value="Rejected: Direct" ${selBadge === 'Rejected: Direct' ? 'selected' : ''}>🔴 Rejected: Direct (Screened Out)</option>
+                <option value="Rejected: Post-Review" ${selBadge === 'Rejected: Post-Review' ? 'selected' : ''}>🔴 Rejected: Post-Review</option>
+                <option value="Rejected: Post-Interview" ${selBadge === 'Rejected: Post-Interview' ? 'selected' : ''}>🔴 Rejected: Post-Interview</option>
+              </optgroup>
             </select>
           </td>
           <td style="text-align: right; width: 90px; min-width: 90px; padding: 0.5rem 0.4rem;">
@@ -1383,15 +1437,41 @@ function removeTrackingRecord(key) {
   renderTriageTable();
 }
 
-function updateAppliedStatus(key, newStatus) {
+function updateAppliedStatus(key, newOption) {
   if (appliedJobsMap[key]) {
-    appliedJobsMap[key].status = newStatus;
+    const item = appliedJobsMap[key];
+    item.stageHistory = item.stageHistory || [];
+
+    if (newOption.startsWith('Rejected:')) {
+      item.status = 'Rejected';
+      if (newOption.includes('Post-Interview')) item.rejectionStage = 'post_interview';
+      else if (newOption.includes('Post-Review')) item.rejectionStage = 'post_review';
+      else item.rejectionStage = 'direct';
+    } else if (newOption === 'No Response') {
+      item.status = 'No Response';
+      item.rejectionStage = 'no_response';
+    } else {
+      item.status = newOption;
+      item.rejectionStage = '';
+    }
+
+    item.updatedAt = new Date().toISOString();
+    item.stageHistory.push({
+      stage: item.status,
+      rejectionStage: item.rejectionStage,
+      timestamp: item.updatedAt
+    });
+
     saveApplicationsState();
 
     // Async server persistence across all devices
-    persistApplicationStatus(key, 'update_status', { status: newStatus });
+    persistApplicationStatus(key, 'update_status', {
+      status: item.status,
+      rejectionStage: item.rejectionStage,
+      stageHistory: item.stageHistory
+    });
 
-    showToast(`Updated status to: ${newStatus}`);
+    showToast(`Updated status to: ${item.status}`);
   }
 }
 

@@ -1,10 +1,363 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" data-theme="dark">
 <head>
-  <meta http-equiv="refresh" content="0; url=./">
-  <script>window.location.replace("./");</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application Funnel & Pipeline Analytics | Scrapedeez</title>
+  <meta name="description" content="End-to-end recruitment funnel and Sankey conversion analytics for active job applications.">
+
+  <!-- Anti-FOUC Theme Initialization -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('scrapedeez_theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Google Charts Loader -->
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+
+  <link rel="stylesheet" href="styles.css?v=17.0">
+
+  <style>
+    .analytics-layout {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 6rem;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-hover);
+    }
+
+    .kpi-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .kpi-value {
+      font-size: 1.8rem;
+      font-weight: 800;
+      font-family: var(--font-display);
+      color: var(--text-main);
+      line-height: 1.1;
+    }
+
+    .kpi-subtext {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .chart-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.75rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .chart-container-box {
+      width: 100%;
+      min-height: 380px;
+      position: relative;
+      border-radius: var(--radius-sm);
+      background: rgba(15, 23, 42, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      overflow-x: auto;
+    }
+
+    .status-select-badge {
+      padding: 0.28rem 0.55rem;
+      font-size: 0.74rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      cursor: pointer;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .status-select-badge:focus {
+      border-color: var(--accent-purple);
+    }
+
+    .flow-legend {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+  </style>
 </head>
 <body>
-  Redirecting to <a href="./">PM Operations Dashboard</a>...
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="container header-wrap">
+      <div class="brand">
+        <a href="./" style="display: flex; align-items: center; gap: 0.75rem; text-decoration: none; color: inherit;">
+          <img src="synops_logo.jpg" alt="Synops Logo" class="brand-logo-img">
+          <span class="brand-title">SCRAPE<span class="highlight">DEEZ</span></span>
+        </a>
+      </div>
+
+      <div class="dash-nav-actions">
+        <a href="./" class="btn btn-primary btn-sm" title="Return to Operational Triage Center">
+          <i data-lucide="arrow-left"></i>
+          <span>Triage Center</span>
+        </a>
+        <a href="search.html" class="btn btn-secondary btn-sm" title="Keyword Criteria & Search Preferences">
+          <i data-lucide="sliders-horizontal"></i>
+          <span>Search Config</span>
+        </a>
+        <button class="btn btn-secondary btn-sm theme-toggle-btn" onclick="toggleTheme()" id="btnThemeToggle" aria-label="Toggle Theme">
+          <i data-lucide="sun" id="themeIconSun"></i>
+          <i data-lucide="moon" id="themeIconMoon" style="display: none;"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="analytics-layout">
+
+    <!-- Page Title & Header Bar -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-purple-light); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.4rem;">
+          <i data-lucide="git-merge" style="width: 14px; height: 14px;"></i>
+          <span>Conversion Intelligence</span>
+        </div>
+        <h1 style="font-size: 1.6rem; font-weight: 800; font-family: var(--font-display); color: var(--text-main); margin: 0;">
+          End-to-End Application Funnel
+        </h1>
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0.25rem 0 0;">
+          Visualizing candidate progression from job origins through screening, interviews, and terminal outcomes.
+        </p>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 0.6rem;">
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.35rem 0.75rem; font-size: 0.74rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.4rem;">
+          <i data-lucide="shield-alert" style="width: 13px; height: 13px; color: var(--accent-amber);"></i>
+          <span>20d Auto-Aging: <b>Active</b></span>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="syncAndRefreshDashboard()" id="btnRefreshAnalytics" title="Refresh Live Applications Data">
+          <i data-lucide="refresh-cw"></i>
+          <span>Sync Data</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Executive KPI Metrics Row -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <i data-lucide="send" style="color: var(--accent-purple-light); width: 14px; height: 14px;"></i>
+          <span>Total Applied</span>
+        </div>
+        <div class="kpi-value" id="kpiTotal">0</div>
+        <div class="kpi-subtext">All submissions recorded</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <i data-lucide="clock" style="color: #60a5fa; width: 14px; height: 14px;"></i>
+          <span>Awaiting Response</span>
+        </div>
+        <div class="kpi-value" id="kpiApplied" style="color: #60a5fa;">0</div>
+        <div class="kpi-subtext">Parked at Step 2 (&lt;20d)</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <i data-lucide="eye" style="color: #c084fc; width: 14px; height: 14px;"></i>
+          <span>In Review</span>
+        </div>
+        <div class="kpi-value" id="kpiInReview" style="color: #c084fc;">0</div>
+        <div class="kpi-subtext">Screening in progress</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <i data-lucide="users" style="color: #38bdf8; width: 14px; height: 14px;"></i>
+          <span>Interviewing</span>
+        </div>
+        <div class="kpi-value" id="kpiInterviewing" style="color: #38bdf8;">0</div>
+        <div class="kpi-subtext">Active round cycles</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <i data-lucide="star" style="color: var(--accent-amber); width: 14px; height: 14px;"></i>
+          <span>Offers</span>
+        </div>
+        <div class="kpi-value" id="kpiOffer" style="color: var(--accent-amber);">0</div>
+        <div class="kpi-subtext">Offers extended</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <i data-lucide="user-x" style="color: #94a3b8; width: 14px; height: 14px;"></i>
+          <span>No Response</span>
+        </div>
+        <div class="kpi-value" id="kpiNoResponse" style="color: #94a3b8;">0</div>
+        <div class="kpi-subtext">&gt;20d aged out &rarr; Rejected</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <i data-lucide="x-circle" style="color: var(--accent-red); width: 14px; height: 14px;"></i>
+          <span>Total Rejected</span>
+        </div>
+        <div class="kpi-value" id="kpiRejected" style="color: var(--accent-red);">0</div>
+        <div class="kpi-subtext">Direct, post-review &amp; aged</div>
+      </div>
+    </section>
+
+    <!-- Sankey Funnel Chart Card -->
+    <section class="chart-panel">
+      <div class="chart-header">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <div style="width: 28px; height: 28px; border-radius: var(--radius-sm); background: rgba(168, 85, 247, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-purple-light);">
+            <i data-lucide="git-branch" style="width: 16px; height: 16px;"></i>
+          </div>
+          <div>
+            <div style="font-size: 0.96rem; font-weight: 700; color: var(--text-main);">Pipeline Flow &amp; Conversion Topology</div>
+            <div style="font-size: 0.72rem; color: var(--text-dim);">
+              Step 1 (Source) &rarr; Step 2 (Scope / Title) &rarr; Step 3 (Response: In Review / No Response) &rarr; Step 4 (Interviewing) &rarr; Final Outcomes
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <div style="font-size: 0.72rem; color: var(--text-dim);">
+            Hover ribbons or nodes to inspect flow volume
+          </div>
+        </div>
+      </div>
+
+      <!-- Sankey Container -->
+      <div id="sankeyChartContainer" class="chart-container-box">
+        <div id="sankeyLoadingState" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 380px; color: var(--text-dim); gap: 0.6rem;">
+          <i data-lucide="loader" class="spin" style="width: 22px; height: 22px; color: var(--accent-purple-light);"></i>
+          <span style="font-size: 0.8rem;">Initializing conversion funnel topology...</span>
+        </div>
+      </div>
+
+      <!-- Flow Legend -->
+      <div class="flow-legend">
+        <div class="legend-item"><span class="legend-dot" style="background: #818cf8;"></span> Step 1: Origin Source</div>
+        <div class="legend-item"><span class="legend-dot" style="background: #a855f7;"></span> Step 2: Scope / Title</div>
+        <div class="legend-item"><span class="legend-dot" style="background: #c084fc;"></span> Step 3: In Review</div>
+        <div class="legend-item"><span class="legend-dot" style="background: #38bdf8;"></span> Step 4: Interviewing</div>
+        <div class="legend-item"><span class="legend-dot" style="background: #f59e0b;"></span> Terminal: Offer Extended</div>
+        <div class="legend-item"><span class="legend-dot" style="background: #64748b;"></span> Step 3: No Response (&gt;20d)</div>
+        <div class="legend-item"><span class="legend-dot" style="background: #ef4444;"></span> Final Sink: Rejected</div>
+      </div>
+    </section>
+
+    <!-- Granular Applications Ledger Table -->
+    <section class="chart-panel">
+      <div class="chart-header">
+        <div>
+          <div style="font-size: 0.96rem; font-weight: 700; color: var(--text-main);">Tracked Applications Ledger &amp; Status Controls</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);">
+            Update statuses below to dynamically route application paths on the Sankey chart above.
+          </div>
+        </div>
+        <div>
+          <input type="text" id="analyticsTableSearch" class="triage-search-input" placeholder="Filter roles, employers or sources..." oninput="renderAnalyticsTable()" style="padding: 0.3rem 0.65rem; font-size: 0.74rem; width: 240px;">
+        </div>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table class="triage-table">
+          <thead>
+            <tr>
+              <th>Employer &amp; Role</th>
+              <th>Origin Source</th>
+              <th>Scope / Resume</th>
+              <th>Applied Date</th>
+              <th>Age</th>
+              <th>Pipeline Status</th>
+            </tr>
+          </thead>
+          <tbody id="analyticsTableBody">
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-dim);">Loading applications ledger...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="dashboard_analytics.js?v=1.19.2"></script>
 </body>
 </html>

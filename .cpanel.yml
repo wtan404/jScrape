@@ -6,6 +6,7 @@ deployment:
     - /bin/cp -R index.html $DEPLOYPATH
     - /bin/cp -R search.html $DEPLOYPATH
     - /bin/cp -R dashboard.js $DEPLOYPATH
+    - /bin/cp -R dashboard_analytics.js $DEPLOYPATH
     - /bin/cp -R main.js $DEPLOYPATH
     - /bin/cp -R dashboard.html $DEPLOYPATH
     - /bin/mkdir -p $DEPLOYPATH/dashboard

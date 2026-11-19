@@ -172,6 +172,12 @@ switch ($action) {
             if (isset($apps['applied'][$jobId])) {
                 $apps['applied'][$jobId]['status'] = $body['status'] ?? $apps['applied'][$jobId]['status'];
                 $apps['applied'][$jobId]['updatedAt'] = $now;
+                if (isset($body['rejectionStage'])) {
+                    $apps['applied'][$jobId]['rejectionStage'] = $body['rejectionStage'];
+                }
+                if (!empty($body['stageHistory'])) {
+                    $apps['applied'][$jobId]['stageHistory'] = $body['stageHistory'];
+                }
                 if (!empty($body['notes'])) {
                     $apps['applied'][$jobId]['notes'] = $body['notes'];
                 }
