@@ -360,7 +360,7 @@ switch ($action) {
             $parsedPath = parse_url($targetUrl, PHP_URL_PATH);
 
             $tenantName = 'Oracle';
-            if (preg_match('/^([a-zA-Z0-9_-]+)\.fa\.[a-zA-Z0-9_-]+\.oraclecloud\.com/i', $parsedHost, $tm)) {
+            if (preg_match('/^([a-zA-Z0-9_-]+)\.fa\.(?:[a-zA-Z0-9_-]+\.)?oraclecloud\.com/i', $parsedHost, $tm)) {
                 $tenantName = $tm[1];
             } elseif (preg_match('/^([a-zA-Z0-9_-]+)\.oraclecloud\.com/i', $parsedHost, $tm)) {
                 $tenantName = $tm[1];

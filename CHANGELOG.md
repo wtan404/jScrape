@@ -4,6 +4,29 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.19.1] - 2026-11-19
+
+### Added
+- **Oracle Cloud (ORC/CX) & Taleo Manual Entry Support (`server.js`, `dashboard/api.php`, `dashboard.js`, `dashboard/dashboard.js`, `index.html`, `submission_engine.js`):**
+  - Integrated native Oracle Cloud Candidate Experience (CX) REST API parser (`/hcmRestApi/resources/latest/recruitingCEJobRequisitionDetails`) to extract structured title, organization/employer, location, and compensation directly from Oracle's cloud recruiting engine.
+  - Added Taleo ATS domain and tenant resolution (`*.taleo.net`) with employer extraction.
+  - Bound Oracle applications into the 1-click assisted dispatch launchpad in `submission_engine.js`.
+  - Updated manual entry URL scanner placeholder in `index.html` to highlight Oracle.
+
+### Fixed
+- **LinkedIn Numeric ID Extraction & Guest API (`server.js`, `dashboard/api.php`):**
+  - Resolved HTTP 429 guest wall on `/jobs/view/<id>` URLs by routing extraction through LinkedIn's unthrottled guest API (`/jobs-guest/jobs/api/jobPosting/<id>`).
+  - Added numeric job ID extraction for URLs without vanity slugs.
+- **Decompiler Hardening & Placeholder Guardrails (`server.js`, `dashboard/api.php`, `dashboard.js`, `dashboard/dashboard.js`, `scripts/merge_applications.js`):**
+  - Fixed an anomaly where fallback placeholder `"Opportunity at Company"` was split by the compound title decompiler into Title `"Opportunity"` and Company `"Company"`.
+  - Hardened regex to ignore `"Opportunity at ..."` and `"Role at ..."` strings and prevent platform tokens from ever being saved as employer or title.
+- **Production Database Healing (`scripts/merge_applications.js`, `job_applications.json`):**
+  - Healed corrupted record `manual-7k090uef` locally and pushed clean metadata upstream to production (`https://j.synopsdigital.com`), restoring Employer: **Navy Federal Credit Union**, Title: **Experience Owner**, and Location: **Vienna, VA**.
+- **Automated Test Coverage (`tests/test_oracle_url_parsing.js`, `tests/test_linkedin_url_parsing.js`):**
+  - Built automated verification suite for Oracle internal requisitions, JPMC Oracle Cloud candidate portal, Taleo, numeric LinkedIn guest API, and decompiler guardrails.
+
+---
+
 ## [1.19.0] - 2026-11-19
 
 ### Added

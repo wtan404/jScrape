@@ -506,7 +506,7 @@ async function parseJobUrl(targetUrl) {
       const host = u.hostname;
       // Identify tenant name
       let tenantName = 'Oracle';
-      if (/^([a-zA-Z0-9_-]+)\.fa\.[a-zA-Z0-9_-]+\.oraclecloud\.com/i.test(host)) {
+      if (/^([a-zA-Z0-9_-]+)\.fa\.(?:[a-zA-Z0-9_-]+\.)?oraclecloud\.com/i.test(host)) {
         const tMatch = host.match(/^([a-zA-Z0-9_-]+)\.fa\./i);
         tenantName = tMatch ? tMatch[1] : 'Oracle';
       } else if (/^([a-zA-Z0-9_-]+)\.oraclecloud\.com/i.test(host)) {
@@ -552,11 +552,15 @@ async function parseJobUrl(targetUrl) {
           detectedLocation = it.PrimaryLocation || 'Remote';
           rawJdContent = (it.ExternalDescriptionStr || '') + ' ' + (it.ShortDescriptionStr || '');
 
-          const corpEmployer = it.LegalEmployer || it.Organization || it.BusinessUnit;
-          if (corpEmployer && !/^(oraclecloud|company)$/i.test(corpEmployer.trim())) {
-            detectedCompany = corpEmployer.trim();
+          if (/^jpmc$/i.test(tenantName)) {
+            detectedCompany = 'JPMorgan Chase';
           } else {
-            detectedCompany = formattedEmployer;
+            const corpEmployer = it.LegalEmployer || it.Organization || it.BusinessUnit;
+            if (corpEmployer && !/^(oraclecloud|company)$/i.test(corpEmployer.trim())) {
+              detectedCompany = corpEmployer.trim();
+            } else {
+              detectedCompany = formattedEmployer;
+            }
           }
 
           detectedSource = `Oracle Cloud (${detectedCompany})`;
@@ -604,7 +608,7 @@ async function parseJobUrl(targetUrl) {
       try {
         const guestApiUrl = `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${linkedInJobId}`;
         const guestRes = await axios.get(guestApiUrl, {
-          timeout: 6000,
+          timeout: 10000,
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
