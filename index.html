@@ -35,6 +35,9 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
+  <!-- Google Charts (Sankey Diagram Support) -->
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+
   <link rel="stylesheet" href="styles.css?v=17.0">
   <style>
     /* Dashboard High-Density Layout & Styling */
@@ -938,12 +941,61 @@
         <div class="manual-import-controls" style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
           <div class="input-icon-wrap" style="flex: 1; min-width: 280px;">
             <i data-lucide="link-2" class="input-icon"></i>
-            <input type="url" id="manualJobUrlInput" class="triage-search-input" placeholder="Paste job posting URL (Greenhouse, Lever, Ashby, LinkedIn, direct career page)..." onkeydown="if(event.key==='Enter') importAndTrackJob()">
+            <input type="url" id="manualJobUrlInput" class="triage-search-input" placeholder="Paste job posting URL (Oracle, Greenhouse, Lever, Ashby, LinkedIn, direct career page)..." onkeydown="if(event.key==='Enter') importAndTrackJob()">
           </div>
           <select id="manualJobResumeSelect" class="select-control" style="min-width: 180px; max-width: 240px;" title="Assigned Resume for this Application">
             <option value="">Default Resume</option>
           </select>
           <button type="button" class="btn btn-primary" onclick="importAndTrackJob()" id="btnImportTrack" title="Add to Applied / Tracking queue">Track</button>
+        </div>
+      </div>
+
+      <!-- Applied & Tracking Funnel Analytics (Sankey Diagram) -->
+      <div id="sankeyAnalyticsSection" class="sankey-analytics-panel" style="display: none; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 1.25rem; box-shadow: var(--shadow-sm);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.6rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <i data-lucide="git-branch" style="color: var(--accent-purple-light); width: 18px; height: 18px;"></i>
+            <span style="font-size: 0.88rem; font-weight: 700; color: var(--text-main); font-family: var(--font-display);">Application Funnel Analytics</span>
+            <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple-light); font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(168, 85, 247, 0.3);">Sankey View</span>
+          </div>
+
+          <!-- Flow View Mode & Controls -->
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.35rem;">
+              <span style="font-size: 0.72rem; color: var(--text-dim); font-weight: 600;">Grouping:</span>
+              <select id="sankeyGroupingSelect" class="select-control" style="padding: 0.2rem 0.5rem; font-size: 0.74rem;" onchange="renderSankeyDiagram()" title="Change Sankey flow aggregation">
+                <option value="full" selected>Full E2E: Source &rarr; Resume &rarr; Status</option>
+                <option value="source">Direct: Source &rarr; Status</option>
+                <option value="resume">Targeted: Resume &rarr; Status</option>
+              </select>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnToggleSankeyCollapse" onclick="toggleSankeyCollapse()" style="padding: 0.25rem 0.5rem; font-size: 0.72rem; display: flex; align-items: center; gap: 4px;" title="Collapse/Expand Sankey Funnel">
+              <i data-lucide="chevron-up" id="iconToggleSankey" style="width: 14px; height: 14px;"></i>
+              <span id="labelToggleSankey">Collapse</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric KPI Pills Bar -->
+        <div id="sankeyMetricsBar" style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;"></div>
+
+        <!-- Collapsible Body -->
+        <div id="sankeyCollapsibleBody">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.72rem; color: var(--text-dim); flex-wrap: wrap; gap: 0.4rem;">
+            <div>
+              <span style="color: var(--accent-purple-light); font-weight: 600;">Flow Path:</span>
+              <span id="sankeyFlowPathDesc">Job Origins &rarr; Resume Variations &rarr; Pipeline Outcomes</span>
+            </div>
+            <div style="color: var(--text-muted); font-size: 0.7rem;">
+              Hover ribbons or nodes to inspect volume and conversion metrics
+            </div>
+          </div>
+          <div id="sankeyChartContainer" style="width: 100%; min-height: 280px; position: relative; border-radius: var(--radius-sm); overflow: hidden; background: rgba(15, 23, 42, 0.4);">
+            <div id="sankeyLoadingIndicator" style="display: flex; align-items: center; justify-content: center; height: 260px; color: var(--text-dim); font-size: 0.8rem; gap: 0.5rem;">
+              <i data-lucide="loader" style="width: 18px; height: 18px;"></i>
+              <span>Loading application funnel...</span>
+            </div>
+          </div>
         </div>
       </div>
 

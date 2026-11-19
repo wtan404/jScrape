@@ -4,6 +4,22 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.19.0] - 2026-11-19
+
+### Added
+- **End-to-End Application Funnel & Sankey Visualization (`index.html`, `dashboard.js`, `dashboard/dashboard.js`):**
+  - Integrated interactive Sankey diagram analytics directly into the "Applied & Tracking" queue view.
+  - Multi-stage pipeline architecture visualizes the complete conversion lifecycle:
+    - **Stage 1 (Origins)**: Direct ATS platforms (*Greenhouse, Lever, Ashby*) and curated tech feeds (*LinkedIn, WeWorkRemotely, Jobicy*).
+    - **Stage 2 (Resume Variations)**: Tracked deployment of tailored candidate profiles (*Corporate / IT Lead & Operations*, *DevOps & Cloud Infrastructure Lead*).
+    - **Stage 3 (Outcomes & Pipeline)**: Live tracking of application stages (*Applied / In Review*, *Interviewing*, *Offer*, *Rejected*, *Archived*).
+  - Dynamic Aggregation Modes: Supported full E2E (`Source -> Resume -> Outcome`), direct origin conversion (`Source -> Outcome`), and resume variation yield (`Resume -> Outcome`).
+  - Real-time Reactivity: Auto-recomputes and redraws on status changes, application removals, restores, and URL scanner imports with responsive window re-fitting.
+  - Interactive Controls: Collapsible container toggle with persistent preference state in `localStorage` and real-time KPI metric pills (Total Tracked, In Review, Interviewing, Offer, Rejected, and Active Conversion Rate).
+  - High-Availability Fallback: Gracefully switches to an inline responsive data flow matrix if Google Charts is blocked or loaded in an offline environment.
+
+---
+
 ## [1.18.1] - 2026-11-18
 
 ### Fixed

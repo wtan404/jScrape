@@ -310,6 +310,26 @@
       "notes": "Marked via PM Operations Dashboard",
       "appliedAt": "2026-11-17T23:46:40.832Z",
       "updatedAt": "2026-11-17T23:46:41Z"
+    },
+    "manual-7k090uef": {
+      "jobId": "manual-7k090uef",
+      "status": "Applied",
+      "resumeId": "res_it_corp_lead",
+      "resumeLabel": "Corporate / IT Lead & Operations",
+      "appliedAt": "2026-11-19T18:38:24.115Z",
+      "notes": "Manually imported via URL scanner",
+      "job": {
+        "id": "manual-7k090uef",
+        "source": "LinkedIn",
+        "title": "Experience Owner",
+        "company": "Navy Federal Credit Union",
+        "location": "Vienna, VA",
+        "workType": "Remote",
+        "salary": null,
+        "url": "https://www.linkedin.com/jobs/view/4492266556/",
+        "matchedKeyword": "MANUAL ENTRY",
+        "date": "2026-11-19T18:38:24.115Z"
+      }
     }
   },
   "dismissed": {
@@ -1229,6 +1249,44 @@
       "reason": "Uninterested",
       "dismissedAt": "2026-11-18T16:52:58.541Z",
       "updatedAt": "2026-11-18T16:52:59Z"
+    },
+    "gh-cloudflare-8370313": {
+      "jobId": "gh-cloudflare-8370313",
+      "job": {
+        "id": "gh-cloudflare-8370313",
+        "source": "Greenhouse (CLOUDFLARE)",
+        "title": "Hardware Systems Engineer, Tooling",
+        "company": "Cloudflare",
+        "location": "Hybrid",
+        "workType": "Hybrid",
+        "salary": "€54k - €68k",
+        "url": "https://boards.greenhouse.io/cloudflare/jobs/8370313?gh_jid=8370313",
+        "matchedKeyword": "SITE RELIABILITY",
+        "date": "2026-11-18T12:27:48-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-18T19:45:24.786Z"
+      },
+      "dismissedAt": "2026-11-18T23:37:59.344Z",
+      "reason": "Uninterested"
+    },
+    "gh-vercel-5796302004": {
+      "jobId": "gh-vercel-5796302004",
+      "job": {
+        "id": "gh-vercel-5796302004",
+        "source": "Greenhouse (VERCEL)",
+        "title": "Solutions Architect",
+        "company": "Vercel",
+        "location": "Hybrid - London, Berlin",
+        "workType": "Hybrid",
+        "salary": null,
+        "url": "https://job-boards.greenhouse.io/vercel/jobs/5796302004",
+        "matchedKeyword": "INFRASTRUCTURE",
+        "date": "2026-11-18T17:30:47-05:00",
+        "isNew": true,
+        "verifiedAt": "2026-11-19T05:03:43.656Z"
+      },
+      "dismissedAt": "2026-11-19T15:45:17.493Z",
+      "reason": "Uninterested"
     }
   }
 }

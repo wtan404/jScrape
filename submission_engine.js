@@ -225,6 +225,22 @@ function parseLeverInfo(job) {
   return null;
 }
 
+// Extract Oracle Cloud / Taleo info
+function parseOracleInfo(job) {
+  const url = job.url || '';
+  const idStr = job.id || '';
+  if (/oraclecloud\.com|careers\.oracle\.com/i.test(url) || idStr.startsWith('oracle-')) {
+    const siteMatch = url.match(/sites\/([^/]+)\/(?:job|requisitions\/preview)\/([0-9a-zA-Z_-]+)/i) ||
+                      url.match(/job\/([0-9a-zA-Z_-]+)/i);
+    const jobId = siteMatch ? siteMatch[siteMatch.length - 1] : idStr.replace(/^oracle-/, '');
+    return { platform: 'Oracle Cloud', company: job.company || 'Oracle', jobId };
+  }
+  if (/taleo\.net/i.test(url) || idStr.startsWith('taleo-')) {
+    return { platform: 'Taleo', company: job.company || 'Employer', jobId: idStr.replace(/^taleo-/, '') };
+  }
+  return null;
+}
+
 // Fetch Greenhouse Schema Pre-Flight
 async function fetchGreenhouseSchema(company, jobId) {
   try {
@@ -436,7 +452,18 @@ async function processJobSubmission(job, profile, resumeId) {
     };
   }
 
-  // 3. Ashby / Remotive / Jobicy / Google Jobs (Assisted 1-Click Launchpad)
+  // 3. Try Oracle Cloud / Taleo (Assisted 1-Click Launchpad)
+  const oracleInfo = parseOracleInfo(job);
+  if (oracleInfo) {
+    return {
+      ...baseRecord,
+      status: 'assisted_ready',
+      message: `${oracleInfo.platform} application package initialized with ${resumeLabel} & auto-mapped profile fields; primed for 1-click candidate dispatch.`,
+      apiDetails: { mode: 'assisted_dispatch', platform: oracleInfo.platform, company: oracleInfo.company, jobId: oracleInfo.jobId }
+    };
+  }
+
+  // 4. Ashby / Remotive / Jobicy / Google Jobs / LinkedIn (Assisted 1-Click Launchpad)
   return {
     ...baseRecord,
     status: 'assisted_ready',

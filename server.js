@@ -496,31 +496,178 @@ async function parseJobUrl(targetUrl) {
     } catch (e) {}
   }
 
-  // 3. LinkedIn URL Recognition & Slug Parsing
-  const isLinkedIn = /linkedin\.com/i.test(targetUrl);
-  if (isLinkedIn) {
-    detectedSource = 'LinkedIn';
+  // 3. Oracle Cloud Recruiting (ORC / Candidate Experience CX) & Taleo
+  const isOracleCloud = /oraclecloud\.com|careers\.oracle\.com/i.test(targetUrl);
+  const isTaleo = /taleo\.net/i.test(targetUrl);
+
+  if (!detectedTitle && isOracleCloud) {
     try {
       const u = new URL(targetUrl);
-      const pathParts = u.pathname.split('/').filter(Boolean);
-      const viewIdx = pathParts.indexOf('view');
-      if (viewIdx !== -1 && pathParts[viewIdx + 1]) {
-        const slug = pathParts[viewIdx + 1].replace(/-[0-9]{6,}$/, '');
-        if (slug.includes('-at-')) {
-          const [roleSlug, companySlug] = slug.split('-at-');
-          if (roleSlug) {
-            detectedTitle = roleSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-          }
-          if (companySlug) {
-            detectedCompany = companySlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-          }
+      const host = u.hostname;
+      // Identify tenant name
+      let tenantName = 'Oracle';
+      if (/^([a-zA-Z0-9_-]+)\.fa\.[a-zA-Z0-9_-]+\.oraclecloud\.com/i.test(host)) {
+        const tMatch = host.match(/^([a-zA-Z0-9_-]+)\.fa\./i);
+        tenantName = tMatch ? tMatch[1] : 'Oracle';
+      } else if (/^([a-zA-Z0-9_-]+)\.oraclecloud\.com/i.test(host)) {
+        const tMatch = host.match(/^([a-zA-Z0-9_-]+)\.oraclecloud\.com/i);
+        tenantName = tMatch ? tMatch[1] : 'Oracle';
+      }
+
+      // Map well-known tenants
+      let formattedEmployer = tenantName.toUpperCase();
+      if (/^eeho$/i.test(tenantName) || /careers\.oracle\.com/i.test(host)) formattedEmployer = 'Oracle';
+      else if (/^jpmc$/i.test(tenantName)) formattedEmployer = 'JPMorgan Chase';
+      else if (/^[a-z0-9]+$/i.test(tenantName) && tenantName.length > 4) {
+        formattedEmployer = tenantName.charAt(0).toUpperCase() + tenantName.slice(1);
+      }
+
+      // Extract siteNumber and jobId from path
+      // Pattern: /sites/:siteNumber/job/:jobId or /sites/:siteNumber/requisitions/preview/:jobId
+      const siteMatch = u.pathname.match(/sites\/([^/]+)\/(?:job|requisitions\/preview)\/([0-9a-zA-Z_-]+)/i) ||
+                        u.pathname.match(/job\/([0-9a-zA-Z_-]+)/i);
+
+      let siteNumber = 'CX';
+      let jobId = null;
+      if (siteMatch) {
+        if (siteMatch.length === 3) {
+          siteNumber = siteMatch[1];
+          jobId = siteMatch[2];
+        } else if (siteMatch.length === 2) {
+          jobId = siteMatch[1];
         }
       }
+
+      if (jobId) {
+        // Query Oracle Fusion HCM Candidate Experience REST API
+        const apiUrl = `https://${host}/hcmRestApi/resources/latest/recruitingCEJobRequisitionDetails?onlyData=true&expand=all&finder=ById;Id=%22${jobId}%22,siteNumber=${siteNumber}`;
+        const orcRes = await axios.get(apiUrl, {
+          timeout: 7000,
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+        });
+
+        if (orcRes.data && orcRes.data.items && orcRes.data.items.length > 0) {
+          const it = orcRes.data.items[0];
+          detectedTitle = (it.Title || '').trim();
+          detectedLocation = it.PrimaryLocation || 'Remote';
+          rawJdContent = (it.ExternalDescriptionStr || '') + ' ' + (it.ShortDescriptionStr || '');
+
+          const corpEmployer = it.LegalEmployer || it.Organization || it.BusinessUnit;
+          if (corpEmployer && !/^(oraclecloud|company)$/i.test(corpEmployer.trim())) {
+            detectedCompany = corpEmployer.trim();
+          } else {
+            detectedCompany = formattedEmployer;
+          }
+
+          detectedSource = `Oracle Cloud (${detectedCompany})`;
+          if (it.ExternalPostedStartDate) detectedDate = it.ExternalPostedStartDate;
+
+          const sal = extractSalaryFromText(rawJdContent);
+          if (sal) detectedSalary = sal;
+        }
+      }
+    } catch (orcErr) {}
+  }
+
+  if (!detectedTitle && isTaleo) {
+    try {
+      const u = new URL(targetUrl);
+      const hostParts = u.hostname.split('.');
+      let taleoOrg = hostParts[0];
+      if (taleoOrg === 'chm' || taleoOrg === 'tbe') {
+        const orgParam = u.searchParams.get('org');
+        if (orgParam) taleoOrg = orgParam;
+      }
+      if (!/^(taleo|www|chm|tbe)$/i.test(taleoOrg)) {
+        detectedCompany = taleoOrg.charAt(0).toUpperCase() + taleoOrg.slice(1);
+      } else {
+        detectedCompany = 'Employer';
+      }
+      detectedSource = `Taleo (${detectedCompany})`;
     } catch (e) {}
   }
 
-  // 4. Generic HTML parser (OpenGraph / JSON-LD / Meta)
-  if (!detectedTitle || !detectedCompany || isLinkedIn) {
+  // 4. LinkedIn URL Recognition, Guest API & Slug Parsing
+  const isLinkedIn = /linkedin\.com/i.test(targetUrl);
+  if (isLinkedIn) {
+    detectedSource = 'LinkedIn';
+
+    // A. Extract numeric LinkedIn Job ID
+    let linkedInJobId = null;
+    const idMatch = targetUrl.match(/\/jobs\/view\/(?:[^\/]+-)?(\d{6,})/i) ||
+                    targetUrl.match(/[?&]currentJobId=(\d{6,})/i) ||
+                    targetUrl.match(/\/jobs\/view\/(\d+)/i);
+    if (idMatch) linkedInJobId = idMatch[1];
+
+    // B. Query LinkedIn Guest API (Bypasses standard 429 guest view wall)
+    if (linkedInJobId) {
+      try {
+        const guestApiUrl = `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${linkedInJobId}`;
+        const guestRes = await axios.get(guestApiUrl, {
+          timeout: 6000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9'
+          }
+        });
+
+        const gHtml = guestRes.data || '';
+        if (gHtml) {
+          rawJdContent = gHtml;
+          const titleMatch = gHtml.match(/<h2[^>]*class="[^"]*top-card-layout__title[^"]*"[^>]*>([\s\S]*?)<\/h2>/i) ||
+                             gHtml.match(/<h1[^>]*class="[^"]*topcard__title[^"]*"[^>]*>([\s\S]*?)<\/h1>/i) ||
+                             gHtml.match(/<h1[^>]*class="[^"]*top-card-layout__title[^"]*"[^>]*>([\s\S]*?)<\/h1>/i);
+          if (titleMatch) {
+            detectedTitle = titleMatch[1].replace(/<[^>]+>/g, '').trim();
+          }
+
+          const compMatch = gHtml.match(/<a[^>]*class="[^"]*topcard__org-name-link[^"]*"[^>]*>([\s\S]*?)<\/a>/i) ||
+                            gHtml.match(/<span[^>]*class="[^"]*topcard__flavor[^"]*"[^>]*>([\s\S]*?)<\/span>/i) ||
+                            gHtml.match(/class="[^"]*top-card-layout__first-subline[^"]*"[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i);
+          if (compMatch) {
+            const parsedComp = compMatch[1].replace(/<[^>]+>/g, '').trim();
+            if (parsedComp && !/^(linkedin|company)$/i.test(parsedComp)) {
+              detectedCompany = parsedComp;
+            }
+          }
+
+          const locMatch = gHtml.match(/<span[^>]*class="[^"]*topcard__flavor--bullet[^"]*"[^>]*>([\s\S]*?)<\/span>/i) ||
+                           gHtml.match(/<span[^>]*class="[^"]*job-search-card__location[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
+          if (locMatch) {
+            detectedLocation = locMatch[1].replace(/<[^>]+>/g, '').trim();
+          }
+
+          const sal = extractSalaryFromText(gHtml);
+          if (sal) detectedSalary = sal;
+        }
+      } catch (guestErr) {}
+    }
+
+    // C. Slug parsing fallback if guest API was not able to determine title/company
+    if (!detectedTitle || !detectedCompany) {
+      try {
+        const u = new URL(targetUrl);
+        const pathParts = u.pathname.split('/').filter(Boolean);
+        const viewIdx = pathParts.indexOf('view');
+        if (viewIdx !== -1 && pathParts[viewIdx + 1]) {
+          const slug = pathParts[viewIdx + 1].replace(/-[0-9]{6,}$/, '');
+          if (slug.includes('-at-')) {
+            const [roleSlug, companySlug] = slug.split('-at-');
+            if (roleSlug && !detectedTitle) {
+              detectedTitle = roleSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            }
+            if (companySlug && !detectedCompany) {
+              detectedCompany = companySlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            }
+          }
+        }
+      } catch (e) {}
+    }
+  }
+
+  // 5. Generic HTML parser (OpenGraph / JSON-LD / Meta)
+  if (!detectedTitle || !detectedCompany) {
     try {
       const res = await axios.get(targetUrl, {
         timeout: 8000,
@@ -543,7 +690,7 @@ async function parseJobUrl(targetUrl) {
               for (const it of items) {
                 if (it['@type'] && /jobposting|job/i.test(it['@type'])) {
                   if (it.title) detectedTitle = it.title;
-                  if (it.hiringOrganization?.name && !/^(linkedin|indeed|glassdoor|ziprecruiter)$/i.test(it.hiringOrganization.name.trim())) {
+                  if (it.hiringOrganization?.name && !/^(linkedin|indeed|glassdoor|ziprecruiter|oraclecloud|taleo)$/i.test(it.hiringOrganization.name.trim())) {
                     detectedCompany = it.hiringOrganization.name;
                   }
                   if (it.jobLocation?.address?.addressLocality) detectedLocation = it.jobLocation.address.addressLocality;
@@ -564,7 +711,7 @@ async function parseJobUrl(targetUrl) {
         }
         if (!detectedCompany) {
           const ogSite = html.match(/<meta[^>]+property=['"]og:site_name['"][^>]+content=['"](.*?)['"]/i);
-          if (ogSite && !/^(linkedin|indeed|glassdoor|ziprecruiter)$/i.test(ogSite[1].trim())) {
+          if (ogSite && !/^(linkedin|indeed|glassdoor|ziprecruiter|oraclecloud|taleo)$/i.test(ogSite[1].trim())) {
             detectedCompany = ogSite[1];
           }
         }
@@ -587,39 +734,52 @@ async function parseJobUrl(targetUrl) {
   // Deconstruct compound titles: "<Role> at <Company> - <Location> | LinkedIn"
   if (detectedTitle) {
     // Strip platform suffixes
-    detectedTitle = detectedTitle.replace(/\s*[-|–—•·]\s*LinkedIn.*$/i, '').trim();
+    detectedTitle = detectedTitle.replace(/\s*[-|–—•·]\s*(?:LinkedIn|Indeed|Glassdoor|ZipRecruiter).*$/i, '').trim();
 
-    const atMatch = detectedTitle.match(/^(.+?)\s+(?:at|@)\s+([^-–—|•·]+?)(?:\s*[-–—|•·]\s*(.+))?$/i);
-    if (atMatch) {
-      detectedTitle = atMatch[1].trim();
-      const extractedCompany = atMatch[2].trim();
-      if (!detectedCompany || /^(linkedin|indeed|glassdoor|ziprecruiter|company)$/i.test(detectedCompany.trim())) {
-        detectedCompany = extractedCompany;
-      }
-      if ((!detectedLocation || detectedLocation === 'Remote') && atMatch[3]) {
-        detectedLocation = atMatch[3].trim();
+    // Guard against placeholder strings like "Opportunity at Company"
+    const isPlaceholderTitle = /^opportunity(?:\s+at\s+.*)?$/i.test(detectedTitle);
+
+    if (!isPlaceholderTitle) {
+      const atMatch = detectedTitle.match(/^(.+?)\s+(?:at|@)\s+([^-–—|•·]+?)(?:\s*[-–—|•·]\s*(.+))?$/i);
+      if (atMatch) {
+        const candidateRole = atMatch[1].trim();
+        const extractedCompany = atMatch[2].trim();
+
+        if (candidateRole.toLowerCase() !== 'opportunity') {
+          detectedTitle = candidateRole;
+          if (!detectedCompany || /^(linkedin|indeed|glassdoor|ziprecruiter|oraclecloud|taleo|company)$/i.test(detectedCompany.trim())) {
+            if (!/^(company|opportunity)$/i.test(extractedCompany)) {
+              detectedCompany = extractedCompany;
+            }
+          }
+          if ((!detectedLocation || detectedLocation === 'Remote') && atMatch[3]) {
+            detectedLocation = atMatch[3].trim();
+          }
+        }
       }
     }
   }
 
   // Hostname fallback
-  if (!detectedCompany || /^(linkedin|indeed|glassdoor|ziprecruiter)$/i.test(detectedCompany.trim())) {
+  if (!detectedCompany || /^(linkedin|indeed|glassdoor|ziprecruiter|oraclecloud|taleo|company)$/i.test(detectedCompany.trim())) {
     try {
       const u = new URL(targetUrl);
       const hostParts = u.hostname.split('.');
       const candidate = hostParts.length >= 2 ? hostParts[hostParts.length - 2] : u.hostname;
-      if (!/^(linkedin|indeed|glassdoor|ziprecruiter)$/i.test(candidate)) {
+      if (!/^(linkedin|indeed|glassdoor|ziprecruiter|oraclecloud|taleo|company)$/i.test(candidate)) {
         detectedCompany = candidate.charAt(0).toUpperCase() + candidate.slice(1);
       } else {
-        detectedCompany = 'Company';
+        detectedCompany = isOracleCloud ? 'Oracle' : (isTaleo ? 'Employer' : (isLinkedIn ? 'Direct Employer' : 'Company'));
       }
     } catch (e) {
-      detectedCompany = 'Company';
+      detectedCompany = 'Direct Employer';
     }
   }
 
-  if (!detectedTitle) {
-    detectedTitle = `Opportunity at ${detectedCompany}`;
+  if (!detectedTitle || /^opportunity(?:\s+at\s+.*)?$/i.test(detectedTitle.trim())) {
+    detectedTitle = (detectedCompany && detectedCompany !== 'Company' && detectedCompany !== 'Direct Employer') 
+      ? `Role at ${detectedCompany}` 
+      : 'Tracked Position';
   }
 
   const resolved = detectLocationAndWorkType(detectedLocation, detectedTitle, rawJdContent);
@@ -1077,7 +1237,11 @@ app.get('/api/dashboard/summary', (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`[Scrapedeez] Personal Job Engine running on http://localhost:${PORT}`);
-  runScraperJob().catch(err => console.error('[Scrapedeez] Startup scan notice:', err.message));
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`[Scrapedeez] Personal Job Engine running on http://localhost:${PORT}`);
+    runScraperJob().catch(err => console.error('[Scrapedeez] Startup scan notice:', err.message));
+  });
+}
+
+module.exports = { app, parseJobUrl };

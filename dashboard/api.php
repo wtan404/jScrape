@@ -351,27 +351,177 @@ switch ($action) {
             }
         }
 
-        // 3. LinkedIn URL Recognition & Slug Parsing
-        $isLinkedIn = (bool)preg_match('#linkedin\.com#i', $targetUrl);
-        if ($isLinkedIn) {
-            $detectedSource = 'LinkedIn';
-            $path = parse_url($targetUrl, PHP_URL_PATH);
-            if ($path && preg_match('#/jobs/view/([a-z0-9-]+)#i', $path, $slugMatch)) {
-                $slug = preg_replace('/-[0-9]{6,}$/', '', $slugMatch[1]);
-                if (strpos($slug, '-at-') !== false) {
-                    list($roleSlug, $companySlug) = explode('-at-', $slug, 2);
-                    if (!empty($roleSlug)) {
-                        $detectedTitle = ucwords(str_replace('-', ' ', $roleSlug));
-                    }
-                    if (!empty($companySlug)) {
-                        $detectedCompany = ucwords(str_replace('-', ' ', $companySlug));
+        // 3. Oracle Cloud Recruiting (ORC / Candidate Experience CX) & Taleo
+        $isOracleCloud = (bool)preg_match('/oraclecloud\.com|careers\.oracle\.com/i', $targetUrl);
+        $isTaleo = (bool)preg_match('/taleo\.net/i', $targetUrl);
+
+        if (empty($detectedTitle) && $isOracleCloud) {
+            $parsedHost = parse_url($targetUrl, PHP_URL_HOST);
+            $parsedPath = parse_url($targetUrl, PHP_URL_PATH);
+
+            $tenantName = 'Oracle';
+            if (preg_match('/^([a-zA-Z0-9_-]+)\.fa\.[a-zA-Z0-9_-]+\.oraclecloud\.com/i', $parsedHost, $tm)) {
+                $tenantName = $tm[1];
+            } elseif (preg_match('/^([a-zA-Z0-9_-]+)\.oraclecloud\.com/i', $parsedHost, $tm)) {
+                $tenantName = $tm[1];
+            }
+
+            $formattedEmployer = strtoupper($tenantName);
+            if (preg_match('/^eeho$/i', $tenantName) || preg_match('/careers\.oracle\.com/i', $parsedHost)) {
+                $formattedEmployer = 'Oracle';
+            } elseif (preg_match('/^jpmc$/i', $tenantName)) {
+                $formattedEmployer = 'JPMorgan Chase';
+            } elseif (strlen($tenantName) > 4) {
+                $formattedEmployer = ucfirst(strtolower($tenantName));
+            }
+
+            $siteNumber = 'CX';
+            $jobId = null;
+            if (preg_match('#sites/([^/]+)/(?:job|requisitions/preview)/([0-9a-zA-Z_-]+)#i', $parsedPath, $sm)) {
+                $siteNumber = $sm[1];
+                $jobId = $sm[2];
+            } elseif (preg_match('#job/([0-9a-zA-Z_-]+)#i', $parsedPath, $sm)) {
+                $jobId = $sm[1];
+            }
+
+            if ($jobId) {
+                $orcApiUrl = "https://{$parsedHost}/hcmRestApi/resources/latest/recruitingCEJobRequisitionDetails?onlyData=true&expand=all&finder=ById;Id=%22{$jobId}%22,siteNumber={$siteNumber}";
+                $ch = curl_init($orcApiUrl);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 7);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                ]);
+                $orcRes = curl_exec($ch);
+                $orcCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($orcCode === 200 && !empty($orcRes)) {
+                    $orcData = @json_decode($orcRes, true);
+                    if (is_array($orcData) && !empty($orcData['items'][0])) {
+                        $it = $orcData['items'][0];
+                        $detectedTitle = trim($it['Title'] ?? '');
+                        $detectedLocation = $it['PrimaryLocation'] ?? 'Remote';
+                        $rawJdText = ($it['ExternalDescriptionStr'] ?? '') . ' ' . ($it['ShortDescriptionStr'] ?? '');
+
+                        if (preg_match('/^jpmc$/i', $tenantName)) {
+                            $detectedCompany = 'JPMorgan Chase';
+                        } else {
+                            $corpComp = trim($it['LegalEmployer'] ?? ($it['Organization'] ?? ($it['BusinessUnit'] ?? '')));
+                            if (!empty($corpComp) && !preg_match('/^(oraclecloud|company)$/i', $corpComp)) {
+                                $detectedCompany = $corpComp;
+                            } else {
+                                $detectedCompany = $formattedEmployer;
+                            }
+                        }
+                        $detectedSource = "Oracle Cloud ({$detectedCompany})";
+                        if (!empty($it['ExternalPostedStartDate'])) {
+                            $detectedDate = $it['ExternalPostedStartDate'];
+                        }
+                        if (preg_match('/\$([0-9]{2,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?k?)\s*(?:-|to)\s*\$([0-9]{2,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?k?)/i', $rawJdText, $salMatch)) {
+                            $detectedSalary = $salMatch[0];
+                        }
                     }
                 }
             }
         }
 
-        // 4. Generic HTML / JSON-LD / OpenGraph Scraper
-        if (empty($detectedTitle) || empty($detectedCompany) || $isLinkedIn) {
+        if (empty($detectedTitle) && $isTaleo) {
+            $parsedHost = parse_url($targetUrl, PHP_URL_HOST);
+            $parts = explode('.', $parsedHost);
+            $tOrg = $parts[0] ?? '';
+            if ($tOrg === 'chm' || $tOrg === 'tbe') {
+                parse_str(parse_url($targetUrl, PHP_URL_QUERY) ?? '', $queryParams);
+                if (!empty($queryParams['org'])) $tOrg = $queryParams['org'];
+            }
+            if (!empty($tOrg) && !preg_match('/^(taleo|www|chm|tbe)$/i', $tOrg)) {
+                $detectedCompany = ucfirst($tOrg);
+            } else {
+                $detectedCompany = 'Employer';
+            }
+            $detectedSource = "Taleo ({$detectedCompany})";
+        }
+
+        // 4. LinkedIn URL Recognition, Guest API & Slug Parsing
+        $isLinkedIn = (bool)preg_match('#linkedin\.com#i', $targetUrl);
+        if ($isLinkedIn) {
+            $detectedSource = 'LinkedIn';
+            $linkedInJobId = null;
+            if (preg_match('#/jobs/view/(?:[^\/]+-)?(\d{6,})#i', $targetUrl, $idM)) {
+                $linkedInJobId = $idM[1];
+            } elseif (preg_match('#[?&]currentJobId=(\d{6,})#i', $targetUrl, $idM)) {
+                $linkedInJobId = $idM[1];
+            } elseif (preg_match('#/jobs/view/(\d+)#i', $targetUrl, $idM)) {
+                $linkedInJobId = $idM[1];
+            }
+
+            // B. Query LinkedIn Guest API (Bypasses 429 guest view wall)
+            if ($linkedInJobId) {
+                $guestApiUrl = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{$linkedInJobId}";
+                $ch = curl_init($guestApiUrl);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+                    'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language: en-US,en;q=0.9'
+                ]);
+                $gHtml = curl_exec($ch);
+                $gCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($gCode === 200 && !empty($gHtml)) {
+                    $rawJdText = $gHtml;
+                    if (preg_match('#<h2[^>]*class="[^"]*top-card-layout__title[^"]*"[^>]*>([\s\S]*?)</h2>#i', $gHtml, $tm) ||
+                        preg_match('#<h1[^>]*class="[^"]*topcard__title[^"]*"[^>]*>([\s\S]*?)</h1>#i', $gHtml, $tm) ||
+                        preg_match('#<h1[^>]*class="[^"]*top-card-layout__title[^"]*"[^>]*>([\s\S]*?)</h1>#i', $gHtml, $tm)) {
+                        $detectedTitle = trim(html_entity_decode(strip_tags($tm[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                    }
+
+                    if (preg_match('#<a[^>]*class="[^"]*topcard__org-name-link[^"]*"[^>]*>([\s\S]*?)</a>#i', $gHtml, $cm) ||
+                        preg_match('#<span[^>]*class="[^"]*topcard__flavor[^"]*"[^>]*>([\s\S]*?)</span>#i', $gHtml, $cm) ||
+                        preg_match('#class="[^"]*top-card-layout__first-subline[^"]*"[\s\S]*?<a[^>]*>([\s\S]*?)</a>#i', $gHtml, $cm)) {
+                        $parsedComp = trim(html_entity_decode(strip_tags($cm[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                        if (!empty($parsedComp) && !preg_match('/^(linkedin|company)$/i', $parsedComp)) {
+                            $detectedCompany = $parsedComp;
+                        }
+                    }
+
+                    if (preg_match('#<span[^>]*class="[^"]*topcard__flavor--bullet[^"]*"[^>]*>([\s\S]*?)</span>#i', $gHtml, $lm) ||
+                        preg_match('#<span[^>]*class="[^"]*job-search-card__location[^"]*"[^>]*>([\s\S]*?)</span>#i', $gHtml, $lm)) {
+                        $detectedLocation = trim(html_entity_decode(strip_tags($lm[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                    }
+
+                    if (preg_match('/\$([0-9]{2,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?k?)\s*(?:-|to)\s*\$([0-9]{2,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?k?)/i', $gHtml, $salMatch)) {
+                        $detectedSalary = $salMatch[0];
+                    }
+                }
+            }
+
+            // Slug fallback
+            if (empty($detectedTitle) || empty($detectedCompany)) {
+                $path = parse_url($targetUrl, PHP_URL_PATH);
+                if ($path && preg_match('#/jobs/view/([a-z0-9-]+)#i', $path, $slugMatch)) {
+                    $slug = preg_replace('/-[0-9]{6,}$/', '', $slugMatch[1]);
+                    if (strpos($slug, '-at-') !== false) {
+                        list($roleSlug, $companySlug) = explode('-at-', $slug, 2);
+                        if (!empty($roleSlug) && empty($detectedTitle)) {
+                            $detectedTitle = ucwords(str_replace('-', ' ', $roleSlug));
+                        }
+                        if (!empty($companySlug) && empty($detectedCompany)) {
+                            $detectedCompany = ucwords(str_replace('-', ' ', $companySlug));
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. Generic HTML / JSON-LD / OpenGraph Scraper
+        if (empty($detectedTitle) || empty($detectedCompany)) {
             $ch = curl_init($targetUrl);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 8);
@@ -396,7 +546,7 @@ switch ($action) {
                             foreach ($items as $item) {
                                 if (isset($item['@type']) && (strtolower($item['@type']) === 'jobposting' || strtolower($item['@type']) === 'job')) {
                                     if (!empty($item['title'])) $detectedTitle = $item['title'];
-                                    if (!empty($item['hiringOrganization']['name']) && !preg_match('/^(linkedin|indeed|glassdoor|ziprecruiter)$/i', trim($item['hiringOrganization']['name']))) {
+                                    if (!empty($item['hiringOrganization']['name']) && !preg_match('/^(linkedin|indeed|glassdoor|ziprecruiter|oraclecloud|taleo)$/i', trim($item['hiringOrganization']['name']))) {
                                         $detectedCompany = $item['hiringOrganization']['name'];
                                     }
                                     if (!empty($item['jobLocation']['address']['addressLocality'])) {
@@ -418,7 +568,7 @@ switch ($action) {
                 }
                 if (empty($detectedCompany) && preg_match('#<meta[^>]+property=[\'"]og:site_name[\'"][^>]+content=[\'"](.*?)[\'"]#i', $html, $siteMatch)) {
                     $cand = html_entity_decode($siteMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                    if (!preg_match('/^(linkedin|indeed|glassdoor|ziprecruiter)$/i', trim($cand))) {
+                    if (!preg_match('/^(linkedin|indeed|glassdoor|ziprecruiter|oraclecloud|taleo)$/i', trim($cand))) {
                         $detectedCompany = $cand;
                     }
                 }
@@ -438,33 +588,42 @@ switch ($action) {
 
         // Deconstruct compound titles: "<Role> at <Company> - <Location> | LinkedIn"
         if (!empty($detectedTitle)) {
-            $detectedTitle = preg_replace('/\s*[-|–—•·]\s*LinkedIn.*$/i', '', $detectedTitle);
-            if (preg_match('/^(.+?)\s+(?:at|@)\s+([^-–—|•·]+?)(?:\s*[-–—|•·]\s*(.+))?$/i', $detectedTitle, $atMatches)) {
-                $detectedTitle = trim($atMatches[1]);
+            $detectedTitle = preg_replace('/\s*[-|–—•·]\s*(?:LinkedIn|Indeed|Glassdoor|ZipRecruiter).*$/i', '', $detectedTitle);
+            $isPlaceholder = (bool)preg_match('/^opportunity(?:\s+at\s+.*)?$/i', $detectedTitle);
+
+            if (!$isPlaceholder && preg_match('/^(.+?)\s+(?:at|@)\s+([^-–—|•·]+?)(?:\s*[-–—|•·]\s*(.+))?$/i', $detectedTitle, $atMatches)) {
+                $candRole = trim($atMatches[1]);
                 $extractedComp = trim($atMatches[2]);
-                if (empty($detectedCompany) || preg_match('/^(linkedin|indeed|glassdoor|ziprecruiter|company)$/i', trim($detectedCompany))) {
-                    $detectedCompany = $extractedComp;
-                }
-                if ((empty($detectedLocation) || $detectedLocation === 'Remote') && !empty($atMatches[3])) {
-                    $detectedLocation = trim($atMatches[3]);
+                if (strtolower($candRole) !== 'opportunity') {
+                    $detectedTitle = $candRole;
+                    if (empty($detectedCompany) || preg_match('/^(linkedin|indeed|glassdoor|ziprecruiter|oraclecloud|taleo|company)$/i', trim($detectedCompany))) {
+                        if (!preg_match('/^(company|opportunity)$/i', $extractedComp)) {
+                            $detectedCompany = $extractedComp;
+                        }
+                    }
+                    if ((empty($detectedLocation) || $detectedLocation === 'Remote') && !empty($atMatches[3])) {
+                        $detectedLocation = trim($atMatches[3]);
+                    }
                 }
             }
         }
 
         // Hostname fallback for company
-        if (empty($detectedCompany) || preg_match('/^(linkedin|indeed|glassdoor|ziprecruiter)$/i', trim($detectedCompany))) {
+        if (empty($detectedCompany) || preg_match('/^(linkedin|indeed|glassdoor|ziprecruiter|oraclecloud|taleo|company)$/i', trim($detectedCompany))) {
             $host = parse_url($targetUrl, PHP_URL_HOST);
             $hostParts = explode('.', $host);
             $cand = count($hostParts) >= 2 ? $hostParts[count($hostParts) - 2] : ($host ?: 'Company');
-            if (!preg_match('/^(linkedin|indeed|glassdoor|ziprecruiter)$/i', $cand)) {
+            if (!preg_match('/^(linkedin|indeed|glassdoor|ziprecruiter|oraclecloud|taleo|company)$/i', $cand)) {
                 $detectedCompany = ucfirst($cand);
             } else {
-                $detectedCompany = 'Company';
+                $detectedCompany = $isOracleCloud ? 'Oracle' : ($isTaleo ? 'Employer' : ($isLinkedIn ? 'Direct Employer' : 'Company'));
             }
         }
 
-        if (empty($detectedTitle)) {
-            $detectedTitle = 'Opportunity at ' . $detectedCompany;
+        if (empty($detectedTitle) || preg_match('/^opportunity(?:\s+at\s+.*)?$/i', trim($detectedTitle))) {
+            $detectedTitle = (!empty($detectedCompany) && !preg_match('/^(company|direct employer)$/i', $detectedCompany))
+                ? 'Role at ' . $detectedCompany
+                : 'Tracked Position';
         }
 
         // Work type classification

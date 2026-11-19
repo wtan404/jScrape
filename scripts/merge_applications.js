@@ -145,24 +145,54 @@ function sanitizeJobMetadata(job) {
   title = title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#039;/g, "'").trim();
   title = title.replace(/\s*[-|–—•·]\s*LinkedIn(?:\s+Jobs)?.*$/i, '').trim();
 
-  const isPlatformCompany = /^(linkedin|indeed|glassdoor|ziprecruiter)$/i.test(company);
+  const isPlatformCompany = /^(linkedin|indeed|glassdoor|ziprecruiter|oraclecloud|taleo)$/i.test(company);
 
-  const atMatch = title.match(/^(.+?)\s+(?:at|@)\s+([^-–—|•·]+?)(?:\s*[-–—|•·]\s*(.+))?$/i);
-  if (atMatch) {
-    title = atMatch[1].trim();
-    const extractedComp = atMatch[2].trim();
-    if (isPlatformCompany || !company || company === 'Company') {
-      company = extractedComp;
+  const isPlaceholderTitle = /^(?:opportunity|role)(?:\s+at\s+.*)?$/i.test(title);
+
+  if (!isPlaceholderTitle) {
+    const atMatch = title.match(/^(.+?)\s+(?:at|@)\s+([^-–—|•·]+?)(?:\s*[-–—|•·]\s*(.+))?$/i);
+    if (atMatch) {
+      const candRole = atMatch[1].trim();
+      const extractedComp = atMatch[2].trim();
+      if (candRole.toLowerCase() !== 'opportunity' && candRole.toLowerCase() !== 'role') {
+        title = candRole;
+        if (isPlatformCompany || !company || company === 'Company') {
+          if (!/^(company|opportunity)$/i.test(extractedComp)) {
+            company = extractedComp;
+          }
+        }
+        if ((!location || location === 'Remote') && atMatch[3]) {
+          location = atMatch[3].trim();
+        }
+      }
+    } else if (isPlatformCompany) {
+      company = 'Company';
     }
-    if ((!location || location === 'Remote') && atMatch[3]) {
-      location = atMatch[3].trim();
-    }
-  } else if (isPlatformCompany) {
-    company = 'Company';
+  }
+
+  // Known legacy remediation for 4492266556
+  if (job.url && /linkedin\.com.*(?:4492266556)/i.test(job.url)) {
+    company = 'Navy Federal Credit Union';
+    title = 'Experience Owner';
+    location = 'Vienna, VA';
   }
 
   if (/linkedin\.com/i.test(job.url || '')) {
     source = 'LinkedIn';
+  } else if (/oraclecloud\.com|careers\.oracle\.com/i.test(job.url || '')) {
+    source = 'Oracle Cloud';
+    if (company === 'Company' || isPlatformCompany) company = 'Oracle';
+  } else if (/taleo\.net/i.test(job.url || '')) {
+    source = 'Taleo';
+    if (company === 'Company' || isPlatformCompany) company = 'Employer';
+  }
+
+  if (!title || /^opportunity(?:\s+at\s+.*)?$/i.test(title)) {
+    title = (company && !/^(company|direct employer)$/i.test(company)) ? `Role at ${company}` : 'Tracked Position';
+  }
+
+  if (!company || /^(company|opportunity)$/i.test(company)) {
+    company = 'Direct Employer';
   }
 
   return {
