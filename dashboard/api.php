@@ -363,7 +363,7 @@ switch ($action) {
             $parsedHost = parse_url($targetUrl, PHP_URL_HOST);
             $parsedPath = parse_url($targetUrl, PHP_URL_PATH);
 
-            if (preg_match('#(?:[a-z]{2}(?:-[a-z]{2})?/)?([^/]+)/job/(?:.*?/)?([^/?#]+)#i', $parsedPath, $pm)) {
+            if (preg_match('~(?:[a-z]{2}(?:-[a-z]{2})?/)?([^/]+)/job/(?:.*?/)?([^/?#]+)~i', $parsedPath, $pm)) {
                 $site = $pm[1];
                 $jobSlug = $pm[2];
                 $apiUrl = "https://{$parsedHost}/wday/cxs/{$wdTenant}/{$site}/job/{$jobSlug}";
@@ -402,7 +402,7 @@ switch ($action) {
         }
 
         // 4. Ashby Board & Job Resolver (Embedded Next.js & REST)
-        if (empty($detectedTitle) && preg_match('#jobs\.ashbyhq\.com/([^/?#]+)(?:/([a-zA-Z0-9_-]+))?#i', $targetUrl, $ashMatches)) {
+        if (empty($detectedTitle) && preg_match('~jobs\.ashbyhq\.com/([^/?#]+)(?:/([a-zA-Z0-9_-]+))?~i', $targetUrl, $ashMatches)) {
             $companySlug = $ashMatches[1];
 
             $ch = curl_init($targetUrl);
@@ -440,7 +440,7 @@ switch ($action) {
         }
 
         // 5. SmartRecruiters Postings API
-        if (empty($detectedTitle) && preg_match('#(?:jobs|careers)\.smartrecruiters\.com/([^/?#]+)/([a-zA-Z0-9_-]+)#i', $targetUrl, $srMatches)) {
+        if (empty($detectedTitle) && preg_match('~(?:jobs|careers)\.smartrecruiters\.com/([^/?#]+)/([a-zA-Z0-9_-]+)~i', $targetUrl, $srMatches)) {
             $srCompany = $srMatches[1];
             $srJobSlug = $srMatches[2];
             $parts = explode('-', $srJobSlug);
