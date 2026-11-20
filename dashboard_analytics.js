@@ -335,7 +335,14 @@ function renderSankeyFunnel() {
 
   const chartHeight = Math.max(380, Math.min(600, edges.length * 28 + 120));
 
+  // Determine container bounds and reserve space on the right (140px) for terminal node labels (⭐ Offer Extended, 🔴 Rejected).
+  // Google Charts Sankey renders the rightmost node column at x = width - nodeWidth and places labels to the right of that node.
+  // Reserving 140px ensures labels never clip the container or push beyond viewport bounds.
+  const containerWidth = container.clientWidth || container.parentElement?.clientWidth || 1100;
+  const chartWidth = Math.max(340, containerWidth - 140);
+
   const options = {
+    width: chartWidth,
     height: chartHeight,
     sankey: {
       node: {
@@ -347,7 +354,8 @@ function renderSankeyFunnel() {
           bold: true
         },
         nodePadding: 24,
-        width: 14
+        width: 14,
+        labelPadding: 10
       },
       link: {
         colorMode: 'gradient',

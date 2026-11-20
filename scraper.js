@@ -32,14 +32,22 @@ const PREDEFINED_ROLES = [
   'Site Reliability Manager',
   'Manager of IT',
   'IT Manager',
-  'Director of IT'
+  'Director of IT',
+  'Shopify Developer',
+  'Shopify Engineer',
+  'Shopify Manager',
+  'WordPress Developer',
+  'WordPress Engineer',
+  'WordPress Manager',
+  'CMS Manager'
 ];
 
 const PREDEFINED_KEYWORDS = [
   'staff engineer', 'technical program manager', 'tpm',
   'web operations', 'website operations', 'webops', 'web manager',
   'forward deploy', 'forward deployed', 'release manager', 'release engineering',
-  'devops manager', 'devops', 'site reliability', 'sre', 'infrastructure', 'it management'
+  'devops manager', 'devops', 'site reliability', 'sre', 'infrastructure', 'it management',
+  'shopify', 'shopify plus', 'wordpress', 'wordpress vip', 'woocommerce'
 ];
 
 // Negative Filter Guardrails: Strict IT focus, excluding non-technical Product Managers, HR, and Finance

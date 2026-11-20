@@ -4,6 +4,23 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.21.0] - 2026-11-19
+
+### Added
+- **Shopify & WordPress Criteria Expansion (`config.json`, `scraper.js`, `server.js`, `main.js`):**
+  - Expanded search keywords to include e-commerce and CMS stacks: `"shopify"`, `"shopify plus"`, `"wordpress"`, `"wordpress vip"`, and `"woocommerce"` for broad full-text matching across RemoteOK, WeWorkRemotely, Remotive, and Jobicy.
+  - Expanded target titles to include dedicated engineering and management requisitions: `"Shopify Developer"`, `"Shopify Engineer"`, `"Shopify Manager"`, `"WordPress Developer"`, `"WordPress Engineer"`, `"WordPress Manager"`, and `"CMS Manager"` across direct ATS boards (Greenhouse, Lever, Ashby, SmartRecruiters) and Google Jobs query generators.
+  - Synchronized defaults across configuration fallbacks in `scraper.js`, `server.js`, and `main.js`.
+
+### Fixed
+- **Sankey Viewport Overflow & Responsive Clamping (`dashboard_analytics.js`, `dashboard/dashboard_analytics.js`, `dashboard.html`, `dashboard/index.html`):**
+  - Resolved diagram overflow where terminal node labels (`⭐ Offer Extended`, `🔴 Rejected`) extended outside the container and viewport boundary.
+  - Implemented dynamic available width calculation in `dashboard_analytics.js` (`chartWidth = Math.max(340, containerWidth - 140)`), strictly reserving clearance for right-hanging terminal node labels.
+  - Applied CSS rule `#sankeyChartContainer svg { overflow: visible !important; }` to guarantee full text visibility without layout truncation.
+  - Hardened layout boundaries with `overflow-x: hidden` and `max-width: 100vw` on `body`, alongside responsive container box bounding across `.analytics-layout`, `.chart-panel`, and `.chart-container-box`.
+
+---
+
 ## [1.20.1] - 2026-11-19
 
 ### Fixed

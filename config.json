@@ -29,7 +29,14 @@
     "IT Manager",
     "Manager of IT",
     "Director of IT",
-    "IT Operations Manager"
+    "IT Operations Manager",
+    "Shopify Developer",
+    "Shopify Engineer",
+    "Shopify Manager",
+    "WordPress Developer",
+    "WordPress Engineer",
+    "WordPress Manager",
+    "CMS Manager"
   ],
   "keywords": [
     "staff engineer",
@@ -50,7 +57,12 @@
     "infrastructure",
     "cloud infrastructure",
     "it operations",
-    "it management"
+    "it management",
+    "shopify",
+    "shopify plus",
+    "wordpress",
+    "wordpress vip",
+    "woocommerce"
   ],
   "excludedKeywords": [
     "product manager",

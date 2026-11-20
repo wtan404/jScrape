@@ -16,11 +16,14 @@ let userConfig = {
   targetTitles: [
     'Manager of IT', 'IT Manager', 'Web Operations', 'WebOps Manager',
     'Website Development', 'DevOps Manager', 'DevOps Lead', 'Director of IT',
-    'Web Engineering Manager', 'Software Engineering Manager'
+    'Web Engineering Manager', 'Software Engineering Manager',
+    'Shopify Developer', 'Shopify Engineer', 'Shopify Manager',
+    'WordPress Developer', 'WordPress Engineer', 'WordPress Manager', 'CMS Manager'
   ],
   keywords: [
     'devops', 'webops', 'web development', 'infrastructure',
-    'cloud', 'terraform', 'kubernetes', 'change control', 'it management'
+    'cloud', 'terraform', 'kubernetes', 'change control', 'it management',
+    'shopify', 'shopify plus', 'wordpress', 'wordpress vip', 'woocommerce'
   ],
   greenhouseCompanies: [
     'webflow', 'squarespace', 'contentful', 'fastly', 'klaviyo', 'braze', 'circleci',

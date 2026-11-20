@@ -316,13 +316,16 @@ function readConfig() {
       'Forward Deployed Engineer', 'Release Manager', 'Release Engineer',
       'Release Engineering Manager', 'DevOps Manager', 'DevOps Lead',
       'Director of DevOps', 'DevOps Engineer', 'Infrastructure Manager',
-      'Site Reliability Manager', 'Manager of IT', 'IT Manager', 'Director of IT'
+      'Site Reliability Manager', 'Manager of IT', 'IT Manager', 'Director of IT',
+      'Shopify Developer', 'Shopify Engineer', 'Shopify Manager',
+      'WordPress Developer', 'WordPress Engineer', 'WordPress Manager', 'CMS Manager'
     ],
     keywords: [
       'staff engineer', 'technical program manager', 'tpm', 'web operations',
       'website operations', 'webops', 'web manager', 'forward deploy',
       'forward deployed', 'release manager', 'release engineering', 'devops manager',
-      'devops', 'site reliability', 'sre', 'infrastructure', 'it management'
+      'devops', 'site reliability', 'sre', 'infrastructure', 'it management',
+      'shopify', 'shopify plus', 'wordpress', 'wordpress vip', 'woocommerce'
     ],
     excludedKeywords: [
       'product manager', 'product management', 'product owner', 'product marketing',
