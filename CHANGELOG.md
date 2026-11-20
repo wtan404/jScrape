@@ -12,6 +12,12 @@ All notable changes to the jScrape project are documented in this file.
   - Expanded target titles to include dedicated engineering and management requisitions: `"Shopify Developer"`, `"Shopify Engineer"`, `"Shopify Manager"`, `"WordPress Developer"`, `"WordPress Engineer"`, `"WordPress Manager"`, and `"CMS Manager"` across direct ATS boards (Greenhouse, Lever, Ashby, SmartRecruiters) and Google Jobs query generators.
   - Synchronized defaults across configuration fallbacks in `scraper.js`, `server.js`, and `main.js`.
 
+### Removed
+- **QA Branch & Pipeline Decommissioning (`.github/workflows/deploy.yml`, `scripts/merge_applications.js`):**
+  - Permanently removed `qa` branch across local and remote repositories.
+  - Streamlined GitHub Actions automated deployments to target exclusively `stage` (`stage.j.synopsdigital.com`) and `main` (production: `j.synopsdigital.com`).
+  - Purged obsolete `qa` and `dev` deployment directories from the live host server.
+
 ### Fixed
 - **Sankey Viewport Overflow & Responsive Clamping (`dashboard_analytics.js`, `dashboard/dashboard_analytics.js`, `dashboard.html`, `dashboard/index.html`):**
   - Resolved diagram overflow where terminal node labels (`⭐ Offer Extended`, `🔴 Rejected`) extended outside the container and viewport boundary.

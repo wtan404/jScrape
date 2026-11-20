@@ -37,9 +37,7 @@ args.forEach(arg => {
   }
   if (arg.startsWith('--env=')) {
     const env = arg.split('=')[1];
-    if (env === 'dev') upstreamUrl = 'https://dev.j.synopsdigital.com';
-    else if (env === 'qa') upstreamUrl = 'https://qa.j.synopsdigital.com';
-    else if (env === 'stage') upstreamUrl = 'https://stage.j.synopsdigital.com';
+    if (env === 'stage') upstreamUrl = 'https://stage.j.synopsdigital.com';
     else upstreamUrl = 'https://j.synopsdigital.com';
   }
 });
