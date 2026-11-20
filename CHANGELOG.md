@@ -4,6 +4,23 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.22.0] - 2026-11-19
+
+### Added
+- **Universal Omni-Link Job Parser (`server.js`, `dashboard/api.php`, `dashboard.js`, `dashboard/dashboard.js`, `index.html`):**
+  - Upgraded the manual application input engine to dynamically ingest and extract structured metadata from **any** job URL across the web.
+  - **Workday Candidate Experience (CXS) REST Integration:** Automatically resolves `*.myworkdayjobs.com` URLs by querying Workday's native `/wday/cxs/<tenant>/<site>/job/<jobSlug>` API endpoint, extracting official requisition title, tenant employer, location, and compensation.
+  - **Ashby Job Board Integration:** Resolves `jobs.ashbyhq.com/<company>/<id>` URLs by extracting embedded Next.js application data (`__NEXT_DATA__`) and public posting endpoints.
+  - **SmartRecruiters Public REST API Integration:** Direct integration querying `api.smartrecruiters.com/v1/companies/<company>/postings/<id>` for structured job and employer details.
+  - **BambooHR Integration:** Direct tenant and posting recognition across `*.bamboohr.com`.
+  - **Enhanced Universal Semantic HTML Engine:** Comprehensive JSON-LD (`@type: JobPosting`) parser with structured compensation support (`baseSalary.value.minValue` / `maxValue`), OpenGraph/Twitter Card extractors, and semantic `<h1>` fallback.
+  - **Expanded Compound Title Decompiler:** Automatically decomposes complex browser page titles across multiple formats (`<Role> at/@ <Company>`, `<Company> hiring <Role>`, `<Company> Careers: <Role>`), stripping platform branding suffixes.
+  - **Subdomain-Aware Hostname Resolution:** Cleans carrier prefixes (`careers.`, `jobs.`, `boards.`, `work.`, `apply.`) to accurately isolate direct corporate employers (e.g. `Stripe`, `Datadog`, `Nike`).
+  - **Zero-Failure Client-Side Fallback:** Enhanced `dashboard.js` with instant multi-segment URL slug deconstruction, ensuring seamless manual tracking even when target platforms deploy strict bot protections.
+  - **Automated Verification Coverage (`tests/test_omni_url_parsing.js`):** Built dedicated automated test battery validating Workday, Ashby, SmartRecruiters, BambooHR, LinkedIn Guest API, Oracle Cloud, Taleo, and corporate career pages.
+
+---
+
 ## [1.21.0] - 2026-11-19
 
 ### Added

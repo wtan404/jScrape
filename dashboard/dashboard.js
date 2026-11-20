@@ -2391,37 +2391,95 @@ async function importAndTrackJob() {
 
     // 3. Client-side heuristic fallback
     if (!scannedJob) {
-      let host = 'Company';
       let title = '';
       let company = '';
+      let source = 'Manual Import';
       const isLinkedIn = /linkedin\.com/i.test(targetUrl);
       const isOracle = /oraclecloud\.com|careers\.oracle\.com/i.test(targetUrl);
       const isTaleo = /taleo\.net/i.test(targetUrl);
+      const isWorkday = /myworkdayjobs\.com/i.test(targetUrl);
+      const isAshby = /ashbyhq\.com/i.test(targetUrl);
+      const isGreenhouse = /greenhouse\.io/i.test(targetUrl);
+      const isLever = /lever\.co/i.test(targetUrl);
+      const isSmartRecruiters = /smartrecruiters\.com/i.test(targetUrl);
+      const isBamboo = /bamboohr\.com/i.test(targetUrl);
 
       try {
         const u = new URL(targetUrl);
-        const parts = u.hostname.split('.');
-        host = parts.length >= 2 ? parts[parts.length - 2] : u.hostname;
-        if (!/^(linkedin|indeed|glassdoor|ziprecruiter|oraclecloud|taleo)$/i.test(host)) {
-          company = host.charAt(0).toUpperCase() + host.slice(1);
+        const hostParts = u.hostname.replace(/^www\./i, '').split('.');
+        const filteredParts = hostParts.filter(p => !/^(careers|jobs|boards|work|apply|hire|corp|cdn)$/i.test(p));
+        const hostCandidate = filteredParts.length >= 2 ? filteredParts[filteredParts.length - 2] : filteredParts[0] || u.hostname;
+
+        if (isWorkday) {
+          const wdTenant = u.hostname.split('.')[0];
+          company = wdTenant.charAt(0).toUpperCase() + wdTenant.slice(1);
+          source = `Workday (${company})`;
+        } else if (isAshby) {
+          const p = u.pathname.split('/').filter(Boolean);
+          if (p[0]) company = p[0].charAt(0).toUpperCase() + p[0].slice(1);
+          source = `Ashby (${company})`;
+        } else if (isGreenhouse) {
+          const p = u.pathname.split('/').filter(Boolean);
+          const ghIdx = p.indexOf('boards.greenhouse.io') !== -1 ? p.indexOf('boards.greenhouse.io') + 1 : 0;
+          if (p[ghIdx]) company = p[ghIdx].charAt(0).toUpperCase() + p[ghIdx].slice(1);
+          source = `Greenhouse (${company})`;
+        } else if (isLever) {
+          const p = u.pathname.split('/').filter(Boolean);
+          if (p[0]) company = p[0].charAt(0).toUpperCase() + p[0].slice(1);
+          source = `Lever (${company})`;
+        } else if (isSmartRecruiters) {
+          const p = u.pathname.split('/').filter(Boolean);
+          if (p[0]) company = p[0].charAt(0).toUpperCase() + p[0].slice(1);
+          source = `SmartRecruiters (${company})`;
+        } else if (isBamboo) {
+          const bhrTenant = u.hostname.split('.')[0];
+          company = bhrTenant.charAt(0).toUpperCase() + bhrTenant.slice(1);
+          source = `BambooHR (${company})`;
         } else if (isOracle) {
           company = 'Oracle';
+          source = 'Oracle Cloud';
         } else if (isTaleo) {
-          company = 'Employer';
-        } else {
+          const taleoTenant = u.hostname.split('.')[0];
+          company = !/^(taleo|www|chm|tbe)$/i.test(taleoTenant) ? taleoTenant.charAt(0).toUpperCase() + taleoTenant.slice(1) : 'Employer';
+          source = `Taleo (${company})`;
+        } else if (isLinkedIn) {
+          source = 'LinkedIn';
           company = 'Direct Employer';
+        } else {
+          if (!/^(linkedin|indeed|glassdoor|ziprecruiter|oraclecloud|taleo|company)$/i.test(hostCandidate)) {
+            company = hostCandidate.charAt(0).toUpperCase() + hostCandidate.slice(1);
+          } else {
+            company = 'Direct Employer';
+          }
+          source = company !== 'Direct Employer' ? `${company} Careers` : 'Direct Import';
         }
 
-        // Try extracting slug for LinkedIn
+        // Slug parsing for role title
+        const pathParts = u.pathname.split('/').filter(Boolean);
         if (isLinkedIn) {
-          const pathParts = u.pathname.split('/').filter(Boolean);
           const viewIdx = pathParts.indexOf('view');
           if (viewIdx !== -1 && pathParts[viewIdx + 1]) {
             const slug = pathParts[viewIdx + 1].replace(/-[0-9]{6,}$/, '');
             if (slug.includes('-at-')) {
               const [roleSlug, companySlug] = slug.split('-at-');
               if (roleSlug) title = roleSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-              if (companySlug) company = companySlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+              if (companySlug && (!company || company === 'Direct Employer')) {
+                company = companySlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+              }
+            }
+          }
+        } else {
+          for (let i = pathParts.length - 1; i >= 0; i--) {
+            const part = pathParts[i];
+            if (part && part.length > 5 && !/^[0-9]+$/.test(part) && !/^(job|jobs|careers|view|apply|detail|requisitions)$/i.test(part)) {
+              const cleanedPart = part.replace(/^job-|_r-?[0-9a-z]+$/i, '').replace(/-[0-9]{5,}$/, '');
+              if (cleanedPart.includes('-') || cleanedPart.includes('_')) {
+                const words = cleanedPart.split(/[-_]/).filter(w => w.length > 0 && !/^[0-9]+$/.test(w));
+                if (words.length >= 2) {
+                  title = words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                  break;
+                }
+              }
             }
           }
         }
@@ -2430,7 +2488,7 @@ async function importAndTrackJob() {
       if (!title || /^opportunity(?:\s+at\s+.*)?$/i.test(title)) {
         title = (company && !/^(company|direct employer)$/i.test(company)) ? `Role at ${company}` : 'Tracked Position';
       }
-      if (!company) company = isOracle ? 'Oracle' : 'Direct Employer';
+      if (!company) company = 'Direct Employer';
 
       const resolvedLoc = formatJobLocationAndWorkType({
         location: 'Remote',
@@ -2440,7 +2498,7 @@ async function importAndTrackJob() {
 
       scannedJob = {
         id: 'manual-' + Math.random().toString(36).substring(2, 10),
-        source: isLinkedIn ? 'LinkedIn' : (isOracle ? 'Oracle Cloud' : (isTaleo ? 'Taleo' : 'Manual Import')),
+        source,
         title,
         company,
         location: resolvedLoc.location,
