@@ -20,6 +20,9 @@ for arg in "$@"; do
   esac
 done
 
+AUTH_USER="${AUTH_USER:-will}"
+AUTH_PASS="${AUTH_PASS:-ScrapeDeez12!}"
+
 echo "======================================================"
 echo "🧪 Running Automated jScrape QA Suite"
 echo "Target URL: ${TARGET_URL}"
@@ -58,7 +61,7 @@ check_endpoint() {
 
   while [ $attempt -le $retries ]; do
     local meta
-    meta=$(curl -s -L -o "$tmpfile" -w "%{http_code} %{time_total}" --max-time 15 "$url")
+    meta=$(curl -s -L -u "${AUTH_USER}:${AUTH_PASS}" -o "$tmpfile" -w "%{http_code} %{time_total}" --max-time 15 "$url")
     http_code=$(echo "$meta" | awk '{print $1}')
     duration=$(echo "$meta" | awk '{print $2}')
 
@@ -104,7 +107,7 @@ check_header() {
   local found=false
 
   for i in 1 2 3; do
-    headers=$(curl -s -L -I --max-time 10 "${TARGET_URL}/")
+    headers=$(curl -s -L -u "${AUTH_USER}:${AUTH_PASS}" -I --max-time 10 "${TARGET_URL}/")
     if echo "$headers" | grep -i -q "^${header_name}:"; then
       found=true
       break
@@ -162,7 +165,7 @@ PAGES=()
 if [ -f "sitemap.xml" ]; then
   sitemap_paths=$(grep -oE '<loc>[^<]+</loc>' sitemap.xml | sed -E 's|</?loc>||g' | sed -E 's|https?://[^/]+||g')
 else
-  sitemap_paths=$(curl -s -L --max-time 10 "${TARGET_URL}/sitemap.xml" | grep -oE '<loc>[^<]+</loc>' | sed -E 's|</?loc>||g' | sed -E 's|https?://[^/]+||g')
+  sitemap_paths=$(curl -s -L -u "${AUTH_USER}:${AUTH_PASS}" --max-time 10 "${TARGET_URL}/sitemap.xml" | grep -oE '<loc>[^<]+</loc>' | sed -E 's|</?loc>||g' | sed -E 's|https?://[^/]+||g')
 fi
 
 while IFS= read -r p; do
@@ -180,7 +183,7 @@ done
 
 CRAWLED_LINKS=()
 for page in "${PAGES[@]}"; do
-  content=$(curl -s -L --max-time 10 "${TARGET_URL}${page}")
+  content=$(curl -s -L -u "${AUTH_USER}:${AUTH_PASS}" --max-time 10 "${TARGET_URL}${page}")
   found_links=$(echo "$content" | grep -oE '(href|src)="[^"#?]+"' | sed -E 's/(href|src)="([^"]+)"/\2/' | grep -vE '^(http|https|mailto|tel|javascript|data|#):' || true)
 
   while IFS= read -r link; do

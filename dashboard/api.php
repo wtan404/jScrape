@@ -118,6 +118,7 @@ switch ($action) {
 
     // 2. Single Application Status Update (Mark Applied, Drop, Restore, Status Dropdown)
     case 'application-status':
+    case 'update_application_status':
         if ($method !== 'POST') {
             http_response_code(405);
             echo json_encode(['error' => 'Method Not Allowed']);

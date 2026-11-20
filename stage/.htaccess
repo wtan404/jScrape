@@ -8,6 +8,17 @@ PassengerAppType node
 # Passenger Nodejs Path
 PassengerNodejs "/opt/alt/alt-nodejs18/root/usr/bin/node"
 
+# Site-Wide HTTP Basic Authentication Shield (Stage Environment)
+AuthType Basic
+AuthName "jScrape Restricted Access - Authorized Personnel Only (Stage)"
+AuthUserFile /home/synopsdi/public_html/list/.htpasswd
+Require valid-user
+
+# Whitelist vitality/health check for automated uptime monitoring
+<FilesMatch "^(health|health\.json)$">
+    Require all granted
+</FilesMatch>
+
 # Enforce Subdomain-Only Access: Block any request that does not use stage.j subdomain (403 Forbidden)
 <IfModule mod_authz_core.c>
     <If "%{HTTP_HOST} !~ /^stage\.j\.synopsdigital\.com$/ && %{HTTP_HOST} !~ /^(localhost|127\.0\.0\.1)/">

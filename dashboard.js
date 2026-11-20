@@ -59,6 +59,55 @@ let currentQueueTab = 'active'; // 'active' | 'applied' | 'dismissed'
 let appliedJobsMap = {}; // key -> { jobId, job, status, resumeId, resumeLabel, notes, appliedAt }
 let dismissedJobsMap = {}; // key -> { jobId, job, reason, dismissedAt }
 
+// Cross-Tab / Cross-Window Real-Time Synchronization Channel
+let statusSyncChannel = null;
+try {
+  if (typeof BroadcastChannel !== 'undefined') {
+    statusSyncChannel = new BroadcastChannel('scrapedeez_status_sync');
+    statusSyncChannel.onmessage = (event) => {
+      if (event.data && (event.data.type === 'STATUS_UPDATED' || event.data.type === 'APPLICATIONS_SYNC')) {
+        handleExternalStatusUpdate();
+      }
+    };
+  }
+} catch (e) {}
+
+function broadcastStatusUpdate(jobId, status, rejectionStage, stageHistory) {
+  if (statusSyncChannel) {
+    try {
+      statusSyncChannel.postMessage({
+        type: 'STATUS_UPDATED',
+        jobId,
+        status,
+        rejectionStage,
+        stageHistory,
+        timestamp: Date.now()
+      });
+    } catch (e) {}
+  }
+}
+
+function handleExternalStatusUpdate() {
+  loadApplicationsState();
+  if (currentQueueTab === 'applied') {
+    renderTriageTable();
+    renderSankeyDiagram();
+  }
+  updateQueueBadgeCounts();
+}
+
+window.addEventListener('storage', (e) => {
+  if (e.key === 'scrapedeez_job_applications') {
+    handleExternalStatusUpdate();
+  }
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    handleExternalStatusUpdate();
+  }
+});
+
 let selectedResumeUploadBase64 = null;
 let selectedResumeUploadFileName = null;
 
@@ -1463,6 +1512,7 @@ function updateAppliedStatus(key, newOption) {
     });
 
     saveApplicationsState();
+    broadcastStatusUpdate(key, item.status, item.rejectionStage, item.stageHistory);
 
     // Async server persistence across all devices
     persistApplicationStatus(key, 'update_status', {
@@ -1471,6 +1521,7 @@ function updateAppliedStatus(key, newOption) {
       stageHistory: item.stageHistory
     });
 
+    renderSankeyDiagram();
     showToast(`Updated status to: ${item.status}`);
   }
 }
@@ -2740,10 +2791,13 @@ function buildSankeyDataRows(mode, appliedList) {
 
   function cleanStatus(status) {
     switch (status) {
-      case 'Applied': return '🟢 Applied / In Review';
+      case 'Applied': return '🟢 Applied';
+      case 'In Review': return '🟣 In Review';
       case 'Interviewing': return '🔵 Interviewing';
-      case 'Offer': return '⭐ Offer Extended';
+      case 'Offer':
+      case 'Offer Extended': return '⭐ Offer Extended';
       case 'Rejected': return '🔴 Rejected';
+      case 'No Response': return '⚪ No Response';
       case 'Archived': return '⚪ Archived';
       default: return status ? `🟢 ${status}` : '🟢 Applied';
     }

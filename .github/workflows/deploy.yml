@@ -92,7 +92,7 @@ jobs:
           chmod +x tests/qa-check.sh
           echo "Waiting for passenger service to settle..."
           for i in {1..12}; do
-            if curl -s -L "${{ steps.set-target.outputs.url }}/health" | grep -q "healthy"; then
+            if curl -s -L -u "will:ScrapeDeez12!" "${{ steps.set-target.outputs.url }}/health" | grep -q "healthy"; then
               echo "Server health confirmed: application online."
               break
             fi

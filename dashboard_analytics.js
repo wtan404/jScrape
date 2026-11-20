@@ -11,6 +11,55 @@ document.addEventListener('DOMContentLoaded', () => {
   initAnalyticsDashboard();
 });
 
+// Cross-Tab / Cross-Window Real-Time Synchronization Channel
+let statusSyncChannel = null;
+try {
+  if (typeof BroadcastChannel !== 'undefined') {
+    statusSyncChannel = new BroadcastChannel('scrapedeez_status_sync');
+    statusSyncChannel.onmessage = (event) => {
+      if (event.data && (event.data.type === 'STATUS_UPDATED' || event.data.type === 'APPLICATIONS_SYNC')) {
+        handleExternalStatusUpdate();
+      }
+    };
+  }
+} catch (e) {}
+
+function broadcastStatusUpdate(jobId, status, rejectionStage, stageHistory) {
+  if (statusSyncChannel) {
+    try {
+      statusSyncChannel.postMessage({
+        type: 'STATUS_UPDATED',
+        jobId,
+        status,
+        rejectionStage,
+        stageHistory,
+        timestamp: Date.now()
+      });
+    } catch (e) {}
+  }
+}
+
+function handleExternalStatusUpdate() {
+  loadLocalApplications();
+  renderKpiMetrics();
+  if (isGoogleChartsReady) {
+    renderSankeyFunnel();
+  }
+  renderAnalyticsTable();
+}
+
+window.addEventListener('storage', (e) => {
+  if (e.key === 'scrapedeez_job_applications') {
+    handleExternalStatusUpdate();
+  }
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    handleExternalStatusUpdate();
+  }
+});
+
 async function initAnalyticsDashboard() {
   if (window.lucide) lucide.createIcons();
 
@@ -52,15 +101,34 @@ function loadLocalApplications() {
   }
 }
 
+function reconcileServerApplications(serverApplied) {
+  if (!serverApplied || typeof serverApplied !== 'object') return;
+  const merged = { ...applicationsMap };
+  Object.entries(serverApplied).forEach(([k, sItem]) => {
+    const lItem = applicationsMap[k];
+    if (!lItem) {
+      merged[k] = sItem;
+    } else {
+      const lTime = new Date(lItem.updatedAt || lItem.appliedAt || 0).getTime();
+      const sTime = new Date(sItem.updatedAt || sItem.appliedAt || 0).getTime();
+      if (sTime > lTime) {
+        merged[k] = sItem;
+      } else {
+        merged[k] = lItem;
+      }
+    }
+  });
+  applicationsMap = merged;
+  saveLocalApplications();
+}
+
 async function fetchServerApplications() {
   try {
     const res = await fetch(`./api.php?action=summary&t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
       if (data && data.applied) {
-        // Merge server state
-        applicationsMap = { ...applicationsMap, ...data.applied };
-        saveLocalApplications();
+        reconcileServerApplications(data.applied);
       }
     }
   } catch (e) {
@@ -70,8 +138,7 @@ async function fetchServerApplications() {
       if (parentRes.ok) {
         const data = await parentRes.json();
         if (data && data.applied) {
-          applicationsMap = { ...applicationsMap, ...data.applied };
-          saveLocalApplications();
+          reconcileServerApplications(data.applied);
         }
       }
     } catch (e2) {}
@@ -126,6 +193,7 @@ async function persistApplicationUpdate(key, item) {
   try {
     const payload = {
       jobId: key,
+      action: 'update_status',
       status: item.status,
       rejectionStage: item.rejectionStage || '',
       resumeId: item.resumeId || '',
@@ -134,8 +202,15 @@ async function persistApplicationUpdate(key, item) {
       stageHistory: item.stageHistory || []
     };
 
-    // Try relative paths
-    const endpoints = ['./api.php?action=update_application_status', '../api.php?action=update_application_status'];
+    // Try relative paths across production & dev
+    const endpoints = [
+      './api.php?action=application-status',
+      '../api.php?action=application-status',
+      './api.php?action=update_application_status',
+      '../api.php?action=update_application_status',
+      './api/jobs/application-status',
+      '../api/jobs/application-status'
+    ];
     for (const ep of endpoints) {
       try {
         const res = await fetch(ep, {
@@ -531,6 +606,7 @@ function updateLedgerStatus(key, newOption) {
   });
 
   saveLocalApplications();
+  broadcastStatusUpdate(key, item.status, item.rejectionStage, item.stageHistory);
   persistApplicationUpdate(key, item);
 
   renderKpiMetrics();

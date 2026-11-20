@@ -152,7 +152,7 @@ async function handlePhpApi(req, res) {
     return res.json(apps);
   }
 
-  if (action === 'application-status') {
+  if (action === 'application-status' || action === 'update_application_status') {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
     const { jobId, job = {}, status, action: op = status || 'applied', reason, notes, resumeId, resumeLabel, appliedAt, dismissedAt } = req.body;
     if (!jobId) return res.status(400).json({ error: 'Missing jobId' });

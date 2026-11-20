@@ -84,7 +84,9 @@
     .dash-nav-actions {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      justify-content: flex-end;
+      gap: 0.65rem;
+      margin-left: auto;
     }
 
     /* KPI Cards Row */
@@ -817,28 +819,21 @@
 
   <header class="app-header">
     <div class="container header-wrap">
-      <div class="brand">
-        <img src="synops_logo.jpg" alt="Synops Logo" class="brand-logo-img">
-        <span class="brand-title">SCRAPE<span class="highlight">DEEZ</span></span>
-      </div>
-
       <div class="dash-nav-actions">
-        <a href="dashboard.html" class="btn btn-secondary btn-sm" title="End-to-End Application Funnel & Analytics Dashboard">
+        <a href="dashboard.html" class="btn btn-secondary btn-sm btn-icon-only" title="Conversion Funnel Analytics" aria-label="End-to-End Application Funnel & Analytics Dashboard">
           <i data-lucide="git-branch" style="color: var(--accent-purple-light);"></i>
-          <span>Funnel Analytics</span>
         </a>
-        <a href="search.html" class="btn btn-secondary btn-sm" title="Keyword Criteria & Search Preferences">
+        <a href="search.html" class="btn btn-secondary btn-sm btn-icon-only" title="Keyword Criteria & Search Preferences" aria-label="Keyword Criteria & Search Preferences">
           <i data-lucide="sliders-horizontal"></i>
-          <span>Search Config</span>
         </a>
-        <a href="dashboard/test-application.html" class="btn btn-secondary btn-sm" title="Mock ATS Test Page & Payload Inspector">
+        <a href="dashboard/test-application.html" class="btn btn-secondary btn-sm btn-icon-only" title="Mock ATS Test Page & Payload Inspector" aria-label="Mock ATS Test Page & Payload Inspector">
           <i data-lucide="flask-conical"></i>
         </a>
-        <button class="btn btn-secondary btn-sm theme-toggle-btn" onclick="toggleTheme()" id="btnThemeToggle" aria-label="Toggle Theme">
+        <button class="btn btn-secondary btn-sm theme-toggle-btn btn-icon-only" onclick="toggleTheme()" id="btnThemeToggle" aria-label="Toggle Theme" title="Toggle Dark/Light Mode">
           <i data-lucide="sun" id="themeIconSun"></i>
           <i data-lucide="moon" id="themeIconMoon" style="display: none;"></i>
         </button>
-        <button class="btn btn-primary btn-sm" onclick="triggerHourlyRescan()" id="btnRescan" title="Trigger Re-Scan">
+        <button class="btn btn-primary btn-sm btn-icon-only" onclick="triggerHourlyRescan()" id="btnRescan" title="Trigger Re-Scan" aria-label="Trigger Re-Scan">
           <i data-lucide="refresh-cw"></i>
         </button>
       </div>

@@ -4,6 +4,33 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.23.0] - 2026-11-20
+
+### Security & Access Control
+- **Site-Wide HTTP Basic Auth Lockdown (`.htaccess`, `.htpasswd`, `stage/.htaccess`, `dashboard/.htaccess`):**
+  - Fully locked the entire site `https://j.synopsdigital.com` and related areas (`stage.j.synopsdigital.com`, root `/`, `/dashboard/`, `/stage/`, API endpoints, and static assets) behind HTTP Basic Authentication.
+  - Set authorized credentials (`will:ScrapeDeez12!`) and updated the SHA-1 digest hash entry across `.htpasswd` files and `jscrape_prod_credentials.txt`.
+  - Configured health check exemption (`<FilesMatch "^(health|health\.json)$"> Require all granted </FilesMatch>`) to allow automated vitality probes.
+  - Updated automated CI/CD and QA test suites (`.github/workflows/deploy.yml`, `tests/qa-check.sh`) to supply basic auth credentials.
+
+### User Interface & Modernization
+- **Header Simplification & Icon-Only Navigation (`index.html`, `dashboard.html`, `dashboard/index.html`, `search.html`, `styles.css`):**
+  - Removed the `SCRAPEDEEZ` branding title and Synops logo image across all headers.
+  - Stripped text labels (`<span>...</span>`) off header action buttons, leaving only compact, centered Lucide SVG icons with explicit tooltip `title` and `aria-label` attributes.
+  - Standardized `.btn-icon-only` styling (36×36px square buttons with centered SVG icons).
+  - Aligned header navigation actions cleanly to the top-right (`justify-content: flex-end; align-items: center; margin-left: auto;`) across desktop and mobile viewports.
+
+### Real-Time Synchronization & Sankey Reactivity
+- **Bidirectional Application Status Synchronization (`dashboard.js`, `dashboard_analytics.js`, `dashboard/api.php`, `server.js`):**
+  - Implemented real-time bidirectional status synchronization between the Triage Center (`index.html`) and the Analytics Dashboard (`dashboard.html`) using a shared `BroadcastChannel('scrapedeez_status_sync')`, native `window.addEventListener('storage')`, and `document.addEventListener('visibilitychange')`.
+  - Status transitions invoked on the Triage Center (Active/Applied table dropdowns) instantly reflect on the dropdowns in the Analytics Dashboard without page reloads, and vice versa.
+  - Added immediate Sankey diagram re-rendering on both pages whenever a status change occurs (`renderSankeyDiagram()` in Triage Center, `renderSankeyFunnel()` in Analytics Dashboard).
+  - Enhanced status granularity mapping in Triage Center Sankey flows to distinguish `🟢 Applied`, `🟣 In Review`, `🔵 Interviewing`, `⭐ Offer Extended`, `⚪ No Response`, and `🔴 Rejected`.
+  - Fixed backend persistence in `dashboard_analytics.js` and added endpoint aliasing (`case 'update_application_status':` -> `case 'application-status':`) in `api.php` and `server.js`.
+  - Upgraded `fetchServerApplications()` in `dashboard_analytics.js` to timestamp-aware reconciliation, preventing older server state from overwriting recent local status updates.
+
+---
+
 ## [1.22.0] - 2026-11-19
 
 ### Added

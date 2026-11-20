@@ -1,17 +1,8 @@
 # ==============================================================================
-# PM Operations Command Center — Production Directory Shield
+# PM Operations Command Center — Directory Shield
 # ==============================================================================
 
-<IfModule mod_authz_core.c>
-    AuthType Basic
-    AuthName "Restricted PM Operations Command Center"
-    AuthUserFile /home/synopsdi/public_html/list/.htpasswd
-
-    # Require HTTP Basic Auth when accessed on production domain
-    <If "%{HTTP_HOST} =~ /^(j\.)?synopsdigital\.com$/">
-        Require valid-user
-    </If>
-    <Else>
-        Require all granted
-    </Else>
-</IfModule>
+AuthType Basic
+AuthName "jScrape Restricted Access - Authorized Personnel Only"
+AuthUserFile /home/synopsdi/public_html/list/.htpasswd
+Require valid-user

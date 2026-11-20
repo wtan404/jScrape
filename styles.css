@@ -135,13 +135,44 @@ body {
 .header-wrap {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.dash-nav-actions,
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-left: auto;
+}
+
+/* Icon-Only Action Buttons */
+.btn-icon-only {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  max-width: 36px;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.btn-icon-only i,
+.btn-icon-only svg {
+  width: 18px !important;
+  height: 18px !important;
+  margin: 0 !important;
 }
 
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
+  display: none;
 }
 
 .brand-logo-img {
@@ -1010,8 +1041,8 @@ body {
 @media (max-width: 768px) {
   .header-wrap {
     flex-wrap: wrap;
-    gap: 0.8rem;
-    justify-content: space-between;
+    gap: 0.5rem;
+    justify-content: flex-end;
   }
 
   .header-actions {
