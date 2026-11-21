@@ -4,21 +4,17 @@ deployment:
     - export DEPLOYPATH=/home/synopsdi/public_html/list/
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/cp -R index.html $DEPLOYPATH
-    - /bin/cp -R dashboard.html $DEPLOYPATH
-    - /bin/cp -R dashboard.js $DEPLOYPATH
-    - /bin/cp -R test-application.html $DEPLOYPATH
-    - /bin/cp -R api.php $DEPLOYPATH
+    - /bin/cp -R dsb.html $DEPLOYPATH
     - /bin/cp -R styles.css $DEPLOYPATH
-    - /bin/cp -R config.json $DEPLOYPATH
-    - /bin/cp -R jobs_data.json $DEPLOYPATH
-    - /bin/cp -R server.js $DEPLOYPATH
-    - /bin/cp -R scraper.js $DEPLOYPATH
-    - /bin/cp -R ats_scraper.js $DEPLOYPATH
-    - /bin/cp -R verifier.js $DEPLOYPATH
-    - /bin/cp -R geo_helper.js $DEPLOYPATH
-    - /bin/cp -R submission_engine.js $DEPLOYPATH
+    - /bin/cp -R api.php $DEPLOYPATH
     - /bin/cp -R package.json $DEPLOYPATH
-    - /bin/cp -R profile.json $DEPLOYPATH
+    - /bin/cp -R server.js $DEPLOYPATH
     - /bin/cp -R .htaccess $DEPLOYPATH 2>/dev/null || true
     - /bin/cp -R .htpasswd $DEPLOYPATH 2>/dev/null || true
+    - /bin/mkdir -p $DEPLOYPATH/dta
+    - /bin/cp -R dta/ $DEPLOYPATH/
+    - /bin/mkdir -p $DEPLOYPATH/scripts
+    - /bin/cp -R scripts/ $DEPLOYPATH/
+    - /bin/mkdir -p $DEPLOYPATH/ops
+    - /bin/cp -R ops/ $DEPLOYPATH/
     - /bin/mkdir -p $DEPLOYPATH/uploads/resumes

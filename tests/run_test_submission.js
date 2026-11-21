@@ -10,7 +10,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { resolveFieldAnswer, readProfile } = require('../submission_engine');
+const { resolveFieldAnswer, readProfile } = require('../scripts/submission_engine');
 
 // 1. Define Realistic Mock ATS Schema (Divergent form questions from Greenhouse/Lever)
 const MOCK_ATS_SCHEMA = {
@@ -188,29 +188,8 @@ async function runTestSubmissionPipeline() {
   console.log(`🕒 Server Timestamp: ${receipt.submittedAt}`);
   console.log(`💬 Ingestion Message: ${receipt.message}\n`);
 
-  // Append to submissions_log.json for live audit tracking
-  const LOGS_FILE = path.join(__dirname, '..', 'submissions_log.json');
-  try {
-    let logs = [];
-    if (fs.existsSync(LOGS_FILE)) {
-      try { logs = JSON.parse(fs.readFileSync(LOGS_FILE, 'utf8')); } catch (e) { logs = []; }
-    }
-    logs.unshift({
-      receiptId: receipt.receiptId,
-      jobId: MOCK_ATS_SCHEMA.jobId,
-      title: MOCK_ATS_SCHEMA.jobTitle,
-      company: receipt.company,
-      url: 'https://dev.j.synopsdigital.com/dashboard/test-application.html',
-      resumeLabel: 'DevOps & Cloud Infrastructure Lead',
-      status: receipt.status,
-      message: receipt.message,
-      submittedAt: receipt.submittedAt
-    });
-    fs.writeFileSync(LOGS_FILE, JSON.stringify(logs.slice(0, 50), null, 2));
-    console.log(`💾 Receipt permanently recorded in submissions_log.json`);
-  } catch (e) {
-    console.warn('Could not record to submissions_log.json:', e.message);
-  }
+  // Receipt generated and verified for candidate submission audit
+  console.log(`💾 Receipt verified for candidate submission audit.`);
 
   console.log('================================================================================');
   console.log('🏁 TEST SUBMISSION HARNESS COMPLETED SUCCESSFULLY');

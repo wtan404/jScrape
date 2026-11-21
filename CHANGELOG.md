@@ -4,6 +4,30 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.29.0] - 2026-11-21
+
+### Architectural Restructuring & Scraper Pipeline Consolidation
+- **Directory Layout Migration (`dta/`, `scripts/`, `ops/`, `dsb.html`, `server.js`):**
+  - Migrated persistent data feeds to [dta/](file:///D:/Projects/jScrape/dta) (`config.json`, `jobs_data.json`, `job_applications.json`, `profile.json`, `health.json`).
+  - Restored [package.json](file:///D:/Projects/jScrape/package.json) and `package-lock.json` to repository root to guarantee compatibility with `npm`, Passenger, and CI/CD runners, bumping version to `1.29.0` and updating CLI run scripts.
+  - Relocated core Node.js application scripts to [scripts/](file:///D:/Projects/jScrape/scripts) (`server.js`, `scraper.js`, `submission_engine.js`, `dashboard.js`).
+  - Added root [server.js](file:///D:/Projects/jScrape/server.js) proxy entrypoint for Passenger / cPanel Node.js Selector compatibility.
+  - Relocated operational automation to [ops/](file:///D:/Projects/jScrape/ops) (`merge_applications.js`, `passenger-watchdog.sh`).
+  - Renamed `dashboard.html` to [dsb.html](file:///D:/Projects/jScrape/dsb.html) and removed deprecated mock page `test-application.html`.
+- **Scraper Ingestion & Verification Consolidation (`scripts/scraper.js`):**
+  - Consolidated standalone micro-modules (`ats_scraper.js`, `geo_helper.js`, `salary_extractor.js`, `verifier.js`) directly into [scripts/scraper.js](file:///D:/Projects/jScrape/scripts/scraper.js).
+  - Eliminated duplicate `EXCLUDED_ROLE_PATTERNS` negative role regexes, centralized distance calculations, workplace classification (`classifyWorkType`), salary range parsing (`extractSalaryFromText`), and ATS company job scraping (Greenhouse, Lever, Ashby, SmartRecruiters).
+  - Removed deprecated stubs `submissions_log.json` and extensionless `health`.
+- **Full Path & Endpoint Re-Wiring Across Application Stack:**
+  - **Frontend ([index.html](file:///D:/Projects/jScrape/index.html), [dsb.html](file:///D:/Projects/jScrape/dsb.html), [scripts/dashboard.js](file:///D:/Projects/jScrape/scripts/dashboard.js)):** Updated script references to `scripts/dashboard.js?v=1.29.0`, updated navigation links to `dsb.html`, removed mock test page button, and pointed `BASE_DATA_PATH` to `./dta/`.
+  - **Backend & Persistence ([scripts/server.js](file:///D:/Projects/jScrape/scripts/server.js), [api.php](file:///D:/Projects/jScrape/api.php), [scripts/submission_engine.js](file:///D:/Projects/jScrape/scripts/submission_engine.js)):** Updated path constants to target `../dta/`, mounted route handlers for `/dsb`, `/dsb/`, `/dashboard`, `/dashboard/` to `dsb.html`, and added backwards-compatibility aliases for legacy root JSON requests.
+  - **Operations & Reconciliation ([ops/merge_applications.js](file:///D:/Projects/jScrape/ops/merge_applications.js)):** Pointed `LOCAL_APPS_FILE` to `dta/job_applications.json` and added upstream endpoints fallback (`api.php` and `dashboard/api.php`).
+  - **Server Routing & Access ([.htaccess](file:///D:/Projects/jScrape/.htaccess)):** Updated `PassengerStartupFile` to root `server.js`, routed `/dashboard` and `/dsb` to `dsb.html`, and added legacy rewrite rules for moved assets.
+  - **Deployment & CI/CD ([.cpanel.yml](file:///D:/Projects/jScrape/.cpanel.yml), [.github/workflows/deploy.yml](file:///D:/Projects/jScrape/.github/workflows/deploy.yml), [.github/workflows/pr-gate.yml](file:///D:/Projects/jScrape/.github/workflows/pr-gate.yml)):** Updated deploy copy tasks for `dta/`, `scripts/`, `ops/`, configured FTP exclusion of persistent candidate state in `dta/`, and updated pre-merge syntax checks for consolidated modules.
+  - **Test Suite ([tests/](file:///D:/Projects/jScrape/tests)):** Updated relative module imports and endpoint verification checks across all test harnesses (`test_omni_url_parsing.js`, `test_oracle_url_parsing.js`, `run_test_submission.js`, `live_real_world_inspection.js`, `qa-check.sh`).
+
+---
+
 ## [1.28.0] - 2026-11-21
 
 ### Deprecation Cleanup & In-Dashboard Criteria Management

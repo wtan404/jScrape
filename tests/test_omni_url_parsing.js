@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { parseJobUrl } = require('../server');
+const { parseJobUrl } = require('../scripts/server');
 
 async function runOmniTests() {
   console.log('--- Running Universal Omni-Link Job Parser Verification Tests ---');

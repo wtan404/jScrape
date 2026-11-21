@@ -27,20 +27,23 @@ jobs:
         run: npm install
 
       - name: 🔍 Run Job Scraper & Link Verifier
-        run: node scraper.js
+        run: node scripts/scraper.js
 
       - name: 📊 Generate Health Telemetry
         run: |
-          cat <<EOF > health.json
+          mkdir -p dta
+          cat <<EOF > dta/health.json
           {
             "status": "healthy",
             "service": "scrapedeez",
             "updatedAt": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-            "jobsCount": $(node -e "try { console.log(JSON.parse(require('fs').readFileSync('jobs_data.json','utf8')).totalMatches || 0) } catch(e) { console.log(0) }"),
-            "lastScraped": "$(node -e "try { console.log(JSON.parse(require('fs').readFileSync('jobs_data.json','utf8')).lastScraped || '') } catch(e) { console.log('') }")"
+            "jobsCount": $(node -e "try { console.log(JSON.parse(require('fs').readFileSync('dta/jobs_data.json','utf8')).totalMatches || 0) } catch(e) { console.log(0) }"),
+            "lastScraped": "$(node -e "try { console.log(JSON.parse(require('fs').readFileSync('dta/jobs_data.json','utf8')).lastScraped || '') } catch(e) { console.log('') }")"
           }
           EOF
-          cp health.json health
+          cp dta/health.json dta/health 2>/dev/null || true
+          cp dta/health.json health.json 2>/dev/null || true
+          cp dta/health.json health 2>/dev/null || true
 
       - name: 🎯 Determine target directory & URL
         id: set-target
@@ -61,11 +64,11 @@ jobs:
         run: |
           mkdir -p tmp
           touch tmp/restart.txt
-          chmod +x scripts/*.sh tests/*.sh 2>/dev/null || true
+          chmod +x scripts/*.sh ops/*.sh tests/*.sh 2>/dev/null || true
 
       - name: 🔀 Reconcile & Merge Live Upstream Application Statuses
         run: |
-          node scripts/merge_applications.js --upstream-url="${{ steps.set-target.outputs.url }}" || true
+          node ops/merge_applications.js --upstream-url="${{ steps.set-target.outputs.url }}" || true
 
       - name: 📂 Sync files via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -80,6 +83,8 @@ jobs:
             **/node_modules/**
             .env*
             README.md
+            dta/job_applications.json
+            dta/profile.json
             job_applications.json
             profile.json
             stage/**

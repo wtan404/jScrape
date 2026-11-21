@@ -4,7 +4,7 @@
  */
 
 const axios = require('axios');
-const { resolveFieldAnswer, readProfile } = require('../submission_engine');
+const { resolveFieldAnswer, readProfile } = require('../scripts/submission_engine');
 
 async function probeLiveAts() {
   const profile = readProfile();

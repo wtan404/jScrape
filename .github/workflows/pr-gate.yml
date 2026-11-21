@@ -25,19 +25,21 @@ jobs:
 
       - name: 🔍 Validate JavaScript Syntax
         run: |
-          echo "Validating syntax across all Node.js scrapers and server..."
+          echo "Validating syntax across all Node.js modules..."
           node -c server.js
-          node -c scraper.js
-          node -c ats_scraper.js
-          node -c geo_helper.js
-          node -c verifier.js
+          node -c scripts/server.js
+          node -c scripts/scraper.js
+          node -c scripts/submission_engine.js
+          node -c scripts/dashboard.js
+          node -c ops/merge_applications.js
           echo "✅ All JavaScript files passed syntax verification."
 
       - name: 📊 Validate Configuration & Data Feeds
         run: |
-          echo "Verifying config.json and jobs_data.json formatting..."
-          node -e 'JSON.parse(require("fs").readFileSync("config.json")); console.log("✅ config.json valid");'
-          node -e 'JSON.parse(require("fs").readFileSync("jobs_data.json")); console.log("✅ jobs_data.json valid");'
+          echo "Verifying dta/config.json, dta/jobs_data.json, and dta/profile.json formatting..."
+          node -e 'JSON.parse(require("fs").readFileSync("dta/config.json")); console.log("✅ dta/config.json valid");'
+          node -e 'JSON.parse(require("fs").readFileSync("dta/jobs_data.json")); console.log("✅ dta/jobs_data.json valid");'
+          node -e 'JSON.parse(require("fs").readFileSync("dta/profile.json")); console.log("✅ dta/profile.json valid");'
 
       - name: 🧪 Pre-Merge Manifest & Structure Check
         run: |

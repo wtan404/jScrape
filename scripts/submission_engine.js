@@ -2,9 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 
-const PROFILE_FILE = path.join(__dirname, 'profile.json');
-const LOGS_FILE = path.join(__dirname, 'submissions_log.json');
-const RESUMES_DIR = path.join(__dirname, 'uploads', 'resumes');
+const ROOT_DIR = path.join(__dirname, '..');
+const PROFILE_FILE = path.join(ROOT_DIR, 'dta', 'profile.json');
+const RESUMES_DIR = path.join(ROOT_DIR, 'uploads', 'resumes');
 const RESUMES_META = path.join(RESUMES_DIR, 'metadata.json');
 
 // Extended Canonical Profile Knowledge Base (Handles Divergent Form Fields)

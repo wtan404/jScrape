@@ -1,12 +1,12 @@
 {
   "name": "scrapedeez",
-  "version": "1.28.0",
+  "version": "1.29.0",
   "description": "Automated Hourly Job Scraper & Verifier Engine for IT Management, WebOps & DevOps Roles",
-  "main": "server.js",
+  "main": "scripts/server.js",
   "scripts": {
-    "start": "node server.js",
-    "scrape": "node scraper.js",
-    "sync:upstream": "node scripts/merge_applications.js"
+    "start": "node scripts/server.js",
+    "scrape": "node scripts/scraper.js",
+    "sync:upstream": "node ops/merge_applications.js"
   },
   "keywords": [
     "job-scraper",

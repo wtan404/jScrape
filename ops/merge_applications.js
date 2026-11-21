@@ -9,7 +9,7 @@ const https = require('https');
 const http = require('http');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
-const LOCAL_APPS_FILE = path.join(ROOT_DIR, 'job_applications.json');
+const LOCAL_APPS_FILE = path.join(ROOT_DIR, 'dta', 'job_applications.json');
 const CREDENTIALS_FILE = path.resolve(ROOT_DIR, '..', 'jscrape_prod_credentials.txt');
 
 // Parse CLI flags
@@ -281,8 +281,14 @@ async function runMerge() {
     } catch (e) {}
   }
 
-  // Fetch upstream from API
-  let remoteData = await fetchRemote(`${upstreamUrl}/dashboard/api.php?action=applications`, authUser, authPass);
+  // Fetch upstream from API (try root api.php, then legacy dashboard/api.php, then direct JSON)
+  let remoteData = await fetchRemote(`${upstreamUrl}/api.php?action=applications`, authUser, authPass);
+  if (!remoteData) {
+    remoteData = await fetchRemote(`${upstreamUrl}/dashboard/api.php?action=applications`, authUser, authPass);
+  }
+  if (!remoteData) {
+    remoteData = await fetchRemote(`${upstreamUrl}/dta/job_applications.json`, authUser, authPass);
+  }
   if (!remoteData) {
     remoteData = await fetchRemote(`${upstreamUrl}/job_applications.json`, authUser, authPass);
   }
@@ -302,7 +308,10 @@ async function runMerge() {
   }
 
   if (pushAfterMerge && authUser && authPass) {
-    const pushed = await pushRemote(`${upstreamUrl}/dashboard/api.php?action=applications`, authUser, authPass, merged);
+    let pushed = await pushRemote(`${upstreamUrl}/api.php?action=applications`, authUser, authPass, merged);
+    if (!pushed) {
+      pushed = await pushRemote(`${upstreamUrl}/dashboard/api.php?action=applications`, authUser, authPass, merged);
+    }
     if (!quiet) console.log(`[Upstream Merger] Push to upstream API status: ${pushed ? 'SUCCESS' : 'FAILED'}`);
   }
 

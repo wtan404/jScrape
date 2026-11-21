@@ -3,7 +3,7 @@
    ========================================================================== */
 
 // Canonical root execution data path
-const BASE_DATA_PATH = './';
+const BASE_DATA_PATH = './dta/';
 
 const CANONICAL_DEFAULT_PROFILE = {
   fullName: 'William Tan',

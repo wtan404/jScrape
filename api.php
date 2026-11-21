@@ -14,11 +14,11 @@ header('Expires: 0');
 
 // Paths to persistent data files
 $rootDir = __DIR__;
-$appsFile = $rootDir . '/job_applications.json';
-$profileFile = $rootDir . '/profile.json';
-$jobsDataFile = $rootDir . '/jobs_data.json';
+$appsFile = $rootDir . '/dta/job_applications.json';
+$profileFile = $rootDir . '/dta/profile.json';
+$jobsDataFile = $rootDir . '/dta/jobs_data.json';
 $resumesMetaFile = $rootDir . '/uploads/resumes/metadata.json';
-$configFile = $rootDir . '/config.json';
+$configFile = $rootDir . '/dta/config.json';
 
 // Helper: Read JSON safely
 function readJsonFile($path, $default = []) {
