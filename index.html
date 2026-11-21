@@ -35,7 +35,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="styles.css?v=17.0">
+  <link rel="stylesheet" href="styles.css?v=1.28.0">
   <style>
     /* Dashboard High-Density Layout & Styling */
     .dashboard-layout {
@@ -820,9 +820,9 @@
         <a href="dashboard.html" class="btn btn-secondary btn-sm btn-icon-only" title="Conversion Funnel Analytics" aria-label="End-to-End Application Funnel & Analytics Dashboard">
           <i data-lucide="git-branch" style="color: var(--accent-purple-light);"></i>
         </a>
-        <a href="search.html" class="btn btn-secondary btn-sm btn-icon-only" title="Keyword Criteria & Search Preferences" aria-label="Keyword Criteria & Search Preferences">
+        <button type="button" class="btn btn-secondary btn-sm btn-icon-only" onclick="openConfigModal()" title="Search Criteria & Target Titles" aria-label="Search Criteria & Target Titles">
           <i data-lucide="sliders-horizontal"></i>
-        </a>
+        </button>
         <a href="test-application.html" class="btn btn-secondary btn-sm btn-icon-only" title="Mock ATS Test Page & Payload Inspector" aria-label="Mock ATS Test Page & Payload Inspector">
           <i data-lucide="flask-conical"></i>
         </a>
@@ -1162,6 +1162,68 @@
     </div>
   </div>
 
+  <!-- Modal 3: Search Criteria & Keywords Modal -->
+  <div class="modal-overlay" id="searchCriteriaModal" onclick="handleModalBackdropClick(event, 'searchCriteriaModal')">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3 style="margin: 0;"><i data-lucide="sliders-horizontal"></i> Search Criteria & Keywords</h3>
+        <button type="button" class="modal-close-btn" onclick="closeConfigModal()" aria-label="Close Criteria Modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.82rem; color: var(--text-dim); margin-bottom: 1.2rem;">
+          Configure target role titles, minimum compensation threshold, and search keywords for the hourly automated ingestion pipeline.
+        </p>
+
+        <!-- Minimum Salary Target -->
+        <div style="margin-bottom: 1.25rem;">
+          <label style="display: block; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.4rem;">
+            Minimum Base Target Salary (USD)
+          </label>
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="color: var(--accent-emerald); font-weight: 700;">$</span>
+            <input type="number" id="cfgMinSalary" class="form-input" style="width: 100%; max-width: 220px;" step="5000" min="50000" max="500000" placeholder="120000">
+          </div>
+        </div>
+
+        <!-- Target Titles -->
+        <div style="margin-bottom: 1.25rem;">
+          <label style="display: block; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.4rem;">
+            Target Role Titles (<span id="cfgTitlesCount">0</span>)
+          </label>
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.6rem;">
+            <input type="text" id="cfgNewTitleInput" class="form-input" placeholder="e.g. Lead Technical Program Manager" style="flex: 1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addConfigTitle();}">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addConfigTitle()">
+              <i data-lucide="plus"></i> Add Title
+            </button>
+          </div>
+          <div class="pill-tags-container" id="cfgTitlesTags" style="max-height: 160px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.5rem; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm);"></div>
+        </div>
+
+        <!-- Matching Keywords -->
+        <div style="margin-bottom: 1.25rem;">
+          <label style="display: block; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.4rem;">
+            Search Keywords (<span id="cfgKeywordsCount">0</span>)
+          </label>
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.6rem;">
+            <input type="text" id="cfgNewKeywordInput" class="form-input" placeholder="e.g. terraform, kubernetes, shopify" style="flex: 1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addConfigKeyword();}">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addConfigKeyword()">
+              <i data-lucide="plus"></i> Add Keyword
+            </button>
+          </div>
+          <div class="pill-tags-container" id="cfgKeywordsTags" style="max-height: 140px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.5rem; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: var(--radius-sm);"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeConfigModal()">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="saveConfigData()" id="btnSaveConfig">
+          <i data-lucide="check"></i> Save & Apply
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Sticky Bottom Dispatch Action Bar (Appears when >= 1 job is checked) -->
   <div class="sticky-dispatch-bar" id="stickyDispatchBar" style="display: none;">
     <div class="dispatch-summary-count">
@@ -1195,6 +1257,6 @@
     </div>
   </div>
 
-  <script src="dashboard.js?v=1.26.0"></script>
+  <script src="dashboard.js?v=1.28.0"></script>
 </body>
 </html>

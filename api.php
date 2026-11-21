@@ -18,6 +18,7 @@ $appsFile = $rootDir . '/job_applications.json';
 $profileFile = $rootDir . '/profile.json';
 $jobsDataFile = $rootDir . '/jobs_data.json';
 $resumesMetaFile = $rootDir . '/uploads/resumes/metadata.json';
+$configFile = $rootDir . '/config.json';
 
 // Helper: Read JSON safely
 function readJsonFile($path, $default = []) {
@@ -894,6 +895,24 @@ switch ($action) {
             'submissionsCount' => count($apps['applied']),
             'applications' => $apps
         ]);
+        exit;
+
+    // 7. Search Criteria & Keywords Configuration
+    case 'config':
+        $config = readJsonFile($configFile, []);
+        if ($method === 'POST') {
+            if (isset($body) && is_array($body)) {
+                $config = array_merge($config, $body);
+                writeJsonFile($configFile, $config);
+            }
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Search criteria configuration updated.',
+                'config' => $config
+            ]);
+            exit;
+        }
+        echo json_encode($config);
         exit;
 
     default:

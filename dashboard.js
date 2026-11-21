@@ -2,9 +2,8 @@
    Scrapedeez — PM Operations Command Center & Automated Submitter
    ========================================================================== */
 
-// Environment-aware path resolver for root (./) vs /dashboard/ (../) execution
-const isDashboardSubdir = /\/dashboard(?:\/|$|\/index\.html)/i.test(window.location.pathname);
-const BASE_DATA_PATH = isDashboardSubdir ? '../' : './';
+// Canonical root execution data path
+const BASE_DATA_PATH = './';
 
 const CANONICAL_DEFAULT_PROFILE = {
   fullName: 'William Tan',
@@ -2680,19 +2679,7 @@ async function fetchServerApplications() {
         reconcileServerApplications(applied);
       }
     }
-  } catch (e) {
-    // If running in subfolder /dashboard/, try parent api.php
-    try {
-      const parentRes = await fetch(`../api.php?action=summary&t=${Date.now()}`);
-      if (parentRes.ok) {
-        const data = await parentRes.json();
-        const applied = data?.applications?.applied || data?.applied;
-        if (applied) {
-          reconcileServerApplications(applied);
-        }
-      }
-    } catch (e2) {}
-  }
+  } catch (e) {}
 }
 
 function saveLocalApplications() {
@@ -2753,14 +2740,11 @@ async function persistApplicationUpdate(key, item) {
       stageHistory: item.stageHistory || []
     };
 
-    // Try relative paths across production & dev
+    // Canonical root persistence endpoints
     const endpoints = [
       './api.php?action=application-status',
-      '../api.php?action=application-status',
       './api.php?action=update_application_status',
-      '../api.php?action=update_application_status',
-      './api/jobs/application-status',
-      '../api/jobs/application-status'
+      './api/jobs/application-status'
     ];
     for (const ep of endpoints) {
       try {
@@ -3198,4 +3182,186 @@ function debounce(fn, ms) {
     clearTimeout(timer);
     timer = setTimeout(() => fn.apply(this, args), ms);
   };
+}
+
+/* ==========================================================================
+   Search Criteria & Target Titles Configuration Engine
+   ========================================================================== */
+let liveScraperConfig = {
+  minSalary: 120000,
+  targetTitles: [],
+  keywords: []
+};
+
+async function openConfigModal() {
+  const modal = document.getElementById('searchCriteriaModal');
+  if (!modal) return;
+
+  try {
+    let cfg = null;
+    try {
+      const res = await fetch(`./api.php?action=config&t=${Date.now()}`);
+      if (res.ok) cfg = await res.json();
+    } catch (e) {}
+
+    if (!cfg) {
+      try {
+        const res2 = await fetch(`./api/config?t=${Date.now()}`);
+        if (res2.ok) cfg = await res2.json();
+      } catch (e2) {}
+    }
+
+    if (!cfg) {
+      try {
+        const res3 = await fetch(`${BASE_DATA_PATH}config.json?t=${Date.now()}`);
+        if (res3.ok) cfg = await res3.json();
+      } catch (e3) {}
+    }
+
+    if (cfg && typeof cfg === 'object') {
+      liveScraperConfig = {
+        minSalary: cfg.minSalary || 120000,
+        targetTitles: Array.isArray(cfg.targetTitles) ? [...cfg.targetTitles] : [],
+        keywords: Array.isArray(cfg.keywords) ? [...cfg.keywords] : []
+      };
+    }
+  } catch (err) {
+    console.warn('Error reading config for modal:', err);
+  }
+
+  const salaryInput = document.getElementById('cfgMinSalary');
+  if (salaryInput) salaryInput.value = liveScraperConfig.minSalary || 120000;
+
+  renderConfigPills();
+  modal.classList.add('open');
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeConfigModal() {
+  const modal = document.getElementById('searchCriteriaModal');
+  if (modal) modal.classList.remove('open');
+}
+
+function renderConfigPills() {
+  const titlesContainer = document.getElementById('cfgTitlesTags');
+  const keywordsContainer = document.getElementById('cfgKeywordsTags');
+  const titlesCountEl = document.getElementById('cfgTitlesCount');
+  const keywordsCountEl = document.getElementById('cfgKeywordsCount');
+
+  if (titlesCountEl) titlesCountEl.textContent = liveScraperConfig.targetTitles.length;
+  if (keywordsCountEl) keywordsCountEl.textContent = liveScraperConfig.keywords.length;
+
+  if (titlesContainer) {
+    if (liveScraperConfig.targetTitles.length === 0) {
+      titlesContainer.innerHTML = '<span style="font-size:0.75rem; color:var(--text-dim); padding:0.25rem;">No target titles specified.</span>';
+    } else {
+      titlesContainer.innerHTML = liveScraperConfig.targetTitles.map((title, idx) => `
+        <span class="cfg-pill" style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.25rem 0.6rem; border-radius:999px; background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.3); font-size:0.75rem; font-weight:500; color:var(--text-main);">
+          <span>${title}</span>
+          <button type="button" onclick="removeConfigTitle(${idx})" style="background:none; border:none; color:var(--text-dim); cursor:pointer; padding:0; display:inline-flex; align-items:center; font-size:0.9rem;" title="Remove Title">&times;</button>
+        </span>
+      `).join('');
+    }
+  }
+
+  if (keywordsContainer) {
+    if (liveScraperConfig.keywords.length === 0) {
+      keywordsContainer.innerHTML = '<span style="font-size:0.75rem; color:var(--text-dim); padding:0.25rem;">No keywords specified.</span>';
+    } else {
+      keywordsContainer.innerHTML = liveScraperConfig.keywords.map((kw, idx) => `
+        <span class="cfg-pill" style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.25rem 0.6rem; border-radius:999px; background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.3); font-size:0.75rem; font-weight:500; color:var(--text-main);">
+          <span>${kw}</span>
+          <button type="button" onclick="removeConfigKeyword(${idx})" style="background:none; border:none; color:var(--text-dim); cursor:pointer; padding:0; display:inline-flex; align-items:center; font-size:0.9rem;" title="Remove Keyword">&times;</button>
+        </span>
+      `).join('');
+    }
+  }
+}
+
+function addConfigTitle() {
+  const input = document.getElementById('cfgNewTitleInput');
+  if (!input) return;
+  const val = input.value.trim();
+  if (val && !liveScraperConfig.targetTitles.some(t => t.toLowerCase() === val.toLowerCase())) {
+    liveScraperConfig.targetTitles.push(val);
+    input.value = '';
+    renderConfigPills();
+  }
+}
+
+function removeConfigTitle(idx) {
+  if (idx >= 0 && idx < liveScraperConfig.targetTitles.length) {
+    liveScraperConfig.targetTitles.splice(idx, 1);
+    renderConfigPills();
+  }
+}
+
+function addConfigKeyword() {
+  const input = document.getElementById('cfgNewKeywordInput');
+  if (!input) return;
+  const val = input.value.trim();
+  if (val && !liveScraperConfig.keywords.some(k => k.toLowerCase() === val.toLowerCase())) {
+    liveScraperConfig.keywords.push(val);
+    input.value = '';
+    renderConfigPills();
+  }
+}
+
+function removeConfigKeyword(idx) {
+  if (idx >= 0 && idx < liveScraperConfig.keywords.length) {
+    liveScraperConfig.keywords.splice(idx, 1);
+    renderConfigPills();
+  }
+}
+
+async function saveConfigData() {
+  const saveBtn = document.getElementById('btnSaveConfig');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i data-lucide="loader" class="spin"></i> Saving...';
+    if (window.lucide) lucide.createIcons();
+  }
+
+  const salaryInput = document.getElementById('cfgMinSalary');
+  const minSal = salaryInput ? parseInt(salaryInput.value, 10) || 120000 : 120000;
+  liveScraperConfig.minSalary = minSal;
+
+  const payload = {
+    minSalary: liveScraperConfig.minSalary,
+    targetTitles: liveScraperConfig.targetTitles,
+    keywords: liveScraperConfig.keywords
+  };
+
+  try {
+    let saved = false;
+    try {
+      const res = await fetch('./api.php?action=config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) saved = true;
+    } catch (e) {}
+
+    try {
+      const res2 = await fetch('./api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res2.ok) saved = true;
+    } catch (e2) {}
+
+    showActionToast('Search criteria & target titles updated successfully.', 'success');
+    closeConfigModal();
+  } catch (err) {
+    console.error('Failed to save search config:', err);
+    showActionToast('Failed to save search criteria updates.', 'error');
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i data-lucide="check"></i> Save & Apply';
+      if (window.lucide) lucide.createIcons();
+    }
+  }
 }

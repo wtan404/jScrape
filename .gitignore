@@ -7,4 +7,5 @@ uploads/resumes/*
 !uploads/resumes/.gitkeep
 !uploads/resumes/metadata.json
 backups/
+.vscode/sftp.json
 

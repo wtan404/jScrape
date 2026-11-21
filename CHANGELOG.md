@@ -4,6 +4,26 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.28.0] - 2026-11-21
+
+### Deprecation Cleanup & In-Dashboard Criteria Management
+- **Full Codebase Evaluation & Deprecation Cleanup (`search.html`, `main.js`, `zip3_centroids.js`, `synops_logo.jpg`, `.vscode/sftp.json`, `.cpanel.yml`, `robots.txt`, `submissions_log.json`):**
+  - Permanently removed legacy public search board ([search.html](file:///D:/Projects/jScrape/search.html)), its duplicate client-side engine ([main.js](file:///D:/Projects/jScrape/main.js), 79 KB / 2,114 lines), and the 3-digit Zip centroid dataset ([zip3_centroids.js](file:///D:/Projects/jScrape/zip3_centroids.js), 36 KB).
+  - Deleted orphaned 346 KB binary logo ([synops_logo.jpg](file:///D:/Projects/jScrape/synops_logo.jpg)) unreferenced by any layout or stylesheet.
+  - Removed plaintext FTP credentials file ([.vscode/sftp.json](file:///D:/Projects/jScrape/.vscode/sftp.json)) from git tracking and added `.vscode/sftp.json` to [.gitignore](file:///D:/Projects/jScrape/.gitignore).
+  - Purged references to deleted `/dev/` and `/qa/` directories from [robots.txt](file:///D:/Projects/jScrape/robots.txt).
+  - Cleared stale mock entries from [submissions_log.json](file:///D:/Projects/jScrape/submissions_log.json).
+  - Synchronized deployment manifest in [.cpanel.yml](file:///D:/Projects/jScrape/.cpanel.yml) and automated crawler verification in [tests/qa-check.sh](file:///D:/Projects/jScrape/tests/qa-check.sh).
+- **Repurposed Sliders Navigation & Native Search Criteria Modal (`index.html`, `dashboard.html`, `dashboard.js`, `styles.css`, `api.php`):**
+  - Repurposed the sliders icon (`<i data-lucide="sliders-horizontal"></i>`) in the headers of both the Triage Center ([index.html](file:///D:/Projects/jScrape/index.html)) and Analytics Dashboard ([dashboard.html](file:///D:/Projects/jScrape/dashboard.html)) to launch a unified **Search Criteria & Keywords Modal** (`openConfigModal()`).
+  - Allows live inspection and in-dashboard editing of target role titles, matching keywords (with interactive tag pills), and minimum base compensation thresholds.
+  - Added native `case 'config':` persistence to [api.php](file:///D:/Projects/jScrape/api.php) to support atomic updates to [config.json](file:///D:/Projects/jScrape/config.json) across both PHP and Node.js environments.
+  - Promoted modal layout and overlay animation tokens to global stylesheet ([styles.css](file:///D:/Projects/jScrape/styles.css)) for cross-page design parity.
+  - Purged dead `../api.php` and `../api/jobs/...` subfolder fallback paths from [dashboard.js](file:///D:/Projects/jScrape/dashboard.js).
+  - Bumped project version to `1.28.0` in [package.json](file:///D:/Projects/jScrape/package.json).
+
+---
+
 ## [1.27.0] - 2026-11-21
 
 ### Decommissioning & Deprecation Cleanup
