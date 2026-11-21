@@ -88,6 +88,8 @@ jobs:
             job_applications.json
             profile.json
             stage/**
+            dashboard
+            dashboard/**
             ${{ steps.set-target.outputs.exclude_htaccess }}
 
       - name: 🧪 Run Automated Post-Deploy Verification
