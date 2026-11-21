@@ -4,6 +4,24 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.26.0] - 2026-11-20
+
+### Frontend Architecture & Script Consolidation
+- **Consolidated `dashboard_analytics.js` into Canonical `dashboard.js` (`dashboard.js`, `dashboard.html`, `index.html`, `package.json`, `.cpanel.yml`):**
+  - Unified all dashboard frontend logic into a single high-performance script ([dashboard.js](file:///D:/Projects/jScrape/dashboard.js)) with page DOM-aware context mounting.
+  - Automatically initializes the Operational Triage Center when `.triage-center` is detected and the Conversion Funnel / Sankey Analytics Engine when `.analytics-layout` is detected.
+  - Migrated complete analytics and pipeline visualization engine:
+    - Google Charts dynamic Sankey topology and offline fallback matrix (`ensureGoogleCharts`, `renderSankeyFunnel`, `buildSankeyEdges`, `renderFallbackFunnel`).
+    - Granular stage metrics & KPI cards (`renderKpiMetrics`).
+    - Real-time application ledger table with status transitions and age tracking (`renderAnalyticsTable`, `updateLedgerStatus`).
+    - 20-day automated inactivity aging (`applyTwentyDayAutoAging`).
+    - Multi-endpoint cloud persistence and cross-window sync channel (`persistApplicationUpdate`, `syncAndRefreshDashboard`, `handleExternalStatusUpdate`).
+  - Switched [dashboard.html](file:///D:/Projects/jScrape/dashboard.html) and [index.html](file:///D:/Projects/jScrape/index.html) to load `<script src="dashboard.js?v=1.26.0"></script>`.
+  - Permanently removed `dashboard_analytics.js` from Git, local disk, `.cpanel.yml`, and remote host servers (`public_html/list/` and `public_html/list/stage/`).
+  - Bumped project version to `1.26.0` in [package.json](file:///D:/Projects/jScrape/package.json).
+
+---
+
 ## [1.25.0] - 2026-11-20
 
 ### Architecture & Directory Simplification
