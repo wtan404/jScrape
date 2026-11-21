@@ -46,6 +46,9 @@ Require valid-user
     RewriteCond %{HTTP_HOST} !^stage\.j\.synopsdigital\.com$ [NC]
     RewriteRule ^stage(/.*)?$ - [F,L]
 
+    # Route /dashboard and /dashboard/ cleanly to dashboard.html without requiring a physical directory
+    RewriteRule ^dashboard/?$ dashboard.html [L]
+
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ server.js [QSA,L]

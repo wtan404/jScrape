@@ -36,6 +36,9 @@ Require valid-user
     RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
     RewriteRule .* - [F,L]
 
+    # Route /dashboard and /dashboard/ cleanly to dashboard.html without requiring a physical directory
+    RewriteRule ^dashboard/?$ dashboard.html [L]
+
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ server.js [QSA,L]

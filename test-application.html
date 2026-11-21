@@ -28,7 +28,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="../styles.css?v=12.0">
+  <link rel="stylesheet" href="styles.css?v=17.0">
   <style>
     .test-layout {
       max-width: 1540px;
@@ -224,25 +224,14 @@
 
   <header class="app-header">
     <div class="container header-wrap">
-      <div class="brand">
-        <img src="../synops_logo.jpg" alt="Synops Logo" class="brand-logo-img">
-        <span class="brand-title">SCRAPE<span class="highlight">DEEZ</span></span>
-        <span class="dash-badge-live" style="margin-left: 0.8rem;">
-          <span class="pulse-dot"></span>
-          <span>Schema Resolution Testbed</span>
-        </span>
-      </div>
-
       <div class="dash-nav-actions">
-        <a href="./" class="btn btn-secondary btn-sm" title="Back to PM Dashboard">
-          <i data-lucide="layout-dashboard"></i>
-          <span>PM Dashboard</span>
+        <a href="./" class="btn btn-secondary btn-sm btn-icon-only" title="Return to Operational Triage Center" aria-label="Return to Operational Triage Center">
+          <i data-lucide="arrow-left"></i>
         </a>
-        <a href="../" class="btn btn-secondary btn-sm" title="Public Job Board">
-          <i data-lucide="globe"></i>
-          <span>Public Board</span>
+        <a href="dashboard.html" class="btn btn-secondary btn-sm btn-icon-only" title="Conversion Funnel Analytics" aria-label="End-to-End Application Funnel & Analytics Dashboard">
+          <i data-lucide="git-branch" style="color: var(--accent-purple-light);"></i>
         </a>
-        <button class="btn btn-secondary btn-sm theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle Theme">
+        <button class="btn btn-secondary btn-sm theme-toggle-btn btn-icon-only" onclick="toggleTheme()" aria-label="Toggle Theme" title="Toggle Dark/Light Mode">
           <i data-lucide="sun" id="themeIconSun"></i>
           <i data-lucide="moon" id="themeIconMoon" style="display: none;"></i>
         </button>

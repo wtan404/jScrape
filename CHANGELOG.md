@@ -4,6 +4,17 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.25.0] - 2026-11-20
+
+### Architecture & Directory Simplification
+- **Eliminated `dashboard/` Subdirectory Entirely (`.htaccess`, `stage/.htaccess`, `server.js`, `.cpanel.yml`):**
+  - Promoted `dashboard/api.php` directly to root `api.php`, removing the legacy one-line forwarder wrapper and executing the native PHP backend directly from root.
+  - Relocated mock ATS schema testbed `dashboard/test-application.html` to root `test-application.html` and updated navigation icon links in `index.html`.
+  - Configured clean Apache URL rewrite rules (`RewriteRule ^dashboard/?$ dashboard.html [L]`) in both root `.htaccess` and `stage/.htaccess` so `https://j.synopsdigital.com/dashboard` and `https://j.synopsdigital.com/dashboard/` resolve seamlessly to `dashboard.html` without requiring a physical directory.
+  - Permanently purged the legacy `dashboard/` folder, `dashboard/index.html`, and `dashboard/.htaccess` from Git, disk, and live host servers.
+
+---
+
 ## [1.24.0] - 2026-11-20
 
 ### Pipeline & Infrastructure Streamlining

@@ -301,7 +301,6 @@ app.get(['/dashboard', '/dashboard/'], (req, res) => {
 app.get('/dashboard.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
-app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
 
 app.use(express.static(__dirname));
 

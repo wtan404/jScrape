@@ -9,8 +9,8 @@ deployment:
     - /bin/cp -R dashboard_analytics.js $DEPLOYPATH
     - /bin/cp -R main.js $DEPLOYPATH
     - /bin/cp -R dashboard.html $DEPLOYPATH
-    - /bin/mkdir -p $DEPLOYPATH/dashboard
-    - /bin/cp -R dashboard $DEPLOYPATH
+    - /bin/cp -R test-application.html $DEPLOYPATH
+    - /bin/cp -R api.php $DEPLOYPATH
     - /bin/cp -R styles.css $DEPLOYPATH
     - /bin/cp -R synops_logo.jpg $DEPLOYPATH
     - /bin/cp -R config.json $DEPLOYPATH
