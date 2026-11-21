@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { parseJobUrl } = require('../scripts/server');
+const { parseJobUrl } = require('../server');
 
 async function runOracleTests() {
   console.log('--- Running Oracle Cloud & Taleo Parsing Verification Tests ---');

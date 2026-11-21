@@ -27,7 +27,6 @@ jobs:
         run: |
           echo "Validating syntax across all Node.js modules..."
           node -c server.js
-          node -c scripts/server.js
           node -c scripts/scraper.js
           node -c scripts/submission_engine.js
           node -c scripts/dashboard.js

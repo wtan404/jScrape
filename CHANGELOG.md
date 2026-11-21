@@ -10,8 +10,7 @@ All notable changes to the jScrape project are documented in this file.
 - **Directory Layout Migration (`dta/`, `scripts/`, `ops/`, `dsb.html`, `server.js`):**
   - Migrated persistent data feeds to [dta/](file:///D:/Projects/jScrape/dta) (`config.json`, `jobs_data.json`, `job_applications.json`, `profile.json`, `health.json`).
   - Restored [package.json](file:///D:/Projects/jScrape/package.json) and `package-lock.json` to repository root to guarantee compatibility with `npm`, Passenger, and CI/CD runners, bumping version to `1.29.0` and updating CLI run scripts.
-  - Relocated core Node.js application scripts to [scripts/](file:///D:/Projects/jScrape/scripts) (`server.js`, `scraper.js`, `submission_engine.js`, `dashboard.js`).
-  - Added root [server.js](file:///D:/Projects/jScrape/server.js) proxy entrypoint for Passenger / cPanel Node.js Selector compatibility.
+  - Relocated core Node.js application scripts to [scripts/](file:///D:/Projects/jScrape/scripts) (`scraper.js`, `submission_engine.js`, `dashboard.js`), consolidating the full application server directly into root [server.js](file:///D:/Projects/jScrape/server.js) and eliminating `scripts/server.js`.
   - Relocated operational automation to [ops/](file:///D:/Projects/jScrape/ops) (`merge_applications.js`, `passenger-watchdog.sh`).
   - Renamed `dashboard.html` to [dsb.html](file:///D:/Projects/jScrape/dsb.html) and removed deprecated mock page `test-application.html`.
 - **Scraper Ingestion & Verification Consolidation (`scripts/scraper.js`):**
