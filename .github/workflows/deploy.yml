@@ -82,8 +82,6 @@ jobs:
             README.md
             job_applications.json
             profile.json
-            dev/**
-            qa/**
             stage/**
             ${{ steps.set-target.outputs.exclude_htaccess }}
 

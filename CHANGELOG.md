@@ -4,6 +4,30 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.24.0] - 2026-11-20
+
+### Pipeline & Infrastructure Streamlining
+- **Streamlined Deployment Matrix (`.github/workflows/deploy.yml`, `pr-gate.yml`, `uptime-monitor.yml`):**
+  - Confirmed and enforced strict deployment boundaries: only `stage` (`https://stage.j.synopsdigital.com`) and `main` (`https://j.synopsdigital.com`) trigger deployments.
+  - The `dev` branch is preserved exclusively for development and feature integration with zero automated deployment triggers.
+  - Removed obsolete `- qa` trigger from the PR evaluation gate (`pr-gate.yml`) and purged all `dev/**` and `qa/**` exclusion references from deployment actions (`deploy.yml`).
+  - Updated synthetic uptime monitoring (`uptime-monitor.yml`), passenger watchdog (`scripts/passenger-watchdog.sh`), and automated QA (`tests/qa-check.sh`) to point to canonical `https://j.synopsdigital.com` with HTTP basic auth credentials.
+
+### Codebase Consolidation & Deprecation Cleanup
+- **Purged Obsolete Folders & Ambiguities (`dev/`, `qa/`):**
+  - Permanently deleted the physical `dev/` and `qa/` directories along with their tracked `.gitkeep` and `.htaccess` files, resolving Git branch/path ambiguity completely.
+- **Removed Unreferenced Duplicate JavaScript (`dashboard/dashboard.js`, `dashboard/dashboard_analytics.js`):**
+  - Deleted 3,610 lines of unreferenced duplicate code from the `dashboard/` subfolder, ensuring all analytics logic cleanly runs through root `dashboard_analytics.js`.
+- **Purged Dead Sankey Engine from `dashboard.js` & Google Charts from `index.html`:**
+  - Removed ~325 lines of dead Sankey charting functions from `dashboard.js` (the Sankey diagram lives and flows strictly on `dashboard.html`).
+  - Removed unused `<script src="https://www.gstatic.com/charts/loader.js"></script>` from `index.html`, eliminating an unnecessary 100KB+ external script dependency on initial triage page load.
+- **Consolidated Candidate Profile Storage (`profile.json`):**
+  - Standardized `submission_engine.js` to reference the canonical `profile.json` and permanently deleted the duplicate `applicant_profile.json`.
+- **CSS Sanitization (`styles.css`):**
+  - Removed dead `.brand`, `.brand-logo-img`, `.brand-title`, and `.brand-title .highlight` rules following logo removal.
+
+---
+
 ## [1.23.0] - 2026-11-20
 
 ### Security & Access Control

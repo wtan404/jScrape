@@ -24,5 +24,7 @@ deployment:
     - /bin/cp -R zip3_centroids.js $DEPLOYPATH
     - /bin/cp -R submission_engine.js $DEPLOYPATH
     - /bin/cp -R package.json $DEPLOYPATH
+    - /bin/cp -R profile.json $DEPLOYPATH
+    - /bin/cp -R .htaccess $DEPLOYPATH 2>/dev/null || true
     - /bin/cp -R .htpasswd $DEPLOYPATH 2>/dev/null || true
     - /bin/mkdir -p $DEPLOYPATH/uploads/resumes

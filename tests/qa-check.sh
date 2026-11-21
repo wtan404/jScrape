@@ -7,7 +7,7 @@
 
 set -uo pipefail
 
-TARGET_URL="${1:-https://dev.j.synopsdigital.com}"
+TARGET_URL="${1:-https://j.synopsdigital.com}"
 # Strip trailing slash if present
 TARGET_URL="${TARGET_URL%/}"
 

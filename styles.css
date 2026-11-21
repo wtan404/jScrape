@@ -171,29 +171,6 @@ body {
   margin: 0 !important;
 }
 
-.brand {
-  display: none;
-}
-
-.brand-logo-img {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  border-radius: 6px;
-}
-
-.brand-title {
-  font-family: var(--font-heading);
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--text-main);
-  letter-spacing: -0.5px;
-}
-
-.brand-title .highlight {
-  color: var(--accent-purple);
-}
-
 .header-actions {
   display: flex;
   align-items: center;

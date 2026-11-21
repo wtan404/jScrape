@@ -9,7 +9,8 @@
 set -uo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TARGET_URL="${1:-https://dev.j.synopsdigital.com}"
+TARGET_URL="${1:-https://j.synopsdigital.com}"
+AUTH_CREDS="will:ScrapeDeez12!"
 SLACK_WEBHOOK="${SLACK_WEBHOOK_URL:-}"
 LOG_FILE="${APP_DIR}/watchdog.log"
 
@@ -24,7 +25,7 @@ log() {
 HEALTH_URL="${TARGET_URL%/}/health"
 
 # Query /health with 10s max-time
-HTTP_CODE=$(curl -s -L -o /dev/null -w "%{http_code}" --max-time 10 "$HEALTH_URL" 2>/dev/null || echo "000")
+HTTP_CODE=$(curl -s -L -u "$AUTH_CREDS" -o /dev/null -w "%{http_code}" --max-time 10 "$HEALTH_URL" 2>/dev/null || echo "000")
 
 if [ "$HTTP_CODE" != "200" ]; then
   log "⚠️ HEALTH CHECK FAILED: ${HEALTH_URL} returned HTTP ${HTTP_CODE}. Initiating self-healing restart..."
@@ -47,7 +48,7 @@ EOF
 
   # Sleep 5s and check recovery
   sleep 5
-  RETRY_CODE=$(curl -s -L -o /dev/null -w "%{http_code}" --max-time 10 "$HEALTH_URL" 2>/dev/null || echo "000")
+  RETRY_CODE=$(curl -s -L -u "$AUTH_CREDS" -o /dev/null -w "%{http_code}" --max-time 10 "$HEALTH_URL" 2>/dev/null || echo "000")
   log "ℹ️ Post-restart probe returned HTTP ${RETRY_CODE}."
 else
   log "✅ Health OK (HTTP 200) from ${HEALTH_URL}."

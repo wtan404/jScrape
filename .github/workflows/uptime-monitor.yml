@@ -20,7 +20,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           chmod +x tests/qa-check.sh
-          TARGET="https://dev.j.synopsdigital.com"
+          TARGET="https://j.synopsdigital.com"
 
           echo "=========================================="
           echo "🔍 Probing ${TARGET}..."
@@ -33,7 +33,7 @@ jobs:
           fi
 
           # Telemetry validation on /health
-          HEALTH_JSON=$(curl -s -L --max-time 10 "${TARGET}/health")
+          HEALTH_JSON=$(curl -s -L -u "will:ScrapeDeez12!" --max-time 10 "${TARGET}/health")
           echo "Telemetry Payload: ${HEALTH_JSON}"
           
           STATUS=$(echo "${HEALTH_JSON}" | jq -r '.status // "unknown"' 2>/dev/null || echo "parse_error")
@@ -71,7 +71,7 @@ jobs:
                 "fields": [
                   {
                     "type": "mrkdwn",
-                    "text": "*Target:*\n\`${FAILED_TARGET:-https://dev.j.synopsdigital.com}\`"
+                    "text": "*Target:*\n\`${FAILED_TARGET:-https://j.synopsdigital.com}\`"
                   },
                   {
                     "type": "mrkdwn",
@@ -83,7 +83,7 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Incident Details:*\nOne or more automated health checks or route assertions failed on \`dev.j.synopsdigital.com\`.\n<${RUN_URL}|View Workflow Incident Logs>"
+                  "text": "*Incident Details:*\nOne or more automated health checks or route assertions failed on \`j.synopsdigital.com\`.\n<${RUN_URL}|View Workflow Incident Logs>"
                 }
               }
             ]

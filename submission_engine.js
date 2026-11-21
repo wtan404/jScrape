@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 
-const PROFILE_FILE = path.join(__dirname, 'applicant_profile.json');
+const PROFILE_FILE = path.join(__dirname, 'profile.json');
 const LOGS_FILE = path.join(__dirname, 'submissions_log.json');
 const RESUMES_DIR = path.join(__dirname, 'uploads', 'resumes');
 const RESUMES_META = path.join(RESUMES_DIR, 'metadata.json');
