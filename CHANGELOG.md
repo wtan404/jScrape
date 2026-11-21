@@ -4,6 +4,19 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.27.0] - 2026-11-21
+
+### Decommissioning & Deprecation Cleanup
+- **Decommissioned Google Jobs & SerpAPI Integration (`google_jobs_scraper.js`, `scraper.js`, `server.js`, `config.json`, `.env.example`, `.cpanel.yml`, `.github/workflows/pr-gate.yml`, `package.json`):**
+  - Permanently removed `google_jobs_scraper.js` from the repository and ingestion pipeline.
+  - Decoupled `scraper.js` orchestration: purged `scrapeGoogleJobs` from parallel `Promise.all` ingestion, removed `googleJobs` from result concatenation, and simplified `runScraperJob` parameters.
+  - Refactored `server.js`: removed `serpApiKey` from default configuration schema and eliminated arguments from manual (`/api/scrape-now`) and cron-scheduled scrape calls.
+  - Cleaned configuration templates: purged `serpApiKey: ""` from `config.json` and removed `SERPAPI_KEY` placeholder documentation from `.env.example`.
+  - Updated deployment and CI/CD manifests: eliminated `google_jobs_scraper.js` from `.cpanel.yml` deployment script and removed syntax validation from `.github/workflows/pr-gate.yml`.
+  - Bumped project version to `1.27.0` in `package.json`.
+
+---
+
 ## [1.26.0] - 2026-11-20
 
 ### Frontend Architecture & Script Consolidation

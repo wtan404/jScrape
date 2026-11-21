@@ -19,7 +19,6 @@ deployment:
     - /bin/cp -R ats_scraper.js $DEPLOYPATH
     - /bin/cp -R verifier.js $DEPLOYPATH
     - /bin/cp -R geo_helper.js $DEPLOYPATH
-    - /bin/cp -R google_jobs_scraper.js $DEPLOYPATH
     - /bin/cp -R zip3_centroids.js $DEPLOYPATH
     - /bin/cp -R submission_engine.js $DEPLOYPATH
     - /bin/cp -R package.json $DEPLOYPATH

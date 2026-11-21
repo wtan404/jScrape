@@ -29,7 +29,6 @@ jobs:
           node -c server.js
           node -c scraper.js
           node -c ats_scraper.js
-          node -c google_jobs_scraper.js
           node -c geo_helper.js
           node -c verifier.js
           echo "✅ All JavaScript files passed syntax verification."

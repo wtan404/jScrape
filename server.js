@@ -354,8 +354,7 @@ function readConfig() {
     ],
     smartRecruitersCompanies: [
       'smartrecruiters'
-    ],
-    serpApiKey: ''
+    ]
   };
 
   if (fs.existsSync(CONFIG_FILE)) {
@@ -1278,7 +1277,6 @@ app.post('/api/scrape-now', async (req, res) => {
     const matches = await runScraperJob(
       config.greenhouseCompanies || [],
       config.leverCompanies || [],
-      config.serpApiKey || process.env.SERPAPI_KEY,
       config.targetTitles || [],
       config.keywords || [],
       config.ashbyCompanies || [],
@@ -1305,7 +1303,6 @@ cron.schedule('0 * * * *', async () => {
     await runScraperJob(
       config.greenhouseCompanies || [],
       config.leverCompanies || [],
-      config.serpApiKey || process.env.SERPAPI_KEY,
       config.targetTitles || [],
       config.keywords || [],
       config.ashbyCompanies || [],

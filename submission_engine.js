@@ -463,7 +463,7 @@ async function processJobSubmission(job, profile, resumeId) {
     };
   }
 
-  // 4. Ashby / Remotive / Jobicy / Google Jobs / LinkedIn (Assisted 1-Click Launchpad)
+  // 4. Ashby / Remotive / Jobicy / LinkedIn (Assisted 1-Click Launchpad)
   return {
     ...baseRecord,
     status: 'assisted_ready',

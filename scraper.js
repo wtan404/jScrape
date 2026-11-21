@@ -2,7 +2,6 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { scrapeAllATSCompanies } = require('./ats_scraper');
-const { scrapeGoogleJobs } = require('./google_jobs_scraper');
 const { verifyAndPruneJobs, isWithin14Days, isWithin30Days } = require('./verifier');
 const { classifyWorkType, detectLocationAndWorkType } = require('./geo_helper');
 const { extractSalaryFromText } = require('./salary_extractor');
@@ -306,7 +305,7 @@ async function scrapeJobicy(targetTitles = PREDEFINED_ROLES, keywords = PREDEFIN
 }
 
 // Master Pipeline Run & Re-Verification
-async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey = process.env.SERPAPI_KEY, customTitles = [], customKeywords = [], customAshby = [], customSmartRecruiters = []) {
+async function runScraperJob(customGreenhouse = [], customLever = [], customTitles = [], customKeywords = [], customAshby = [], customSmartRecruiters = []) {
   console.log('[Scrapedeez] Launching Pipeline for Active Criteria (< 14 days old, 2 weeks max)...');
 
   // Load config if available
@@ -322,7 +321,6 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
   const smartRecruitersCompanies = customSmartRecruiters.length > 0 ? customSmartRecruiters : (cfg.smartRecruitersCompanies || []);
   const targetTitles = customTitles.length > 0 ? customTitles : (cfg.targetTitles || PREDEFINED_ROLES);
   const keywords = customKeywords.length > 0 ? customKeywords : (cfg.keywords || PREDEFINED_KEYWORDS);
-  const apiKey = serpApiKey || cfg.serpApiKey || process.env.SERPAPI_KEY;
 
   const dataPath = path.join(__dirname, 'jobs_data.json');
   let existingStore = { jobs: [] };
@@ -333,16 +331,15 @@ async function runScraperJob(customGreenhouse = [], customLever = [], serpApiKey
   const verifiedExistingJobs = await verifyAndPruneJobs(existingStore.jobs || []);
   const existingIdSet = new Set(verifiedExistingJobs.map(j => j.id || j.url));
 
-  const [remoteOkJobs, wwrJobs, remotiveJobs, jobicyJobs, atsJobs, googleJobs] = await Promise.all([
+  const [remoteOkJobs, wwrJobs, remotiveJobs, jobicyJobs, atsJobs] = await Promise.all([
     scrapeRemoteOK(targetTitles, keywords).catch(() => []),
     scrapeWeWorkRemotely(targetTitles, keywords).catch(() => []),
     scrapeRemotive(targetTitles, keywords).catch(() => []),
     scrapeJobicy(targetTitles, keywords).catch(() => []),
-    scrapeAllATSCompanies(greenhouseCompanies, leverCompanies, targetTitles, keywords, ashbyCompanies, smartRecruitersCompanies).catch(() => []),
-    scrapeGoogleJobs(apiKey, targetTitles).catch(() => [])
+    scrapeAllATSCompanies(greenhouseCompanies, leverCompanies, targetTitles, keywords, ashbyCompanies, smartRecruitersCompanies).catch(() => [])
   ]);
 
-  const newlyScraped = [...atsJobs, ...googleJobs, ...remoteOkJobs, ...wwrJobs, ...remotiveJobs, ...jobicyJobs].filter(j => isWithin30Days(j.date));
+  const newlyScraped = [...atsJobs, ...remoteOkJobs, ...wwrJobs, ...remotiveJobs, ...jobicyJobs].filter(j => isWithin30Days(j.date));
 
   const mergedJobs = [];
   const seenUrls = new Set();
