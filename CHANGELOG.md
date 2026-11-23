@@ -21,6 +21,7 @@ All notable changes to the jScrape project are documented in this file.
   - **Responsive Layout Breakpoints ([dsb.html](file:///D:/Projects/jScrape/dsb.html)):** Added `@media (max-width: 640px)` rules to streamline container padding across `.analytics-layout` and `.chart-panel`.
 - **Quality Assurance & Verification:**
   - Updated [tests/qa-check.sh](file:///D:/Projects/jScrape/tests/qa-check.sh) to verify `/dsb` (HTTP 200), assert direct denial of `/dashboard` (HTTP 403), and decommissioned `/dashboard.js` assertions.
+  - Promoted `v1.30.0` end-to-end to staging (`https://stage.j.synopsdigital.com`) and production (`https://j.synopsdigital.com`), confirmed Passenger restart, and verified remote remnant cleanup.
 
 ---
 
