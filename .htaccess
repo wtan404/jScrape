@@ -46,12 +46,13 @@ Require valid-user
     RewriteCond %{HTTP_HOST} !^stage\.j\.synopsdigital\.com$ [NC]
     RewriteRule ^stage(/.*)?$ - [F,L]
 
-    # Route /dashboard, /dashboard/, /dsb, and /dsb/ cleanly to dsb.html
-    RewriteRule ^(dashboard|dsb)/?$ dsb.html [L]
-    RewriteRule ^dashboard\.html$ dsb.html [L]
+    # Block direct path access to deprecated /dashboard directory remnants (403 Forbidden)
+    RewriteRule ^dashboard(/.*)?$ - [F,L]
 
-    # Legacy rewrite aliases for restructured assets and data feeds
-    RewriteRule ^dashboard\.js$ scripts/dashboard.js [L]
+    # Route /dsb and /dsb/ cleanly to dsb.html
+    RewriteRule ^dsb/?$ dsb.html [L]
+
+    # Legacy rewrite aliases for restructured data feeds
     RewriteRule ^jobs_data\.json$ dta/jobs_data.json [L]
     RewriteRule ^job_applications\.json$ dta/job_applications.json [L]
     RewriteRule ^profile\.json$ dta/profile.json [L]

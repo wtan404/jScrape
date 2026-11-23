@@ -35,7 +35,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="styles.css?v=1.29.0">
+  <link rel="stylesheet" href="styles.css?v=1.30.0">
   <style>
     /* Dashboard High-Density Layout & Styling */
     .dashboard-layout {
@@ -817,9 +817,9 @@
   <header class="app-header">
     <div class="container header-wrap">
       <div class="dash-nav-actions">
-        <a href="dsb.html" class="btn btn-secondary btn-sm btn-icon-only" title="Conversion Funnel Analytics" aria-label="End-to-End Application Funnel & Analytics Dashboard">
-          <i data-lucide="git-branch" style="color: var(--accent-purple-light);"></i>
-        </a>
+        <button class="btn btn-primary btn-sm btn-icon-only" onclick="triggerHourlyRescan()" id="btnRescan" title="Trigger Re-Scan" aria-label="Trigger Re-Scan">
+          <i data-lucide="refresh-cw"></i>
+        </button>
         <button type="button" class="btn btn-secondary btn-sm btn-icon-only" onclick="openConfigModal()" title="Search Criteria & Target Titles" aria-label="Search Criteria & Target Titles">
           <i data-lucide="sliders-horizontal"></i>
         </button>
@@ -827,9 +827,9 @@
           <i data-lucide="sun" id="themeIconSun"></i>
           <i data-lucide="moon" id="themeIconMoon" style="display: none;"></i>
         </button>
-        <button class="btn btn-primary btn-sm btn-icon-only" onclick="triggerHourlyRescan()" id="btnRescan" title="Trigger Re-Scan" aria-label="Trigger Re-Scan">
-          <i data-lucide="refresh-cw"></i>
-        </button>
+        <a href="dsb.html" class="btn btn-secondary btn-sm btn-icon-only" title="Conversion Funnel Analytics" aria-label="End-to-End Application Funnel & Analytics Dashboard">
+          <i data-lucide="git-branch" style="color: var(--accent-purple-light);"></i>
+        </a>
       </div>
     </div>
   </header>
@@ -1254,6 +1254,6 @@
     </div>
   </div>
 
-  <script src="scripts/dashboard.js?v=1.29.0"></script>
+  <script src="scripts/dashboard.js?v=1.30.0"></script>
 </body>
 </html>

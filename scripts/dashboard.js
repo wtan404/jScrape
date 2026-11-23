@@ -2952,9 +2952,21 @@ function renderSankeyFunnel() {
 
   const chartHeight = Math.max(380, Math.min(600, edges.length * 28 + 120));
 
-  // Determine container bounds and reserve space on the right (140px) for terminal node labels (⭐ Offer Extended, 🔴 Rejected).
+  // Determine viewport & container bounds
+  const isMobile = window.innerWidth <= 640;
+  const labelMargin = isMobile ? 110 : 140;
   const containerWidth = container.clientWidth || container.parentElement?.clientWidth || 1100;
-  const chartWidth = Math.max(340, containerWidth - 140);
+
+  // On mobile, size the chart to maintain proportion and reserve label margin inside the scrollable container
+  const chartWidth = isMobile
+    ? Math.max(320, containerWidth - labelMargin)
+    : Math.max(340, containerWidth - labelMargin);
+
+  // Set the container minWidth/width to encompass both chartWidth and terminal label margin
+  // so the scroll container (.chart-container-box) encompasses all nodes and labels without spilling
+  const totalContentWidth = chartWidth + labelMargin;
+  container.style.minWidth = isMobile ? `${totalContentWidth}px` : '100%';
+  container.style.width = isMobile ? `${totalContentWidth}px` : '100%';
 
   const options = {
     width: chartWidth,
@@ -2964,13 +2976,13 @@ function renderSankeyFunnel() {
         colors: colors,
         label: {
           fontName: 'Inter, system-ui, sans-serif',
-          fontSize: 11,
+          fontSize: isMobile ? 10 : 11,
           color: '#f8fafc',
           bold: true
         },
-        nodePadding: 24,
-        width: 14,
-        labelPadding: 10
+        nodePadding: isMobile ? 18 : 24,
+        width: isMobile ? 12 : 14,
+        labelPadding: isMobile ? 6 : 10
       },
       link: {
         colorMode: 'gradient',

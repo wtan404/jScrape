@@ -70,6 +70,15 @@ jobs:
         run: |
           node ops/merge_applications.js --upstream-url="${{ steps.set-target.outputs.url }}" || true
 
+      - name: 🧹 Purge Remote Remnants & Legacy Artifacts
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_SERVER_DIR: ${{ steps.set-target.outputs.dir }}
+        run: |
+          python3 ops/purge_remote_remnants.py || true
+
       - name: 📂 Sync files via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -88,8 +97,6 @@ jobs:
             job_applications.json
             profile.json
             stage/**
-            dashboard
-            dashboard/**
             ${{ steps.set-target.outputs.exclude_htaccess }}
 
       - name: 🧪 Run Automated Post-Deploy Verification

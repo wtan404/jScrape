@@ -154,7 +154,8 @@ echo ""
 echo "--- 2. Critical Asset & SEO Manifest Verification ---"
 check_endpoint "/styles.css" "200" ""
 check_endpoint "/scripts/dashboard.js" "200" ""
-check_endpoint "/dashboard.js" "200" ""
+check_endpoint "/dsb" "200" "Application Funnel"
+check_endpoint "/dashboard" "403" ""
 check_endpoint "/robots.txt" "200" "Sitemap:"
 check_endpoint "/sitemap.xml" "200" "<urlset"
 
@@ -206,7 +207,7 @@ echo ""
 echo "Found ${#UNIQUE_LINKS[@]} unique internal assets & links across all pages..."
 for link in "${UNIQUE_LINKS[@]}"; do
   case "$link" in
-    /|/dsb.html|/styles.css|/dashboard.js|/scripts/dashboard.js|/jobs_data.json|/dta/jobs_data.json|/robots.txt|/sitemap.xml)
+    /|/dsb.html|/dsb|/styles.css|/scripts/dashboard.js|/jobs_data.json|/dta/jobs_data.json|/robots.txt|/sitemap.xml)
       continue
       ;;
   esac

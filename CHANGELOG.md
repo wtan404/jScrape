@@ -4,6 +4,26 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.30.0] - 2026-11-23
+
+### Production Remnants Decommissioning, UI Realignment & Sankey Mobile Responsiveness
+- **Legacy Route & Remnant Purge:**
+  - Removed deprecated `/dashboard`, `/dashboard/`, `/dashboard.html`, `/dashboard.js`, and `/dashboard/api/*` routes and aliases across [server.js](file:///D:/Projects/jScrape/server.js) and [.htaccess](file:///D:/Projects/jScrape/.htaccess).
+  - Explicitly configured direct access restriction for `/dashboard` paths (`RewriteRule ^dashboard(/.*)?$ - [F,L]`) in [.htaccess](file:///D:/Projects/jScrape/.htaccess).
+  - Developed and integrated [ops/purge_remote_remnants.py](file:///D:/Projects/jScrape/ops/purge_remote_remnants.py) into [.github/workflows/deploy.yml](file:///D:/Projects/jScrape/.github/workflows/deploy.yml) to automatically purge obsolete remote files (`test-application.html`, root duplicate JSONs, `scripts/server.js`, and lingering `dashboard/` directory) during deployment.
+  - Removed `dashboard` and `dashboard/**` from the FTP sync exclusion list in [.github/workflows/deploy.yml](file:///D:/Projects/jScrape/.github/workflows/deploy.yml).
+- **Header Navigation Realignment:**
+  - **Operational Triage ([index.html](file:///D:/Projects/jScrape/index.html)):** Repositioned the Re-Scan / Sync button to the left-most spot and the Analytics Dashboard link (`dsb.html`) to the right-most spot in the top navigation bar.
+  - **Funnel Analytics ([dsb.html](file:///D:/Projects/jScrape/dsb.html)):** Removed the Search Criteria modal button and repositioned the Back button (`./`) to the right-most spot in the top navigation bar.
+- **Mobile Responsive Sankey Funnel:**
+  - **Viewport Constraints ([scripts/dashboard.js](file:///D:/Projects/jScrape/scripts/dashboard.js)):** Added mobile-specific viewport detection (`window.innerWidth <= 640`), dynamic label margins (`110px` on mobile), compact node padding (`18px`), reduced node width (`12px`), and compact font sizes (`10px`).
+  - **Scroll Bounds Protection ([scripts/dashboard.js](file:///D:/Projects/jScrape/scripts/dashboard.js), [dsb.html](file:///D:/Projects/jScrape/dsb.html)):** Bound the total content width (`chartWidth + labelMargin`) to the inner container's `minWidth` and added touch horizontal scrolling (`-webkit-overflow-scrolling: touch;`), eliminating SVG label clipping and preventing card overflow.
+  - **Responsive Layout Breakpoints ([dsb.html](file:///D:/Projects/jScrape/dsb.html)):** Added `@media (max-width: 640px)` rules to streamline container padding across `.analytics-layout` and `.chart-panel`.
+- **Quality Assurance & Verification:**
+  - Updated [tests/qa-check.sh](file:///D:/Projects/jScrape/tests/qa-check.sh) to verify `/dsb` (HTTP 200), assert direct denial of `/dashboard` (HTTP 403), and decommissioned `/dashboard.js` assertions.
+
+---
+
 ## [1.29.0] - 2026-11-21
 
 ### Architectural Restructuring & Scraper Pipeline Consolidation

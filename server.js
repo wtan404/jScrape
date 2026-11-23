@@ -283,26 +283,15 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Mount PHP API dynamically BEFORE express.static
-app.all(['/api.php', '/dashboard/api.php'], handlePhpApi);
+app.all('/api.php', handlePhpApi);
 
-// Route Alias: transparently forward /dashboard/api/* to /api/*
-app.use((req, res, next) => {
-  if (req.url.startsWith('/dashboard/api/')) {
-    req.url = req.url.replace('/dashboard/api/', '/api/');
-  }
-  next();
-});
-
-// Dedicated /dashboard and /dsb route handlers: serve the Funnel Analytics Dashboard
-app.get(['/dashboard', '/dashboard/', '/dsb', '/dsb/'], (req, res) => {
+// Dedicated /dsb route handlers: serve the Funnel Analytics Dashboard
+app.get(['/dsb', '/dsb/'], (req, res) => {
   res.sendFile(path.join(ROOT_DIR, 'dsb.html'));
 });
-app.get(['/dashboard.html', '/dsb.html'], (req, res) => {
+app.get('/dsb.html', (req, res) => {
   res.sendFile(path.join(ROOT_DIR, 'dsb.html'));
 });
-
-// Legacy root route aliases for restructured assets & data feeds
-app.get('/dashboard.js', (req, res) => res.sendFile(path.join(ROOT_DIR, 'scripts', 'dashboard.js')));
 app.get('/jobs_data.json', (req, res) => res.sendFile(path.join(ROOT_DIR, 'dta', 'jobs_data.json')));
 app.get('/job_applications.json', (req, res) => res.sendFile(path.join(ROOT_DIR, 'dta', 'job_applications.json')));
 app.get('/profile.json', (req, res) => res.sendFile(path.join(ROOT_DIR, 'dta', 'profile.json')));

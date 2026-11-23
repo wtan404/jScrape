@@ -29,7 +29,7 @@
   <!-- Google Charts Loader -->
   <script src="https://www.gstatic.com/charts/loader.js"></script>
 
-  <link rel="stylesheet" href="styles.css?v=1.29.0">
+  <link rel="stylesheet" href="styles.css?v=1.30.0">
 
   <style>
     body {
@@ -127,10 +127,24 @@
       border: 1px solid rgba(255, 255, 255, 0.03);
       overflow-x: auto;
       overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
     }
 
     #sankeyChartContainer svg {
       overflow: visible !important;
+    }
+
+    @media (max-width: 640px) {
+      .analytics-layout {
+        padding: 1rem 0.75rem 4rem;
+      }
+      .chart-panel {
+        padding: 1rem 0.75rem;
+      }
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+      }
     }
 
     .status-select-badge {
@@ -179,16 +193,13 @@
   <header class="app-header">
     <div class="container header-wrap">
       <div class="dash-nav-actions">
-        <a href="./" class="btn btn-primary btn-sm btn-icon-only" title="Return to Operational Triage Center" aria-label="Return to Operational Triage Center">
-          <i data-lucide="arrow-left"></i>
-        </a>
-        <button type="button" class="btn btn-secondary btn-sm btn-icon-only" onclick="openConfigModal()" title="Search Criteria & Target Titles" aria-label="Search Criteria & Target Titles">
-          <i data-lucide="sliders-horizontal"></i>
-        </button>
         <button class="btn btn-secondary btn-sm theme-toggle-btn btn-icon-only" onclick="toggleTheme()" id="btnThemeToggle" aria-label="Toggle Theme" title="Toggle Dark/Light Mode">
           <i data-lucide="sun" id="themeIconSun"></i>
           <i data-lucide="moon" id="themeIconMoon" style="display: none;"></i>
         </button>
+        <a href="./" class="btn btn-primary btn-sm btn-icon-only" title="Return to Operational Triage Center" aria-label="Return to Operational Triage Center">
+          <i data-lucide="arrow-left"></i>
+        </a>
       </div>
     </div>
   </header>
@@ -429,6 +440,6 @@
 
   </main>
 
-  <script src="scripts/dashboard.js?v=1.29.0"></script>
+  <script src="scripts/dashboard.js?v=1.30.0"></script>
 </body>
 </html>
