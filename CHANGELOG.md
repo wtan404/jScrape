@@ -4,6 +4,20 @@ All notable changes to the jScrape project are documented in this file.
 
 ---
 
+## [1.30.1] - 2026-11-24
+
+### Sankey Funnel Topology Correction & Resume Scope Normalization
+- **Step 2 Column Alignment & Active Stage Edge Routing:**
+  - Updated `buildSankeyEdges()` in [scripts/dashboard.js](file:///D:/Projects/jScrape/scripts/dashboard.js) to route initial `status === 'Applied'` positions to a dedicated `🟢 Applied (Awaiting Response)` stage node.
+  - Eliminated the terminal sink behavior where resume scopes with only applied jobs (such as `Web Operations & E-commerce`) were forced to the far-right edge of the chart alongside final exits.
+- **Resume Category Consolidation:**
+  - Updated `cleanResume()` in [scripts/dashboard.js](file:///D:/Projects/jScrape/scripts/dashboard.js) to merge legacy `DevOps & Cloud Infrastructure Lead` records into the canonical `Corporate / IT Lead` category.
+  - Standardized Step 2 of the Sankey diagram and the Analytics table to feature two distinct, unified resume profiles: `Corporate / IT Lead` and `Web Operations & E-commerce`.
+- **Flow Legend Update:**
+  - Added `Step 3: Applied (Awaiting Response)` to the flow legend in [dsb.html](file:///D:/Projects/jScrape/dsb.html) to clearly document the transition from resume scopes into active awaiting response states.
+
+---
+
 ## [1.30.0] - 2026-11-23
 
 ### Production Remnants Decommissioning, UI Realignment & Sankey Mobile Responsiveness

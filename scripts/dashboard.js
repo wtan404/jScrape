@@ -2799,7 +2799,12 @@ function cleanSource(src) {
 
 function cleanResume(label) {
   if (!label || label === 'Default Resume') return 'Corporate / IT Lead';
-  return label.replace(' & Operations', '').trim();
+  const clean = label.replace(' & Operations', '').trim();
+  // Consolidate legacy DevOps & Cloud Infrastructure Lead into Corporate / IT Lead
+  if (/devops/i.test(clean) || /cloud.*infra/i.test(clean)) {
+    return 'Corporate / IT Lead';
+  }
+  return clean;
 }
 
 function renderKpiMetrics() {
@@ -2866,7 +2871,7 @@ function buildSankeyEdges() {
 
     // Progression rules based on response:
     if (status === 'Applied') {
-      // Stops at Step 2 (scope node)
+      addEdge(scope, '🟢 Applied (Awaiting Response)', 1);
       return;
     }
 
