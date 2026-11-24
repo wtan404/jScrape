@@ -15,6 +15,7 @@ All notable changes to the jScrape project are documented in this file.
   - Standardized Step 2 of the Sankey diagram and the Analytics table to feature two distinct, unified resume profiles: `Corporate / IT Lead` and `Web Operations & E-commerce`.
 - **Flow Legend Update:**
   - Added `Step 3: Applied (Awaiting Response)` to the flow legend in [dsb.html](file:///D:/Projects/jScrape/dsb.html) to clearly document the transition from resume scopes into active awaiting response states.
+  - Promoted `v1.30.1` end-to-end to staging (`https://stage.j.synopsdigital.com`) and production (`https://j.synopsdigital.com`), confirming Passenger reload and live DAG validation.
 
 ---
 
